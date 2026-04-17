@@ -48,8 +48,8 @@ const Api = {
   /**
    * Remove um lançamento.
    */
-  async excluirLancamento(id) {
-    const res = await fetch(`${API_BASE}/lancamentos/${id}`, {
+  async excluirLancamento(id, excluirProximos = false) {
+    const res = await fetch(`${API_BASE}/lancamentos/${id}?excluirProximos=${excluirProximos}`, {
       method: 'DELETE',
     });
     if (!res.ok) throw new Error('Erro ao excluir lançamento');
