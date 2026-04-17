@@ -77,12 +77,14 @@ public class LancamentoController {
 
     /**
      * Remove um lançamento.
-     * DELETE /api/lancamentos/{id}
+     * DELETE /api/lancamentos/{id}?excluirProximos=true
      */
     @DeleteMapping("/lancamentos/{id}")
-    public ResponseEntity<Void> excluir(@PathVariable Long id) {
+    public ResponseEntity<Void> excluir(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "false") boolean excluirProximos) {
         try {
-            service.excluir(id);
+            service.excluir(id, excluirProximos);
             return ResponseEntity.noContent().build();
         } catch (NoSuchElementException e) {
             return ResponseEntity.notFound().build();
