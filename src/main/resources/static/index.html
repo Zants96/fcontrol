@@ -54,6 +54,12 @@
       </span>
       <span class="nav-label">Assinaturas</span>
     </a>
+    <a href="#" class="nav-item" id="nav-configuracoes" data-view="configuracoes">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </span>
+      <span class="nav-label">Configurações</span>
+    </a>
   </nav>
 
   <div class="sidebar-footer">
@@ -241,6 +247,30 @@
       </table>
     </div>
 
+  </section>
+
+  <!-- ─── VIEW: CONFIGURAÇÕES ───────────────────────────────────────────── -->
+  <section class="view hidden" id="view-configuracoes">
+    <div class="cards-grid">
+      <div class="card">
+        <h2 style="margin-bottom: 1rem; color: #fff;">Exportar Backup</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Gere um arquivo de segurança contendo todos os seus lançamentos. Ideal para transferir dados para outro dispositivo.</p>
+        <button class="btn btn-save" id="btn-export-backup" style="width: 100%; justify-content: center;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          Exportar Base de Dados (.sql)
+        </button>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-bottom: 1rem; color: #fff;">Importar Backup</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Restaure seus dados a partir de um arquivo gerado anteriormente. <strong>Atenção: Isso substituirá as informações atuais.</strong></p>
+        <input type="file" id="file-import-backup" accept=".sql" style="display: none;">
+        <button class="btn" id="btn-import-backup" style="width: 100%; justify-content: center; background: rgba(244, 63, 94, 0.1); color: var(--accent-red); border: 1px solid rgba(244, 63, 94, 0.2);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+          Restaurar Banco de Dados (.sql)
+        </button>
+      </div>
+    </div>
   </section>
 
 </main>
