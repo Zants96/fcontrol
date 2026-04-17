@@ -3,6 +3,7 @@ name: Git Flow Automation
 on:
   push:
     branches:
+      - "feat/*"
       - develop
       - release
 
@@ -18,7 +19,10 @@ jobs:
       - name: Calculate destination branch
         id: vars
         run: |
-          if [[ "${{ github.ref_name }}" == "develop" ]]; then
+          if [[ "${{ github.ref_name }}" == feat/* || "${{ github.ref_name }}" == feature/* ]]; then
+            echo "dest=develop" >> $GITHUB_OUTPUT
+            echo "title=🛠️ [Auto-PR] Feature -> Develop" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
             echo "dest=release" >> $GITHUB_OUTPUT
             echo "title=🔄 [Auto-PR] Develop -> Release (Homologação)" >> $GITHUB_OUTPUT
           else
@@ -35,10 +39,10 @@ jobs:
           title: ${{ steps.vars.outputs.title }}
           body: |
             Este é um Pull Request automático gerado pelo fluxo Git Flow.
-            
+
             - **Origem:** `${{ github.ref_name }}`
             - **Destino:** `${{ steps.vars.outputs.dest }}`
-            
+
             Por favor, valide as alterações e realize os testes de homologação antes do merge.
           labels: |
             automated-pr
