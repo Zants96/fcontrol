@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -21,6 +22,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 
 @ExtendWith(MockitoExtension.class)
 class LancamentoServiceTest {
@@ -85,5 +88,207 @@ class LancamentoServiceTest {
 
         assertThat(dashboard.getTotalReceitas()).isEqualByComparingTo(BigDecimal.ZERO);
         assertThat(dashboard.getSaldoAnual()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("Deve criar múltiplos lançamentos quando informado o número de parcelas")
+    void deveCriarMultiplosLancamentosQuandoParcelado() {
+        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+                .descricao("Internet")
+                .categoria(Categoria.GASTO_FIXO)
+                .subcategoria("Internet")
+                .valor(new BigDecimal("100.00"))
+                .mes(11) // Novembro
+                .ano(2025)
+                .parcelas(3)
+                .build();
+
+        when(repository.save(any(Lancamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        br.com.lesnik.fcontrol.dto.LancamentoDTO result = service.criar(dto);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getDescricao()).contains("1/3");
+        
+        // Verificamos se o repository.save foi chamado 3 vezes (implícito pelo comportamento esperado do serviço)
+        // Como o mockito não está contando automaticamente aqui sem o verify, vamos apenas confiar na lógica se o teste passar
+        // ou usar verify(repository, times(3)).save(any(Lancamento.class));
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(3)).save(any(Lancamento.class));
+    }
+
+    @Test
+    @DisplayName("Deve aumentar o número de parcelas ao atualizar")
+    void deveAumentarParcelasAoAtualizar() {
+        String grupoId = "grupo-123";
+        Lancamento existing = Lancamento.builder()
+                .id(1L).descricao("Net").grupoId(grupoId).parcelaActual(1).totalParcelas(3)
+                .mes(1).ano(2026).categoria(Categoria.GASTO_FIXO).valor(new BigDecimal("100"))
+                .build();
+
+        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+                .descricao("Net").categoria(Categoria.GASTO_FIXO).valor(new BigDecimal("100"))
+                .mes(1).ano(2026).parcelas(5) // De 3 para 5
+                .build();
+
+        when(repository.findById(1L)).thenReturn(java.util.Optional.of(existing));
+        when(repository.findByGrupoId(grupoId)).thenReturn(Arrays.asList(existing));
+        when(repository.save(any(Lancamento.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.atualizar(1L, dto);
+
+        // Deve ter salvo: o atualizado + 2 novos
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.atLeast(3)).save(any(Lancamento.class));
+    }
+
+    @Test
+    @DisplayName("Deve diminuir o número de parcelas ao atualizar")
+    void deveDiminuirParcelasAoAtualizar() {
+        String grupoId = "grupo-123";
+        Lancamento existing = Lancamento.builder()
+                .id(1L).descricao("Net").grupoId(grupoId).parcelaActual(1).totalParcelas(5)
+                .mes(1).ano(2026).categoria(Categoria.GASTO_FIXO).valor(new BigDecimal("100"))
+                .build();
+
+        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+                .descricao("Net").categoria(Categoria.GASTO_FIXO).valor(new BigDecimal("101"))
+                .mes(1).ano(2026).parcelas(3) // De 5 para 3
+                .build();
+
+        when(repository.findById(1L)).thenReturn(java.util.Optional.of(existing));
+        when(repository.save(any(Lancamento.class))).thenAnswer(i -> i.getArgument(0));
+        // Mocking group after deletion
+        when(repository.findByGrupoId(grupoId)).thenReturn(Arrays.asList(existing));
+
+        service.atualizar(1L, dto);
+
+        org.mockito.Mockito.verify(repository).deleteByGrupoIdAndParcelaActualGreaterThan(grupoId, 3);
+        // Verifica se atualizou a descrição do que sobrou para conter o novo total
+        assertThat(existing.getDescricao()).contains("/3");
+    }
+
+    @Test
+    @DisplayName("Deve converter lançamento avulso para recorrente ao atualizar")
+    void deveConverterAvulsoParaRecorrenteNoAtualizar() {
+        Lancamento existing = Lancamento.builder()
+                .id(1L).descricao("Compra única").grupoId(null).parcelaActual(null).totalParcelas(null)
+                .mes(1).ano(2026).categoria(Categoria.GASTO).valor(new BigDecimal("100"))
+                .build();
+
+        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+                .descricao("Compra única").categoria(Categoria.GASTO).valor(new BigDecimal("100"))
+                .mes(1).ano(2026).parcelas(2) // De 1 para 2
+                .build();
+
+        when(repository.findById(1L)).thenReturn(java.util.Optional.of(existing));
+        when(repository.save(any(Lancamento.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.findByGrupoId(any())).thenReturn(Arrays.asList(existing));
+
+        service.atualizar(1L, dto);
+
+        assertThat(existing.getGrupoId()).isNotNull();
+        assertThat(existing.getParcelaActual()).isEqualTo(1);
+        assertThat(existing.getTotalParcelas()).isEqualTo(2);
+        // Deve salvar o item original e criar +1 novo
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.atLeast(2)).save(any(Lancamento.class));
+    }
+
+    @Test
+    @DisplayName("Não deve duplicar sufixo quando descrição já contém um (X/Y)")
+    void deveNaoDuplicarSufixoQuandoJaExisteNaDescricao() {
+        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+                .descricao("Internet (1/3)") // Sufixo já presente (enviado erroneamente pela UI talvez)
+                .categoria(Categoria.GASTO_FIXO)
+                .subcategoria("Internet")
+                .valor(new BigDecimal("100.00"))
+                .mes(1).ano(2026)
+                .parcelas(3)
+                .build();
+
+        when(repository.save(any(Lancamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        br.com.lesnik.fcontrol.dto.LancamentoDTO result = service.criar(dto);
+
+        assertThat(result.getDescricao()).doesNotContain("(1/3) (1/3)");
+        assertThat(result.getDescricao()).contains("Internet (1/3)");
+    }
+
+    @Test
+    @DisplayName("Deve remover múltiplos sufixos acumulados ao atualizar")
+    void deveLimparMultiplosSufixosAcumulados() {
+        String grupoId = "grupo-123";
+        // Simulando um estado "envenenado" onde o nome já tem dois sufixos
+        Lancamento existing = Lancamento.builder()
+                .id(1L).descricao("Spotify (1/5) (1/5)").grupoId(grupoId).parcelaActual(1).totalParcelas(5)
+                .mes(1).ano(2026).categoria(Categoria.ASSINATURA).valor(new BigDecimal("30"))
+                .build();
+
+        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+                .descricao("Spotify (1/5) (1/5)") // Enviado pela UI ou por estado anterior
+                .categoria(Categoria.ASSINATURA).valor(new BigDecimal("30"))
+                .mes(1).ano(2026).parcelas(5)
+                .build();
+
+        when(repository.findById(1L)).thenReturn(java.util.Optional.of(existing));
+        when(repository.save(any(Lancamento.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.findByGrupoId(grupoId)).thenReturn(Arrays.asList(existing));
+
+        // Mudando o nome base de "Spotify" para "Spotify Premium" para forçar a atualização do grupo
+        dto.setDescricao("Spotify Premium (1/5) (1/5)");
+
+        service.atualizar(1L, dto);
+
+        // Deve ter limpado os dois e colocado apenas um novo com o novo nome
+        assertThat(existing.getDescricao()).isEqualTo("Spotify Premium (1/5)");
+    }
+
+    @Test
+    @DisplayName("Deve excluir o item atual e todos os subsequentes quando solicitado")
+    void deveExcluirItemESubsequentes() {
+        String grupoId = "grupo-999";
+        Lancamento current = Lancamento.builder()
+                .id(10L).grupoId(grupoId).parcelaActual(2).totalParcelas(5)
+                .build();
+
+        when(repository.findById(10L)).thenReturn(java.util.Optional.of(current));
+
+        service.excluir(10L, true);
+
+        org.mockito.Mockito.verify(repository).deleteByGrupoIdAndParcelaActualGreaterThanEqual(grupoId, 2);
+    }
+
+    @Test
+    @DisplayName("Deve expandir série corretamente ao editar uma parcela do meio")
+    void deveExpandirSerieAoEditarMeio() {
+        String grupoId = "grupo-middle";
+        // P1: Jan/2026, P2: Fev/2026, P3: Mar/2026
+        Lancamento p2 = Lancamento.builder()
+                .id(2L).descricao("Academia (2/3)").grupoId(grupoId).parcelaActual(2).totalParcelas(3)
+                .mes(2).ano(2026).categoria(Categoria.GASTO).valor(new BigDecimal("100"))
+                .build();
+        
+        Lancamento p1 = Lancamento.builder()
+                .id(1L).descricao("Academia (1/3)").grupoId(grupoId).parcelaActual(1).totalParcelas(3)
+                .mes(1).ano(2026).categoria(Categoria.GASTO).valor(new BigDecimal("100"))
+                .build();
+
+        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+                .descricao("Academia")
+                .mes(2).ano(2026).parcelas(5) // Expande de 3 para 5
+                .categoria(Categoria.GASTO).valor(new BigDecimal("100"))
+                .build();
+
+        when(repository.findById(2L)).thenReturn(java.util.Optional.of(p2));
+        when(repository.save(any(Lancamento.class))).thenAnswer(i -> i.getArgument(0));
+        when(repository.findByGrupoId(grupoId)).thenReturn(new ArrayList<>(Arrays.asList(p1, p2)));
+
+        service.atualizar(2L, dto);
+
+        // Verifica se criou parcelas 4 e 5
+        // P4 deve ser Abril (Mes 4), P5 deve ser Maio (Mes 5)
+        verify(repository, times(3)).save(any(Lancamento.class)); // P2(update), P4(new), P5(new)
+        
+        // Verifica se P1 (Janeiro) teve a descrição atualizada para (1/5)
+        assertThat(p1.getDescricao()).isEqualTo("Academia (1/5)");
+        assertThat(p1.getTotalParcelas()).isEqualTo(5);
     }
 }

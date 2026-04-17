@@ -442,6 +442,10 @@ function openCreateModal() {
   $('form-categoria').value = cat;
   populateSubcategoriaSelect(cat, null);
 
+  // Reseta parcelas
+  $('group-parcelas').classList.remove('hidden');
+  $('form-parcelas').value = 1;
+
   showModal();
 }
 
@@ -464,6 +468,10 @@ function openEditModal(id) {
 
   // Popula subcategorias e mantém o valor atual selecionado
   populateSubcategoriaSelect(item.categoria, item.subcategoria);
+
+  // Exibe sempre o campo de parcelas (conforme plano) e preenche o valor
+  $('group-parcelas').classList.remove('hidden');
+  $('form-parcelas').value = item.totalParcelas || 1;
 
   showModal();
 }
@@ -494,6 +502,7 @@ async function onFormSubmit(e) {
     mes:        parseInt($('form-mes').value),
     ano:        state.ano,
     categoria:  $('form-categoria').value,
+    parcelas:   parseInt($('form-parcelas').value || 1),
   };
 
   const btn = $('btn-save');
@@ -525,20 +534,33 @@ async function onFormSubmit(e) {
 // ─── EXCLUIR ─────────────────────────────────────────────────────────────────
 async function excluir(id) {
   const item = state.lancamentos.find(l => l.id === id);
-  const label = item ? `"${item.subcategoria}"` : `#${id}`;
-  if (!confirm(`Excluir o lançamento ${label}?`)) return;
+  if (!item) return;
+
+  const label = `"${item.subcategoria}"`;
+  let excluirProximos = !!(item.grupoId && item.parcelaActual);
+
+  const msg = excluirProximos 
+    ? `Excluir o lançamento ${label} e TODAS as parcelas futuras desta série?`
+    : `Excluir o lançamento ${label}?`;
+
+  if (!confirm(msg)) return;
 
   try {
-    await Api.excluirLancamento(id);
-    const row = $(`row-${id}`);
-    if (row) {
-      row.style.opacity = '0';
-      row.style.transition = 'opacity 0.3s';
-      setTimeout(() => loadTabela(), 300);
-    } else {
+    await Api.excluirLancamento(id, excluirProximos);
+    
+    if (excluirProximos) {
       loadTabela();
+    } else {
+      const row = $(`row-${id}`);
+      if (row) {
+        row.style.opacity = '0';
+        row.style.transition = 'opacity 0.3s';
+        setTimeout(() => loadTabela(), 300);
+      } else {
+        loadTabela();
+      }
     }
-    showToast('Lançamento excluído.', 'success');
+    showToast(excluirProximos ? 'Série de lançamentos excluída.' : 'Lançamento excluído.', 'success');
   } catch (err) {
     showToast(err.message, 'error');
   }

@@ -46,6 +46,10 @@ public class Lancamento {
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 
+    private Integer parcelaActual;
+    private Integer totalParcelas;
+    private String grupoId;
+
     @PrePersist
     public void prePersist() {
         this.criadoEm = LocalDateTime.now();
