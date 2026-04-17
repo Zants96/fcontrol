@@ -3,6 +3,7 @@ name: CI Validation
 on:
   pull_request:
     branches: [ "main", "develop", "release" ]
+  workflow_dispatch:
 
 jobs:
   test:
