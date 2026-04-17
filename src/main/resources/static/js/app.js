@@ -288,7 +288,7 @@ async function loadTabela() {
     state.lancamentos = lancamentos;
     renderTabela(lancamentos);
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">⚠️</div><p>${err.message}</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div><p>${err.message}</p></div></td></tr>`;
     showToast(err.message, 'error');
   }
 }
@@ -301,7 +301,7 @@ function renderTabela(lancamentos) {
       <tr>
         <td colspan="4">
           <div class="empty-state">
-            <div class="empty-icon">📭</div>
+            <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div>
             <p>Nenhum lançamento para este mês.<br>Clique em <strong>+ Adicionar</strong> para incluir.</p>
           </div>
         </td>
@@ -322,8 +322,8 @@ function renderTabela(lancamentos) {
         <td class="cell-valor">${fmtCurrency(valor)}</td>
         <td class="col-actions">
           <div class="action-btns">
-            <button class="action-btn action-btn--edit" title="Editar" onclick="openEditModal(${l.id})">✏️</button>
-            <button class="action-btn action-btn--del"  title="Excluir" onclick="excluir(${l.id})">🗑️</button>
+            <button class="action-btn action-btn--edit" title="Editar" onclick="openEditModal(${l.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
+            <button class="action-btn action-btn--del"  title="Excluir" onclick="excluir(${l.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
           </div>
         </td>
       </tr>
@@ -544,7 +544,11 @@ let toastTimer = null;
 
 function showToast(message, type = 'success') {
   const toast = $('toast');
-  toast.textContent = (type === 'success' ? '✅ ' : '❌ ') + message;
+  const icon = type === 'success' 
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><polyline points="20 6 9 17 4 12"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+  
+  toast.innerHTML = icon + `<span>${message}</span>`;
   toast.className = `toast toast--${type}`;
   toast.classList.remove('hidden');
 
