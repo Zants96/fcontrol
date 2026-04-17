@@ -77,7 +77,8 @@ jobs:
       shell: bash
       run: |
         mkdir -p target/jpackage-input
-        cp target/fcontrol-*.jar target/jpackage-input/
+        # Copia o JAR com nome genérico para evitar erro de versão no jpackage
+        cp target/fcontrol-*.jar target/jpackage-input/fcontrol.jar
         $JAVA_HOME/bin/jlink --add-modules java.se,jdk.unsupported,java.management,java.desktop,java.naming,java.sql,java.net.http,java.instrument,java.rmi,java.security.jgss,jdk.crypto.ec,jdk.charsets,jdk.localedata,java.xml,java.management.rmi,jdk.jsobject,jdk.xml.dom,jdk.zipfs,jdk.crypto.cryptoki,jdk.naming.dns --output target/custom-jre --no-header-files --no-man-pages
 
     - name: Run jpackage
@@ -89,14 +90,14 @@ jobs:
           ICON="src/main/resources/static/icon.ico"
         fi
 
-        # Comando base do jpackage usando a versão calculada ou fallback (numérico para evitar erros no macOS)
+        # Comando base do jpackage usando a versão calculada ou fallback
         VERSION=${{ needs.version.outputs.clean_version }}
         if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
 
         $JAVA_HOME/bin/jpackage \
           --input target/jpackage-input \
           --name "FControl" \
-          --main-jar "fcontrol-0.0.1-SNAPSHOT.jar" \
+          --main-jar "fcontrol.jar" \
           --type ${{ matrix.type }} \
           --dest release \
           --app-version "$VERSION" \
