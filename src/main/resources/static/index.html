@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FControl – Controle Financeiro Pessoal</title>
+  <meta name="description" content="Gerencie suas receitas, gastos e assinaturas mensais com visualizações em tempo real." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/resize-observer-polyfill@1.5.1/dist/ResizeObserver.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">₿</div>
+    <span class="logo-text">FControl</span>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="#" class="nav-item active" id="nav-dashboard" data-view="dashboard">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <a href="#" class="nav-item" id="nav-receitas" data-view="receitas">
+      <span class="nav-icon">💰</span>
+      <span class="nav-label">Receitas</span>
+    </a>
+    <a href="#" class="nav-item" id="nav-gastos" data-view="gastos">
+      <span class="nav-icon">💸</span>
+      <span class="nav-label">Gastos</span>
+    </a>
+    <a href="#" class="nav-item" id="nav-gastos-fixos" data-view="gastos-fixos">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Gastos Fixos</span>
+    </a>
+    <a href="#" class="nav-item" id="nav-assinaturas" data-view="assinaturas">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Assinaturas</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-item-row">
+      <label for="select-ano">Ano</label>
+      <select id="select-ano"></select>
+    </div>
+    
+    <div class="sidebar-item-row">
+      <label>Exportar</label>
+      <div class="export-btns">
+        <button class="btn-export" id="btn-export-csv" title="Exportar Planilha CSV">CSV</button>
+        <button class="btn-export" id="btn-export-pdf" title="Exportar Relatório PDF">PDF</button>
+      </div>
+    </div>
+    <hr>
+    <div class="sidebar-copyright">
+      &copy; 2026 Leandro Lesnik
+      <button class="btn-apoiar" id="btn-open-pix">❤ Apoiar</button>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN CONTENT ═══════════════════════════════════════════════════════ -->
+<main class="main-content">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="menu-toggle" id="menu-toggle">☰</button>
+      <h1 class="page-title" id="page-title">Dashboard</h1>
+    </div>
+    <div class="topbar-right">
+      <div class="current-date" id="current-date"></div>
+    </div>
+  </header>
+
+  <!-- ─── VIEW: DASHBOARD ──────────────────────────────────────────────── -->
+  <section class="view" id="view-dashboard">
+
+    <!-- Summary Cards -->
+    <div class="cards-grid" id="dashboard-cards">
+      <div class="card card--green">
+        <div class="card-label">Receitas Anuais</div>
+        <div class="card-value" id="card-receitas">R$ 0,00</div>
+        <div class="card-sub" id="card-receitas-sub">carregando...</div>
+      </div>
+      <div class="card card--red">
+        <div class="card-label">Gastos Anuais</div>
+        <div class="card-value" id="card-gastos">R$ 0,00</div>
+        <div class="card-sub" id="card-gastos-sub">carregando...</div>
+      </div>
+      <div class="card card--purple">
+        <div class="card-label">Assinaturas Anuais</div>
+        <div class="card-value" id="card-assinaturas">R$ 0,00</div>
+        <div class="card-sub" id="card-assinaturas-sub">carregando...</div>
+      </div>
+      <div class="card card--blue">
+        <div class="card-label">Saldo Anual</div>
+        <div class="card-value" id="card-saldo">R$ 0,00</div>
+        <div class="card-sub" id="card-saldo-sub">carregando...</div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="charts-row">
+      <div class="chart-card chart-card--wide">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Receitas vs Gastos por Mês</h2>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="chart-bar"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Distribuição de Gastos</h2>
+        </div>
+        <div class="chart-wrapper chart-wrapper--donut">
+          <canvas id="chart-donut"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Saldo Line Chart + Top Gastos -->
+    <div class="charts-row">
+      <div class="chart-card chart-card--wide">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Evolução do Saldo Mensal</h2>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="chart-line"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Top 5 Maiores Gastos</h2>
+        </div>
+        <div class="top-list" id="top-gastos"></div>
+      </div>
+    </div>
+
+    <!-- ─── DASHBOARD MENSAL ─────────────────────────────────────────── -->
+    <div class="section-divider">
+      <div class="section-divider-line"></div>
+      <div class="section-divider-title">
+        <span>📅 Resumo Mensal</span>
+        <select id="select-dash-mes" class="select-dash-mes"></select>
+      </div>
+      <div class="section-divider-line"></div>
+    </div>
+
+    <!-- Monthly Summary Cards -->
+    <div class="cards-grid" id="monthly-cards">
+      <div class="card card--green">
+        <div class="card-label">Receitas do Mês</div>
+        <div class="card-value" id="card-m-receitas">R$ 0,00</div>
+      </div>
+      <div class="card card--red">
+        <div class="card-label">Gastos do Mês</div>
+        <div class="card-value" id="card-m-gastos">R$ 0,00</div>
+      </div>
+      <div class="card card--purple">
+        <div class="card-label">Assinaturas do Mês</div>
+        <div class="card-value" id="card-m-assinaturas">R$ 0,00</div>
+      </div>
+      <div class="card card--blue">
+        <div class="card-label">Saldo do Mês</div>
+        <div class="card-value" id="card-m-saldo">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- Monthly Charts Row -->
+    <div class="charts-row">
+      <div class="chart-card chart-card--wide">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Distribuição de Gastos do Mês</h2>
+        </div>
+        <div class="chart-wrapper chart-wrapper--donut">
+          <canvas id="chart-donut-monthly"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Top 5 Gastos do Mês</h2>
+        </div>
+        <div class="top-list" id="top-gastos-monthly"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ─── VIEW: RECEITAS / GASTOS / ASSINATURAS ────────────────────────── -->
+  <section class="view hidden" id="view-tabela">
+
+    <!-- Toolbar -->
+    <div class="table-toolbar">
+      <div class="month-tabs" id="month-tabs"></div>
+      <button class="btn btn--primary" id="btn-add-row">+ Adicionar</button>
+    </div>
+
+    <!-- Table Area -->
+    <div class="table-container">
+      <table class="data-table" id="data-table">
+        <thead>
+          <tr>
+            <th>Subcategoria</th>
+            <th>Descrição</th>
+            <th>Valor (R$)</th>
+            <th class="col-actions">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+        <tfoot>
+          <tr class="totals-row">
+            <td colspan="2"><strong>Total do Mês</strong></td>
+            <td id="table-total"><strong>R$ 0,00</strong></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- ═══ MODAL: ADD/EDIT LANÇAMENTO ════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-overlay">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Novo Lançamento</h2>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <form id="lancamento-form">
+      <input type="hidden" id="form-id" />
+
+      <div class="form-group">
+        <label for="form-subcategoria">Subcategoria</label>
+        <select id="form-subcategoria" required></select>
+      </div>
+
+      <div class="form-group">
+        <label for="form-descricao">Descrição (opcional)</label>
+        <input type="text" id="form-descricao" placeholder="Observação adicional..." />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="form-valor">Valor (R$)</label>
+          <input type="number" id="form-valor" placeholder="0,00" min="0" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label for="form-mes">Mês</label>
+          <select id="form-mes" required>
+            <option value="1">Janeiro</option>
+            <option value="2">Fevereiro</option>
+            <option value="3">Março</option>
+            <option value="4">Abril</option>
+            <option value="5">Maio</option>
+            <option value="6">Junho</option>
+            <option value="7">Julho</option>
+            <option value="8">Agosto</option>
+            <option value="9">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="form-categoria">Categoria</label>
+        <select id="form-categoria" required>
+          <option value="RECEITA">Receita</option>
+          <option value="GASTO">Gasto</option>
+          <option value="GASTO_FIXO">Gasto Fixo</option>
+          <option value="ASSINATURA">Assinatura</option>
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn--secondary" id="btn-cancel">Cancelar</button>
+        <button type="submit" class="btn btn--primary" id="btn-save">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ MODAL: PIX ═════════════════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-pix-overlay">
+  <div class="modal modal-pix">
+    <div class="modal-header">
+      <h2 class="modal-title">Obrigado pelo apoio ❤!</h2>
+      <button class="modal-close" id="modal-pix-close">✕</button>
+    </div>
+    <div class="modal-body pix-body">
+      <p style="text-align: center; margin-bottom: 1rem; color: var(--text-secondary);">Gostou do <b>FControl</b>? Ajude com uma doação PIX!</p>
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <img src="pix.png" alt="QR Code PIX" style="width: 200px; border-radius: var(--radius); border: 2px solid var(--border);">
+      </div>
+      <div class="pix-key-box" style="display: flex; gap: 0.5rem; justify-content: center; align-items: center; background: var(--bg-hover); padding: 0.75rem; border-radius: var(--radius-sm);">
+        <span id="pix-key" style="font-family: monospace; color: var(--brand-glow); font-size: 0.9rem;">leandrolesnik@hotmail.com</span>
+        <button class="btn btn--primary" id="btn-copy-pix" style="padding: 0.2rem 0.6rem; font-size: 0.8rem;">Copiar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TOAST NOTIFICATION ════════════════════════════════════════════════ -->
+<div class="toast hidden" id="toast"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/charts.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

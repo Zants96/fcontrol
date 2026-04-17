@@ -1,13 +1,13 @@
 package br.com.lesnik.fcontrol;
 
-import org.springframework.boot.SpringApplication;
+import javafx.application.Application;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
 public class FcontrolApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(FcontrolApplication.class, args);
+		// Encaminhando a execução prioritária para a Window do Desktop
+		Application.launch(FControlDesktopApp.class, args);
 	}
-
 }

@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### FControl Custom ###
+*.mv.db
+*.trace.db
+release/
+*.rpm
+*.deb
+bin/
