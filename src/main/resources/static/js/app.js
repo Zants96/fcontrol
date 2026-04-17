@@ -593,22 +593,24 @@ async function handleExportBackup() {
     const res = await fetch('/api/backup/export');
     if (!res.ok) throw new Error('Falha ao exportar banco de dados.');
     
+    const fileName = `fcontrol_backup_${new Date().toISOString().split('T')[0]}.sql`;
+    
     // Tratamento para ambiente JavaFX com WebEngine
     if (window.javaBridge) {
-      // Como o blob não é bem suportado para salvamento direto no WebEngine antigo, 
-      // precisaremos testar isso. Caso falhe, podemos ter que criar uma rota na ponte Java.
-      // Vou manter o fallback básico padrão.
+      window.javaBridge.saveFile('/api/backup/export', fileName);
+      showToast('O explorador de arquivos será aberto.');
+      return;
     }
 
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `fcontrol_backup_${new Date().toISOString().split('T')[0]}.sql`;
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    showToast('Backup exportado com sucesso!');
+    showToast('Backup exportado com sucesso (Verifique seus downloads)');
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
