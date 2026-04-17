@@ -2,14 +2,15 @@ name: Build and Release Multi-Platform Installers
 
 on:
   push:
-    branches: [ "main", "release" ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
   version:
     name: Calculate Next Version
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       new_tag: ${{ steps.tag_action.outputs.new_tag }}
       clean_version: ${{ steps.tag_action.outputs.new_version }}
@@ -24,12 +25,11 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
-          initial_version: 1.0.0
 
   build:
     name: Build ${{ matrix.target }}
     needs: version
-    if: always() && (needs.version.result == 'success' || needs.version.result == 'skipped')
+    if: always() && (needs.version.result == 'success' || (github.event_name == 'workflow_dispatch' && needs.version.result == 'skipped'))
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -109,7 +109,6 @@ jobs:
   release:
     name: Create GitHub Release
     needs: [version, build]
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
