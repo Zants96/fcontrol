@@ -66,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initModal();
   initMenuToggle();
   initExport();
+  initBackup();
   initMonthlyDashboard();
   navigateTo('dashboard');
 });
@@ -118,15 +119,19 @@ function navigateTo(view) {
     gastos:          'Gastos',
     'gastos-fixos':  'Gastos Fixos',
     assinaturas:     'Assinaturas',
+    configuracoes:   'Configurações',
   };
   $('page-title').textContent = titles[view] || view;
 
   $('view-dashboard').classList.add('hidden');
   $('view-tabela').classList.add('hidden');
+  $('view-configuracoes')?.classList.add('hidden');
 
   if (view === 'dashboard') {
     $('view-dashboard').classList.remove('hidden');
     loadDashboard();
+  } else if (view === 'configuracoes') {
+    $('view-configuracoes')?.classList.remove('hidden');
   } else {
     state.categoria = CATEGORIA_VIEW[view];
     $('view-tabela').classList.remove('hidden');
@@ -569,4 +574,92 @@ function escHtml(str) {
   return String(str || '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
   );
+}
+
+// ─── BACKUP E RESTAURAÇÃO ─────────────────────────────────────────────────────
+function initBackup() {
+  $('btn-export-backup')?.addEventListener('click', handleExportBackup);
+  $('btn-import-backup')?.addEventListener('click', () => {
+    if (window.javaBridge) {
+        window.javaBridge.importFile();
+    } else {
+        $('file-import-backup').click();
+    }
+  });
+  $('file-import-backup')?.addEventListener('change', handleImportBackup);
+}
+
+async function handleExportBackup() {
+  const btn = $('btn-export-backup');
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = 'Gerando backup...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/backup/export');
+    if (!res.ok) throw new Error('Falha ao exportar banco de dados.');
+    
+    const fileName = `fcontrol_backup_${new Date().toISOString().split('T')[0]}.sql`;
+    
+    // Tratamento para ambiente JavaFX com WebEngine
+    if (window.javaBridge) {
+      window.javaBridge.saveFile('/api/backup/export', fileName);
+      showToast('O explorador de arquivos será aberto.');
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast('Backup exportado com sucesso (Verifique seus downloads)');
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }
+}
+
+async function handleImportBackup(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (!confirm('ATENÇÃO: A restauração substituirá TODOS os dados atuais. Deseja continuar?')) {
+    e.target.value = '';
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const btn = $('btn-import-backup');
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = 'Restaurando...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/backup/import', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || 'Falha ao restaurar banco.');
+    }
+    
+    showToast('Backup restaurado! Recarregando sistema...');
+    setTimeout(() => location.reload(), 1500);
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    e.target.value = '';
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }
 }
