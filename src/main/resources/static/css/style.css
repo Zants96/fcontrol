@@ -165,7 +165,14 @@ select option { background: var(--bg-elevated); }
   border-radius: 0 2px 2px 0;
 }
 
-.nav-icon { font-size: 1.1rem; }
+.nav-icon { 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+}
+.nav-icon svg { width: 100%; height: 100%; }
 
 .sidebar-footer {
   padding: 1rem 1.25rem;
@@ -640,9 +647,11 @@ select option { background: var(--bg-elevated); }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.875rem;
   transition: all 0.15s;
 }
+.action-btn svg { width: 16px; height: 16px; }
+
+.logo-icon svg { width: 24px; height: 24px; color: #fff; }
 
 .action-btn--edit { background: rgba(96,165,250,0.1); color: var(--accent-blue); }
 .action-btn--edit:hover { background: rgba(96,165,250,0.25); }
