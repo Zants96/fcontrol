@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -50,8 +51,37 @@ public class LancamentoService {
 
     @Transactional
     public LancamentoDTO criar(LancamentoDTO dto) {
-        Lancamento lancamento = toEntity(dto);
-        return toDTO(repository.save(lancamento));
+        int parcelas = dto.getParcelas() != null && dto.getParcelas() > 1 ? dto.getParcelas() : 1;
+        String grupoId = parcelas > 1 ? UUID.randomUUID().toString() : null;
+        Lancamento first = null;
+
+        int currentMes = dto.getMes();
+        int currentAno = dto.getAno();
+
+        String baseDesc = limparDescricao(dto.getDescricao());
+        for (int i = 0; i < parcelas; i++) {
+            Lancamento l = toEntity(dto);
+            l.setMes(currentMes);
+            l.setAno(currentAno);
+            
+            if (parcelas > 1) {
+                l.setDescricao(baseDesc + " (" + (i + 1) + "/" + parcelas + ")");
+                l.setGrupoId(grupoId);
+                l.setParcelaActual(i + 1);
+                l.setTotalParcelas(parcelas);
+            }
+
+            Lancamento saved = repository.save(l);
+            if (i == 0) first = saved;
+
+            currentMes++;
+            if (currentMes > 12) {
+                currentMes = 1;
+                currentAno++;
+            }
+        }
+
+        return toDTO(first != null ? first : repository.save(toEntity(dto)));
     }
 
     @Transactional
@@ -59,22 +89,92 @@ public class LancamentoService {
         Lancamento lancamento = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Lançamento não encontrado: " + id));
 
-        lancamento.setDescricao(dto.getDescricao());
+        int originalTotal = lancamento.getTotalParcelas() != null ? lancamento.getTotalParcelas() : 1;
+        int novoTotal = dto.getParcelas() != null ? dto.getParcelas() : originalTotal;
+        String grupoId = lancamento.getGrupoId();
+        String originalBaseDesc = limparDescricao(lancamento.getDescricao());
+
+        // 1. Atualiza o registro atual e limpa descrição se for grupo
+        String baseDesc = limparDescricao(dto.getDescricao());
+        lancamento.setDescricao(grupoId != null ? baseDesc + " (" + (lancamento.getParcelaActual() != null ? lancamento.getParcelaActual() : 1) + "/" + novoTotal + ")" : dto.getDescricao());
         lancamento.setCategoria(dto.getCategoria());
         lancamento.setSubcategoria(dto.getSubcategoria());
         lancamento.setValor(dto.getValor());
         lancamento.setMes(dto.getMes());
         lancamento.setAno(dto.getAno());
 
+        // Se o total mudou ou a descrição base mudou, e é (ou se tornou) um grupo
+        if (novoTotal != originalTotal || (grupoId != null && !baseDesc.equals(originalBaseDesc))) {
+            if (grupoId == null && novoTotal > 1) {
+                grupoId = UUID.randomUUID().toString();
+                lancamento.setGrupoId(grupoId);
+                lancamento.setParcelaActual(1);
+                lancamento.setTotalParcelas(novoTotal);
+            }
+
+            if (grupoId != null) {
+                lancamento.setTotalParcelas(novoTotal);
+
+                if (novoTotal < originalTotal) {
+                    // Diminuir: Remove excedentes
+                    repository.deleteByGrupoIdAndParcelaActualGreaterThan(grupoId, novoTotal);
+                } else if (novoTotal > originalTotal) {
+                    // Aumentar: Cria novos registros baseados na parcela atual
+                    int parcelasParaCriar = novoTotal - originalTotal;
+                    
+                    // Descobrir qual a última parcela para continuar
+                    List<Lancamento> grupoAtual = repository.findByGrupoId(grupoId);
+                    int ultimaParcelaExistente = grupoAtual.stream()
+                            .mapToInt(l -> l.getParcelaActual() != null ? l.getParcelaActual() : 0)
+                            .max().orElse(originalTotal);
+
+                    int pActual = lancamento.getParcelaActual() != null ? lancamento.getParcelaActual() : 1;
+                    LocalDate baseDate = LocalDate.of(lancamento.getAno(), lancamento.getMes(), 1);
+
+                    for (int i = 0; i < parcelasParaCriar; i++) {
+                        int nParcela = ultimaParcelaExistente + i + 1;
+                        // Calcula a data da nova parcela proporcionalmente à parcela atual que está sendo editada
+                        // Ex: se edito a parcela 3 (Março) e quero criar a 6, adiciono 3 meses (6-3)
+                        LocalDate nextDate = baseDate.plusMonths(nParcela - pActual);
+
+                        Lancamento nova = toEntity(dto);
+                        nova.setGrupoId(grupoId);
+                        nova.setParcelaActual(nParcela);
+                        nova.setTotalParcelas(novoTotal);
+                        nova.setMes(nextDate.getMonthValue());
+                        nova.setAno(nextDate.getYear());
+                        nova.setDescricao(baseDesc + " (" + nParcela + "/" + novoTotal + ")");
+                        repository.save(nova);
+                    }
+                }
+
+                // Atualiza o totalParcelas e descrição de todos os outros membros do grupo (pós aumento ou redução)
+                List<Lancamento> grupoFinal = repository.findByGrupoId(grupoId);
+                for (Lancamento l : grupoFinal) {
+                    if (!l.getId().equals(lancamento.getId())) {
+                        l.setTotalParcelas(novoTotal);
+                        l.setDescricao(baseDesc + " (" + l.getParcelaActual() + "/" + novoTotal + ")");
+                    }
+                }
+            }
+        }
+
         return toDTO(repository.save(lancamento));
     }
 
     @Transactional
-    public void excluir(Long id) {
-        if (!repository.existsById(id)) {
-            throw new NoSuchElementException("Lançamento não encontrado: " + id);
+    public void excluir(Long id, boolean excluirProximos) {
+        Lancamento lancamento = repository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Lançamento não encontrado: " + id));
+
+        if (excluirProximos && lancamento.getGrupoId() != null && lancamento.getParcelaActual() != null) {
+            repository.deleteByGrupoIdAndParcelaActualGreaterThanEqual(
+                    lancamento.getGrupoId(),
+                    lancamento.getParcelaActual()
+            );
+        } else {
+            repository.deleteById(id);
         }
-        repository.deleteById(id);
     }
 
     // ─── DASHBOARD ───────────────────────────────────────────────────────────
@@ -150,6 +250,9 @@ public class LancamentoService {
                 .valor(l.getValor())
                 .mes(l.getMes())
                 .ano(l.getAno())
+                .parcelaActual(l.getParcelaActual())
+                .totalParcelas(l.getTotalParcelas())
+                .grupoId(l.getGrupoId())
                 .build();
     }
 
@@ -161,6 +264,15 @@ public class LancamentoService {
                 .valor(dto.getValor())
                 .mes(dto.getMes())
                 .ano(dto.getAno())
+                .parcelaActual(dto.getParcelaActual())
+                .totalParcelas(dto.getTotalParcelas())
+                .grupoId(dto.getGrupoId())
                 .build();
+    }
+
+    private String limparDescricao(String desc) {
+        if (desc == null) return null;
+        // Remove um ou mais sufixos (X/Y) acumulados e espaços extras
+        return desc.trim().replaceAll("(\\s*\\(\\d+/\\d+\\))+$", "").trim();
     }
 }
