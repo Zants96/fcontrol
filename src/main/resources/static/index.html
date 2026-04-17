@@ -77,12 +77,13 @@
     </div>
     <hr>
     <div class="sidebar-copyright">
-      &copy; 2026 Leandro Lesnik
+      &copy;2026 Leandro Lesnik
       <button class="btn-apoiar" id="btn-open-pix">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
         Apoiar
       </button>
     </div>
+    <div class="app-version">v@project.version@</div>
   </div>
 </aside>
 
@@ -354,8 +355,9 @@
         <img src="pix.png" alt="QR Code PIX" style="width: 200px; border-radius: var(--radius); border: 2px solid var(--border);">
       </div>
       <div class="pix-key-box" style="display: flex; gap: 0.5rem; justify-content: center; align-items: center; background: var(--bg-hover); padding: 0.75rem; border-radius: var(--radius-sm);">
-        <span id="pix-key" style="font-family: monospace; color: var(--brand-glow); font-size: 0.9rem;">leandrolesnik@hotmail.com</span>
-        <button class="btn btn--primary" id="btn-copy-pix" style="padding: 0.2rem 0.6rem; font-size: 0.8rem;">Copiar</button>
+        <button class="btn btn--primary" id="btn-copy-pix" data-key="leandrolesnik@hotmail.com" style="padding: 0.6rem 1.25rem; font-size: 0.9rem; width: 100%; justify-content: center;">
+          Copiar chave PIX
+        </button>
       </div>
     </div>
   </div>
