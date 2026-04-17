@@ -4,8 +4,10 @@ on:
   push:
     branches:
       - "feat/*"
+      - "feature/*"
       - develop
       - release
+  workflow_dispatch:
 
 jobs:
   create-pr:
