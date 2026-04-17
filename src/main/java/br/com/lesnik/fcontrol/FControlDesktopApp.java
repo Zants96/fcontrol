@@ -15,6 +15,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
 
 public class FControlDesktopApp extends Application {
 
