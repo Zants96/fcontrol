@@ -291,4 +291,33 @@ class LancamentoServiceTest {
         assertThat(p1.getDescricao()).isEqualTo("Academia (1/5)");
         assertThat(p1.getTotalParcelas()).isEqualTo(5);
     }
+
+    @Test
+    @DisplayName("Deve deslocar as datas de todo o grupo quando a data de uma parcela é alterada")
+    void testAtualizarDataGrupoDeslocaTodoOGrupo() {
+        String grupoId = "grupo-datas";
+        // Grupo original: Junho (mês 6), Julho (mês 7), Agosto (mês 8)
+        Lancamento p1 = Lancamento.builder().id(1L).parcelaActual(1).totalParcelas(3).grupoId(grupoId).mes(6).ano(2024).categoria(Categoria.GASTO).subcategoria("S").build();
+        Lancamento p2 = Lancamento.builder().id(2L).parcelaActual(2).totalParcelas(3).grupoId(grupoId).mes(7).ano(2024).categoria(Categoria.GASTO).subcategoria("S").build();
+        Lancamento p3 = Lancamento.builder().id(3L).parcelaActual(3).totalParcelas(3).grupoId(grupoId).mes(8).ano(2024).categoria(Categoria.GASTO).subcategoria("S").build();
+
+        // Editando P2 para Junho (mês 6) -> Antecipando 1 mês
+        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+                .descricao("Internet").categoria(Categoria.GASTO).subcategoria("S").valor(new BigDecimal("100"))
+                .mes(6).ano(2024).parcelas(3)
+                .build();
+
+        when(repository.findById(2L)).thenReturn(java.util.Optional.of(p2));
+        when(repository.findByGrupoId(grupoId)).thenReturn(Arrays.asList(p1, p2, p3));
+        when(repository.save(any(Lancamento.class))).thenAnswer(i -> i.getArgument(0));
+
+        service.atualizar(2L, dto);
+
+        // P1 deve ter ido para Maio (6 - 1)
+        assertThat(p1.getMes()).isEqualTo(5);
+        // P2 deve estar em Junho (conforme o DTO)
+        assertThat(p2.getMes()).isEqualTo(6);
+        // P3 deve ter ido para Julho (6 + 1)
+        assertThat(p3.getMes()).isEqualTo(7);
+    }
 }

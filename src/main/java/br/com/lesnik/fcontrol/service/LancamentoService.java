@@ -103,8 +103,11 @@ public class LancamentoService {
         lancamento.setMes(dto.getMes());
         lancamento.setAno(dto.getAno());
 
-        // Se o total mudou ou a descrição base mudou, e é (ou se tornou) um grupo
-        if (novoTotal != originalTotal || (grupoId != null && !baseDesc.equals(originalBaseDesc))) {
+        // Se o total mudou, a descrição base mudou, a data mudou ou categorias mudaram, e é um grupo
+        boolean dataMudou = dto.getMes() != lancamento.getMes() || dto.getAno() != lancamento.getAno();
+        boolean categoriasMudaram = !dto.getCategoria().equals(lancamento.getCategoria()) || !java.util.Objects.equals(dto.getSubcategoria(), lancamento.getSubcategoria());
+
+        if (novoTotal != originalTotal || (grupoId != null && (!baseDesc.equals(originalBaseDesc) || dataMudou || categoriasMudaram))) {
             if (grupoId == null && novoTotal > 1) {
                 grupoId = UUID.randomUUID().toString();
                 lancamento.setGrupoId(grupoId);
@@ -119,10 +122,8 @@ public class LancamentoService {
                     // Diminuir: Remove excedentes
                     repository.deleteByGrupoIdAndParcelaActualGreaterThan(grupoId, novoTotal);
                 } else if (novoTotal > originalTotal) {
-                    // Aumentar: Cria novos registros baseados na parcela atual
+                    // Aumentar: Cria novos registros baseados na parcela atual (já usa a lógica de âncora)
                     int parcelasParaCriar = novoTotal - originalTotal;
-                    
-                    // Descobrir qual a última parcela para continuar
                     List<Lancamento> grupoAtual = repository.findByGrupoId(grupoId);
                     int ultimaParcelaExistente = grupoAtual.stream()
                             .mapToInt(l -> l.getParcelaActual() != null ? l.getParcelaActual() : 0)
@@ -133,8 +134,6 @@ public class LancamentoService {
 
                     for (int i = 0; i < parcelasParaCriar; i++) {
                         int nParcela = ultimaParcelaExistente + i + 1;
-                        // Calcula a data da nova parcela proporcionalmente à parcela atual que está sendo editada
-                        // Ex: se edito a parcela 3 (Março) e quero criar a 6, adiciono 3 meses (6-3)
                         LocalDate nextDate = baseDate.plusMonths(nParcela - pActual);
 
                         Lancamento nova = toEntity(dto);
@@ -148,12 +147,24 @@ public class LancamentoService {
                     }
                 }
 
-                // Atualiza o totalParcelas e descrição de todos os outros membros do grupo (pós aumento ou redução)
+                // SINCRONIZAÇÃO GERAL DO GRUPO (Datas, Descrições, Categorias)
+                LocalDate dataAncora = LocalDate.of(lancamento.getAno(), lancamento.getMes(), 1);
+                int indexAncora = lancamento.getParcelaActual() != null ? lancamento.getParcelaActual() : 1;
+
                 List<Lancamento> grupoFinal = repository.findByGrupoId(grupoId);
                 for (Lancamento l : grupoFinal) {
                     if (!l.getId().equals(lancamento.getId())) {
+                        // Sincroniza Metadados
                         l.setTotalParcelas(novoTotal);
+                        l.setCategoria(dto.getCategoria());
+                        l.setSubcategoria(dto.getSubcategoria());
                         l.setDescricao(baseDesc + " (" + l.getParcelaActual() + "/" + novoTotal + ")");
+                        
+                        // Sincroniza Datas (Mantendo o intervalo mensal relativo à âncora)
+                        int offset = l.getParcelaActual() - indexAncora;
+                        LocalDate novaData = dataAncora.plusMonths(offset);
+                        l.setMes(novaData.getMonthValue());
+                        l.setAno(novaData.getYear());
                     }
                 }
             }
