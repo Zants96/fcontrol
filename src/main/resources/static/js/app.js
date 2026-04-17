@@ -390,6 +390,7 @@ function initModal() {
   $('modal-pix-overlay').addEventListener('click', e => {
     if (e.target === $('modal-pix-overlay')) $('modal-pix-overlay').classList.add('hidden');
   });
+  $('btn-copy-pix').addEventListener('click', () => {
     const key = $('pix-key').textContent;
     // Fallback para navegadores que não suportam navigator.clipboard (ou contextos não-seguros)
     if (navigator.clipboard && window.isSecureContext) {
@@ -405,6 +406,7 @@ function initModal() {
       document.body.removeChild(ta);
       showToast('Chave PIX copiada!');
     }
+  });
 
 
   // Máscara de Moeda (Real PT-BR)
