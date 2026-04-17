@@ -579,7 +579,13 @@ function escHtml(str) {
 // ─── BACKUP E RESTAURAÇÃO ─────────────────────────────────────────────────────
 function initBackup() {
   $('btn-export-backup')?.addEventListener('click', handleExportBackup);
-  $('btn-import-backup')?.addEventListener('click', () => $('file-import-backup').click());
+  $('btn-import-backup')?.addEventListener('click', () => {
+    if (window.javaBridge) {
+        window.javaBridge.importFile();
+    } else {
+        $('file-import-backup').click();
+    }
+  });
   $('file-import-backup')?.addEventListener('change', handleImportBackup);
 }
 

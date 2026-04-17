@@ -66,18 +66,95 @@ public class FControlDesktopApp extends Application {
                     conn.disconnect();
 
                     // Notifica o JS que o download foi concluído
-                    primaryStage.getScene().lookup("WebView");
-                    WebView wv = (WebView) primaryStage.getScene().getRoot().getChildrenUnmodifiable().get(0);
+                    WebView wv = (WebView) primaryStage.getScene().lookup("#main-view"); 
+                    if (wv == null) wv = findWebView(primaryStage.getScene().getRoot());
                     wv.getEngine().executeScript("showToast('Arquivo salvo com sucesso!')");
 
                 } catch (Exception e) {
                     e.printStackTrace();
-                    try {
-                        WebView wv = (WebView) primaryStage.getScene().getRoot().getChildrenUnmodifiable().get(0);
-                        wv.getEngine().executeScript("showToast('Erro ao salvar: " + e.getMessage().replace("'", "") + "', 'error')");
-                    } catch (Exception ignored) {}
+                    showErrorInJs("Erro ao salvar: " + e.getMessage());
                 }
             });
+        }
+
+        public void importFile() {
+            Platform.runLater(() -> {
+                try {
+                    FileChooser fileChooser = new FileChooser();
+                    fileChooser.setTitle("Selecionar Backup para Restaurar");
+                    fileChooser.getExtensionFilters().add(
+                        new FileChooser.ExtensionFilter("Backup do FControl (*.sql)", "*.sql")
+                    );
+
+                    File file = fileChooser.showOpenDialog(primaryStage);
+                    if (file == null) return; // Usuário cancelou
+
+                    // Confirmar acao no Java para garantir seguranca extra
+                    javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(
+                        javafx.scene.control.Alert.AlertType.WARNING,
+                        "ATENÇÃO: A restauração substituirá TODOS os dados atuais.\n\nArquivo: " + file.getName() + "\n\nDeseja continuar?",
+                        javafx.scene.control.ButtonType.YES, javafx.scene.control.ButtonType.NO
+                    );
+                    confirm.setTitle("Confirmação de Restauração");
+                    confirm.setHeaderText(null);
+                    confirm.showAndWait();
+
+                    if (confirm.getResult() != javafx.scene.control.ButtonType.YES) return;
+
+                    // Realiza o upload via POST multipart manual (HttpClient Nativo Java 11+)
+                    String boundary = "---" + System.currentTimeMillis();
+                    java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
+                    java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                            .uri(java.net.URI.create("http://localhost:8085/api/backup/import"))
+                            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                            .POST(createMultipartBody(file, boundary))
+                            .build();
+
+                    java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+
+                    if (response.statusCode() == 200) {
+                        WebView wv = findWebView(primaryStage.getScene().getRoot());
+                        wv.getEngine().executeScript("showToast('Backup restaurado! Recarregando...'); setTimeout(() => location.reload(), 1500);");
+                    } else {
+                        showErrorInJs("Falha na restauração: " + response.body());
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    showErrorInJs("Erro durante a importação: " + e.getMessage());
+                }
+            });
+        }
+
+        private java.net.http.HttpRequest.BodyPublisher createMultipartBody(File file, String boundary) throws IOException {
+            byte[] fileBytes = Files.readAllBytes(file.toPath());
+            byte[] prefix = ("--" + boundary + "\r\n" +
+                            "Content-Disposition: form-data; name=\"file\"; filename=\"" + file.getName() + "\"\r\n" +
+                            "Content-Type: application/octet-stream\r\n\r\n").getBytes();
+            byte[] suffix = ("\r\n--" + boundary + "--\r\n").getBytes();
+            
+            byte[] total = new byte[prefix.length + fileBytes.length + suffix.length];
+            System.arraycopy(prefix, 0, total, 0, prefix.length);
+            System.arraycopy(fileBytes, 0, total, prefix.length, fileBytes.length);
+            System.arraycopy(suffix, 0, total, prefix.length + fileBytes.length, suffix.length);
+            
+            return java.net.http.HttpRequest.BodyPublishers.ofByteArray(total);
+        }
+
+        private void showErrorInJs(String msg) {
+            try {
+                WebView wv = findWebView(primaryStage.getScene().getRoot());
+                wv.getEngine().executeScript("showToast('" + msg.replace("'", "") + "', 'error')");
+            } catch (Exception ignored) {}
+        }
+
+        private WebView findWebView(javafx.scene.Parent root) {
+            if (root instanceof StackPane) {
+                for (javafx.scene.Node node : ((StackPane) root).getChildren()) {
+                    if (node instanceof WebView) return (WebView) node;
+                }
+            }
+            return null; // Caso nao ache
         }
     }
 
