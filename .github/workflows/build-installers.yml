@@ -82,9 +82,9 @@ jobs:
           ICON="src/main/resources/static/icon.ico"
         fi
 
-        # Comando base do jpackage usando a versão calculada ou fallback
+        # Comando base do jpackage usando a versão calculada ou fallback (numérico para evitar erros no macOS)
         VERSION=${{ needs.version.outputs.clean_version }}
-        if [ -z "$VERSION" ]; then VERSION="1.0.0-rc"; fi
+        if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
 
         $JAVA_HOME/bin/jpackage \
           --input target/jpackage-input \
