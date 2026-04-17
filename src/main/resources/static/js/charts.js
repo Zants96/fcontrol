@@ -334,7 +334,6 @@ async function renderMonthlyDashboard(data, mes) {
   
   const saldoEl = document.getElementById('card-m-saldo');
   saldoEl.textContent = fmtCurrency(saldo);
-  saldoEl.style.color = saldo >= 0 ? '#10b981' : '#f87171';
 
   // Buscar lançamentos do mês para montar o donut e top 5
   try {
