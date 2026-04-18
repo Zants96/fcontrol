@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class LancamentoService {
 
     private final LancamentoRepository repository;
@@ -94,8 +95,12 @@ public class LancamentoService {
         String grupoId = lancamento.getGrupoId();
         String originalBaseDesc = limparDescricao(lancamento.getDescricao());
 
-        // 1. Atualiza o registro atual e limpa descrição se for grupo
+        // 1. Detecta mudanças ANTES de aplicar na entidade
+        boolean dataMudou = dto.getMes() != lancamento.getMes() || dto.getAno() != lancamento.getAno();
+        boolean categoriasMudaram = !dto.getCategoria().equals(lancamento.getCategoria()) || !java.util.Objects.equals(dto.getSubcategoria(), lancamento.getSubcategoria());
         String baseDesc = limparDescricao(dto.getDescricao());
+
+        // 2. Atualiza o registro atual
         lancamento.setDescricao(grupoId != null ? baseDesc + " (" + (lancamento.getParcelaActual() != null ? lancamento.getParcelaActual() : 1) + "/" + novoTotal + ")" : dto.getDescricao());
         lancamento.setCategoria(dto.getCategoria());
         lancamento.setSubcategoria(dto.getSubcategoria());
@@ -104,9 +109,6 @@ public class LancamentoService {
         lancamento.setAno(dto.getAno());
 
         // Se o total mudou, a descrição base mudou, a data mudou ou categorias mudaram, e é um grupo
-        boolean dataMudou = dto.getMes() != lancamento.getMes() || dto.getAno() != lancamento.getAno();
-        boolean categoriasMudaram = !dto.getCategoria().equals(lancamento.getCategoria()) || !java.util.Objects.equals(dto.getSubcategoria(), lancamento.getSubcategoria());
-
         if (novoTotal != originalTotal || (grupoId != null && (!baseDesc.equals(originalBaseDesc) || dataMudou || categoriasMudaram))) {
             if (grupoId == null && novoTotal > 1) {
                 grupoId = UUID.randomUUID().toString();
@@ -148,6 +150,9 @@ public class LancamentoService {
                 }
 
                 // SINCRONIZAÇÃO GERAL DO GRUPO (Datas, Descrições, Categorias)
+                // SINCRONIZAÇÃO GERAL DO GRUPO (Datas, Descrições, Categorias)
+                log.info("Sincronizando grupo {}. Âncora: parcela {} em {}/{}", grupoId, lancamento.getParcelaActual(), lancamento.getMes(), lancamento.getAno());
+                
                 LocalDate dataAncora = LocalDate.of(lancamento.getAno(), lancamento.getMes(), 1);
                 int indexAncora = lancamento.getParcelaActual() != null ? lancamento.getParcelaActual() : 1;
 
@@ -163,8 +168,13 @@ public class LancamentoService {
                         // Sincroniza Datas (Mantendo o intervalo mensal relativo à âncora)
                         int offset = l.getParcelaActual() - indexAncora;
                         LocalDate novaData = dataAncora.plusMonths(offset);
+                        
+                        log.debug("Parcela {} deslocada: {}/{} -> {}/{}", l.getParcelaActual(), l.getMes(), l.getAno(), novaData.getMonthValue(), novaData.getYear());
+                        
                         l.setMes(novaData.getMonthValue());
                         l.setAno(novaData.getYear());
+                        
+                        repository.save(l);
                     }
                 }
             }

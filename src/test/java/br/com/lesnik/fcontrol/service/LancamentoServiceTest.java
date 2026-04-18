@@ -283,9 +283,9 @@ class LancamentoServiceTest {
 
         service.atualizar(2L, dto);
 
-        // Verifica se criou parcelas 4 e 5
+        // Verifica se criou parcelas 4 e 5, e se salvou P1 e P2 (update)
         // P4 deve ser Abril (Mes 4), P5 deve ser Maio (Mes 5)
-        verify(repository, times(3)).save(any(Lancamento.class)); // P2(update), P4(new), P5(new)
+        verify(repository, times(4)).save(any(Lancamento.class)); // P2(update), P4(new), P5(new) + P1(update sync)
         
         // Verifica se P1 (Janeiro) teve a descrição atualizada para (1/5)
         assertThat(p1.getDescricao()).isEqualTo("Academia (1/5)");
