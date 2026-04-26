@@ -34,6 +34,7 @@ $JAVA_HOME/bin/jpackage \
   --linux-shortcut \
   --linux-package-name "fcontrol" \
   --linux-menu-group "Office;Finance;" \
+  --java-options "-XX:+UseParallelGC" \
   --runtime-image target/custom-jre
 
 echo ""

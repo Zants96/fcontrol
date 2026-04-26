@@ -204,9 +204,18 @@ public class FControlDesktopApp extends Application {
         // Carrega o site local e injeta a Bridge
         webView.getEngine().getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue == Worker.State.SUCCEEDED) {
-                javaBridge = new JavaBridge();
-                JSObject window = (JSObject) webView.getEngine().executeScript("window");
-                window.setMember("javaBridge", javaBridge);
+                // Bugfix Linux/WebKit G1GC/Wayland segfault: Delay injection
+                javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.millis(200));
+                pause.setOnFinished(e -> {
+                    try {
+                        javaBridge = new JavaBridge();
+                        JSObject window = (JSObject) webView.getEngine().executeScript("window");
+                        window.setMember("javaBridge", javaBridge);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                });
+                pause.play();
             }
         });
         
