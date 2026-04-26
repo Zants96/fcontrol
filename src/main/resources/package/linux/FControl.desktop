@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=FControl
+Comment=Controle Financeiro Pessoal
+Exec=/opt/fcontrol/bin/FControl
+Icon=fcontrol
+Terminal=false
+Type=Application
+Categories=Office;Finance;
+StartupNotify=true
+StartupWMClass=FControl
