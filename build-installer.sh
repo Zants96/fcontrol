@@ -34,9 +34,9 @@ $JAVA_HOME/bin/jpackage \
   --linux-shortcut \
   --linux-package-name "fcontrol" \
   --linux-app-category "Office" \
-  --linux-menu-group "Office;Finance;" \
+  --linux-menu-group Office \
   --java-options "-XX:+UseParallelGC" \
-  --runtime-image target/custom-jre
+  --runtime-image target/custom-jre --resource-dir src/main/resources/package/linux
 
 echo ""
 echo "✅ Construção Completa!"
