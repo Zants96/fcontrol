@@ -328,12 +328,15 @@ async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
   const assinaturas = parseFloat(data.assinaturasPorMes?.[idx] ?? 0);
   const saldo = receitas - gastos - assinaturas;
 
-  document.getElementById(`card-${prefix}receitas`).textContent = fmtCurrency(receitas);
-  document.getElementById(`card-${prefix}gastos`).textContent = fmtCurrency(gastos);
-  document.getElementById(`card-${prefix}assinaturas`).textContent = fmtCurrency(assinaturas);
-  
-  const saldoEl = document.getElementById(`card-${prefix}saldo`);
-  saldoEl.textContent = fmtCurrency(saldo);
+  const setCard = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = fmtCurrency(val);
+  };
+
+  setCard(`card-${prefix}receitas`, receitas);
+  setCard(`card-${prefix}gastos`, gastos);
+  setCard(`card-${prefix}assinaturas`, assinaturas);
+  setCard(`card-${prefix}saldo`, saldo);
 
   // Buscar lançamentos do mês para montar o donut e top 5
   try {
@@ -341,12 +344,17 @@ async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
     const res = await fetch(`/api/lancamentos?ano=${ano}&mes=${mes}`);
     const lancamentos = await res.json();
     
-    // Filtrar apenas gastos (GASTO, GASTO_FIXO, ASSINATURA)
-    const saidas = lancamentos.filter(l => l.categoria !== 'RECEITA');
+    let filteredLancamentos = [];
+    if (prefix === 't-' && typeof state !== 'undefined' && state.categoria) {
+      filteredLancamentos = lancamentos.filter(l => l.categoria === state.categoria);
+    } else {
+      // Padrão (Dashboard main) - Filtra apenas despesas (remove receitas)
+      filteredLancamentos = lancamentos.filter(l => l.categoria !== 'RECEITA');
+    }
     
     // Agrupar por subcategoria
     const porSubcat = {};
-    saidas.forEach(l => {
+    filteredLancamentos.forEach(l => {
       const sub = l.subcategoria || 'Outros';
       porSubcat[sub] = (porSubcat[sub] || 0) + parseFloat(l.valor);
     });
@@ -389,7 +397,7 @@ function renderMonthlyDonut(gastosPorSubcategoria, suffix = '') {
     .slice(0, 10);
 
   if (entries.length === 0) {
-    ctx.canvas.parentElement.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div><p>Sem gastos neste mês</p></div>';
+    ctx.canvas.parentElement.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div><p>Sem dados neste mês</p></div>';
     return;
   }
 
