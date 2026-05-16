@@ -5,14 +5,14 @@
 // ─── Subcategorias por Categoria ─────────────────────────────────────────────
 const SUBCATEGORIAS = {
   RECEITA: [
-    '13º Salário', 'Férias', 'Outras Receitas', 'Participação nos Lucros', 
+    '13º Salário', 'Férias', 'Freelancer', 'Outras Receitas', 'Participação nos Lucros', 
     'Resgate de Investimentos', 'Restituição de IR', 'Salário', 'Vendas'
   ],
   GASTO: [
     'Água', 'Alimentação', 'Aluguel', 'Cartão de Crédito', 'Consultas', 
-    'Educação', 'Empréstimo', 'Investimentos', 'Lazer', 'Manutenção/Reparos', 
+    'Educação', 'Empréstimo', 'Investimentos', 'Lanches', 'Lazer', 'Manutenção/Reparos', 
     'Medicamentos', 'Outros', 'Pets', 'Presentes / Doações', 'Prestações', 
-    'Saúde & Beleza', 'Taxas/Impostos', 'Transporte', 'Vestuário', 'Viagens'
+    'Restaurante', 'Saúde & Beleza', 'Taxas/Impostos', 'Transporte', 'Vestuário', 'Viagens'
   ],
   GASTO_FIXO: [
     'Água', 'Aluguel/Prestação', 'Condomínio', 'Energia/Luz', 'Impostos', 
@@ -280,7 +280,7 @@ function buildMonthTabs() {
 
 async function loadTabela() {
   const tbody = $('table-body');
-  tbody.innerHTML = `<tr><td colspan="4"><div class="loading-overlay"><div class="spinner"></div> Carregando...</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="5"><div class="loading-overlay"><div class="spinner"></div> Carregando...</div></td></tr>`;
   $('table-total').innerHTML = '<strong>Calculando...</strong>';
 
   try {
@@ -292,8 +292,13 @@ async function loadTabela() {
 
     state.lancamentos = lancamentos;
     renderTabela(lancamentos);
+
+    if (!_dashboardData || _dashboardData.ano !== state.ano) {
+      _dashboardData = await Api.getDashboard(state.ano);
+    }
+    renderMonthlyDashboard(_dashboardData, state.mes, 't-');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div><p>${err.message}</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div><p>${err.message}</p></div></td></tr>`;
     showToast(err.message, 'error');
   }
 }
@@ -304,7 +309,7 @@ function renderTabela(lancamentos) {
   if (lancamentos.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="4">
+        <td colspan="5">
           <div class="empty-state">
             <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div>
             <p>Nenhum lançamento para este mês.<br>Clique em <strong>+ Adicionar</strong> para incluir.</p>
@@ -325,6 +330,7 @@ function renderTabela(lancamentos) {
         <td><span class="subcategoria-badge">${escHtml(l.subcategoria)}</span></td>
         <td>${escHtml(l.descricao || l.subcategoria)}</td>
         <td class="cell-valor">${fmtCurrency(valor)}</td>
+        <td>${l.dia || '-'}</td>
         <td class="col-actions">
           <div class="action-btns">
             <button class="action-btn action-btn--edit" title="Editar" onclick="openEditModal(${l.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
@@ -436,6 +442,7 @@ function openCreateModal() {
   $('lancamento-form').reset();
   $('form-id').value = '';
   $('form-mes').value = state.mes;
+  $('form-dia').value = '';
 
   const cat = state.categoria || 'GASTO';
   $('form-categoria').value = cat;
@@ -457,6 +464,7 @@ function openEditModal(id) {
   $('btn-save').textContent = 'Atualizar';
   $('form-id').value = id;
   $('form-descricao').value = item.descricao || '';
+  $('form-dia').value = item.dia || '';
   
   // Seta valor formatado
   const val = parseFloat(item.valor).toFixed(2).replace('.', ',');
@@ -500,6 +508,7 @@ async function onFormSubmit(e) {
     valor:      parseFloat($('form-valor').value.replace('R$ ', '').replace(/\./g, '').replace(',', '.')),
     mes:        parseInt($('form-mes').value),
     ano:        state.ano,
+    dia:        $('form-dia').value ? parseInt($('form-dia').value) : null,
     categoria:  $('form-categoria').value,
     parcelas:   parseInt($('form-parcelas').value || 1),
   };

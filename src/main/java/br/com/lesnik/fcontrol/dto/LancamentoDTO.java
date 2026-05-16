@@ -18,6 +18,7 @@ public class LancamentoDTO {
     private BigDecimal valor;
     private Integer mes;
     private Integer ano;
+    private Integer dia;
 
     /** Número de vezes que o lançamento deve se repetir (usado na criação) */
     private Integer parcelas;

@@ -318,7 +318,7 @@ function initMonthlyDashboard() {
   });
 }
 
-async function renderMonthlyDashboard(data, mes) {
+async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
   _dashboardData = data;
   const idx = mes - 1;
 
@@ -328,11 +328,11 @@ async function renderMonthlyDashboard(data, mes) {
   const assinaturas = parseFloat(data.assinaturasPorMes?.[idx] ?? 0);
   const saldo = receitas - gastos - assinaturas;
 
-  document.getElementById('card-m-receitas').textContent = fmtCurrency(receitas);
-  document.getElementById('card-m-gastos').textContent = fmtCurrency(gastos);
-  document.getElementById('card-m-assinaturas').textContent = fmtCurrency(assinaturas);
+  document.getElementById(`card-${prefix}receitas`).textContent = fmtCurrency(receitas);
+  document.getElementById(`card-${prefix}gastos`).textContent = fmtCurrency(gastos);
+  document.getElementById(`card-${prefix}assinaturas`).textContent = fmtCurrency(assinaturas);
   
-  const saldoEl = document.getElementById('card-m-saldo');
+  const saldoEl = document.getElementById(`card-${prefix}saldo`);
   saldoEl.textContent = fmtCurrency(saldo);
 
   // Buscar lançamentos do mês para montar o donut e top 5
@@ -351,22 +351,32 @@ async function renderMonthlyDashboard(data, mes) {
       porSubcat[sub] = (porSubcat[sub] || 0) + parseFloat(l.valor);
     });
 
-    renderMonthlyDonut(porSubcat);
-    renderMonthlyTopGastos(porSubcat);
+    const suffixChart = prefix === 'm-' ? '' : '-tabela';
+
+    renderMonthlyDonut(porSubcat, suffixChart);
+    renderMonthlyTopGastos(porSubcat, suffixChart);
   } catch (err) {
     console.error('Erro ao carregar dados mensais:', err);
   }
 }
 
-function renderMonthlyDonut(gastosPorSubcategoria) {
-  destroyIfExists(chartDonutMonthly);
+let chartDonutMonthlyTabela = null;
+
+function renderMonthlyDonut(gastosPorSubcategoria, suffix = '') {
+  const canvasId = `chart-donut-monthly${suffix}`;
   
-  let canvas = document.getElementById('chart-donut-monthly');
+  if (suffix === '') {
+    destroyIfExists(chartDonutMonthly);
+  } else {
+    destroyIfExists(chartDonutMonthlyTabela);
+  }
+  
+  let canvas = document.getElementById(canvasId);
   if (!canvas) {
-    const parent = document.querySelector('#view-dashboard .charts-row:last-of-type .chart-wrapper--donut');
+    const parent = document.querySelector(suffix === '' ? '#view-dashboard .charts-row:last-of-type .chart-wrapper--donut' : '#view-tabela .charts-row .chart-wrapper--donut');
     if (parent) {
-      parent.innerHTML = '<canvas id="chart-donut-monthly"></canvas>';
-      canvas = document.getElementById('chart-donut-monthly');
+      parent.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+      canvas = document.getElementById(canvasId);
     }
   }
   if (!canvas) return;
@@ -383,7 +393,7 @@ function renderMonthlyDonut(gastosPorSubcategoria) {
     return;
   }
 
-  chartDonutMonthly = new Chart(ctx, {
+  const newChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels: entries.map(([k]) => k),
@@ -418,10 +428,17 @@ function renderMonthlyDonut(gastosPorSubcategoria) {
       },
     },
   });
+  
+  if (suffix === '') {
+    chartDonutMonthly = newChart;
+  } else {
+    chartDonutMonthlyTabela = newChart;
+  }
 }
 
-function renderMonthlyTopGastos(gastosPorSubcategoria) {
-  const container = document.getElementById('top-gastos-monthly');
+function renderMonthlyTopGastos(gastosPorSubcategoria, suffix = '') {
+  const containerId = `top-gastos-monthly${suffix}`;
+  const container = document.getElementById(containerId);
   if (!container) return;
 
   const entries = Object.entries(gastosPorSubcategoria)
