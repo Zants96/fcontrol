@@ -569,6 +569,14 @@ select option { background: var(--bg-elevated); }
   flex-wrap: wrap;
 }
 
+.table-toolbar label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+  margin: 0;
+}
+
 .month-tabs {
   display: flex;
   gap: 0.25rem;

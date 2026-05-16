@@ -41,8 +41,8 @@ class ExportServiceTest {
         byte[] csvBytes = exportService.exportarCsv(ano, 0, null);
         String csv = new String(csvBytes, StandardCharsets.UTF_8);
 
-        assertThat(csv).contains("Ano;Mes;Categoria;Subcategoria;Descricao;Valor");
-        assertThat(csv).contains("2026;Janeiro;RECEITA;Salário;Mensal;5000,00");
+        assertThat(csv).contains("Ano;Mes;Dia;Categoria;Subcategoria;Descricao;Valor");
+        assertThat(csv).contains("2026;Janeiro;;RECEITA;Salário;Mensal;5000,00");
     }
 
     @Test
@@ -60,9 +60,9 @@ class ExportServiceTest {
         byte[] csvBytes = exportService.exportarCsv(ano, mes, null);
         String csv = new String(csvBytes, StandardCharsets.UTF_8);
 
-        assertThat(csv).contains("Ano;Categoria;Subcategoria;Descricao;Valor");
+        assertThat(csv).contains("Ano;Dia;Categoria;Subcategoria;Descricao;Valor");
         assertThat(csv).doesNotContain("Mes;");
-        assertThat(csv).contains("2026;GASTO;Aluguel;Apartamento;2000,00");
+        assertThat(csv).contains("2026;;GASTO;Aluguel;Apartamento;2000,00");
     }
 
     @Test
