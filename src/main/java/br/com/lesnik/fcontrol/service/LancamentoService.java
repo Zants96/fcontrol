@@ -107,6 +107,7 @@ public class LancamentoService {
         lancamento.setValor(dto.getValor());
         lancamento.setMes(dto.getMes());
         lancamento.setAno(dto.getAno());
+        lancamento.setDia(dto.getDia());
 
         // Se o total mudou, a descrição base mudou, a data mudou ou categorias mudaram, e é um grupo
         if (novoTotal != originalTotal || (grupoId != null && (!baseDesc.equals(originalBaseDesc) || dataMudou || categoriasMudaram))) {
@@ -149,7 +150,6 @@ public class LancamentoService {
                     }
                 }
 
-                // SINCRONIZAÇÃO GERAL DO GRUPO (Datas, Descrições, Categorias)
                 // SINCRONIZAÇÃO GERAL DO GRUPO (Datas, Descrições, Categorias)
                 log.info("Sincronizando grupo {}. Âncora: parcela {} em {}/{}", grupoId, lancamento.getParcelaActual(), lancamento.getMes(), lancamento.getAno());
                 
@@ -271,6 +271,7 @@ public class LancamentoService {
                 .valor(l.getValor())
                 .mes(l.getMes())
                 .ano(l.getAno())
+                .dia(l.getDia())
                 .parcelaActual(l.getParcelaActual())
                 .totalParcelas(l.getTotalParcelas())
                 .grupoId(l.getGrupoId())
@@ -285,6 +286,7 @@ public class LancamentoService {
                 .valor(dto.getValor())
                 .mes(dto.getMes())
                 .ano(dto.getAno())
+                .dia(dto.getDia())
                 .parcelaActual(dto.getParcelaActual())
                 .totalParcelas(dto.getTotalParcelas())
                 .grupoId(dto.getGrupoId())
@@ -293,7 +295,28 @@ public class LancamentoService {
 
     private String limparDescricao(String desc) {
         if (desc == null) return null;
-        // Remove um ou mais sufixos (X/Y) acumulados e espaços extras
-        return desc.trim().replaceAll("(\\s*\\(\\d+/\\d+\\))+$", "").trim();
+        String resultado = desc.trim();
+        while (true) {
+            int fim = resultado.length() - 1;
+            if (fim < 0 || resultado.charAt(fim) != ')') break;
+
+            int inicio = resultado.lastIndexOf('(');
+            if (inicio < 0 || inicio >= fim) break;
+
+            String trecho = resultado.substring(inicio + 1, fim);
+            int barra = trecho.indexOf('/');
+            if (barra <= 0 || barra >= trecho.length() - 1) break;
+
+            if (!isNumero(trecho.substring(0, barra)) || !isNumero(trecho.substring(barra + 1))) break;
+            resultado = resultado.substring(0, inicio).trim();
+        }
+        return resultado;
+    }
+
+    private boolean isNumero(String valor) {
+        for (int i = 0; i < valor.length(); i++) {
+            if (!Character.isDigit(valor.charAt(i))) return false;
+        }
+        return !valor.isEmpty();
     }
 }
