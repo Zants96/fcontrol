@@ -1,7 +1,7 @@
-package br.com.lesnik.fcontrol.service;
+package br.com.lesnik.mytwocents.service;
 
-import br.com.lesnik.fcontrol.dto.LancamentoDTO;
-import br.com.lesnik.fcontrol.model.Categoria;
+import br.com.lesnik.mytwocents.dto.LancamentoDTO;
+import br.com.lesnik.mytwocents.model.Categoria;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

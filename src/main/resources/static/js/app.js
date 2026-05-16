@@ -1,5 +1,5 @@
 /**
- * app.js – Lógica principal da SPA FControl
+ * app.js – Lógica principal da SPA MyTwoCents
  */
 
 // ─── Subcategorias por Categoria ─────────────────────────────────────────────
@@ -74,13 +74,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ─── Tema (Light/Dark) ────────────────────────────────────────────────────────
 function initTheme() {
-  const saved = localStorage.getItem('fcontrol-theme') || 'dark';
+  const saved = localStorage.getItem('mytwocents-theme') || 'dark';
   document.documentElement.setAttribute('data-theme', saved);
   
   const setTheme = (t) => {
     if (saved === t) return; // evita reload desnecessário se já estiver no tema
     document.documentElement.setAttribute('data-theme', t);
-    localStorage.setItem('fcontrol-theme', t);
+    localStorage.setItem('mytwocents-theme', t);
     setTimeout(() => location.reload(), 50);
   };
 
@@ -190,7 +190,7 @@ function buildFileName(format, isFullReport) {
     'assinaturas': 'Assinaturas',
     'dashboard': 'Geral'
   };
-  let name = `FControl - ${state.ano}`;
+  let name = `MyTwoCents - ${state.ano}`;
   const mes = isFullReport ? 0 : state.mes;
   const view = isFullReport ? 'dashboard' : state.view;
   
@@ -678,7 +678,7 @@ async function handleExportBackup() {
     const res = await fetch('/api/backup/export');
     if (!res.ok) throw new Error('Falha ao exportar banco de dados.');
     
-    const fileName = `fcontrol_backup_${new Date().toISOString().split('T')[0]}.sql`;
+    const fileName = `mytwocents_backup_${new Date().toISOString().split('T')[0]}.sql`;
     
     // Tratamento para ambiente JavaFX com WebEngine
     if (window.javaBridge) {

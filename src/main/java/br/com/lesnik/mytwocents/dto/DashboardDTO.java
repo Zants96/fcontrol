@@ -1,4 +1,4 @@
-package br.com.lesnik.fcontrol.dto;
+package br.com.lesnik.mytwocents.dto;
 
 import lombok.*;
 

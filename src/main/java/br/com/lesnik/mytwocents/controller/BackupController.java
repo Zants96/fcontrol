@@ -1,4 +1,4 @@
-package br.com.lesnik.fcontrol.controller;
+package br.com.lesnik.mytwocents.controller;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
@@ -39,7 +39,7 @@ public class BackupController {
             ByteArrayResource resource = new ByteArrayResource(data);
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=fcontrol_backup.sql")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mytwocents_backup.sql")
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .contentLength(data.length)
                     .body(resource);

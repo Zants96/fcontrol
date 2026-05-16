@@ -1,6 +1,6 @@
-package br.com.lesnik.fcontrol.config;
+package br.com.lesnik.mytwocents.config;
 
-import br.com.lesnik.fcontrol.repository.LancamentoRepository;
+import br.com.lesnik.mytwocents.repository.LancamentoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
