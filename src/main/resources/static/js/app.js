@@ -242,8 +242,11 @@ function initExport() {
 
 // ─── Mobile Menu ─────────────────────────────────────────────────────────────
 function initMenuToggle() {
-  $('menu-toggle').addEventListener('click', () => {
+  const btn = $('menu-toggle');
+  btn.addEventListener('click', () => {
     $('sidebar').classList.toggle('open');
+    const isOpen = $('sidebar').classList.contains('open');
+    btn.setAttribute('aria-expanded', isOpen);
   });
 }
 
@@ -428,12 +431,17 @@ function initModal() {
   // PIX Modal
   $('btn-open-pix').addEventListener('click', () => {
     $('modal-pix-overlay').classList.remove('hidden');
+    $('main-content').setAttribute('aria-hidden', 'true');
+    setTimeout(() => $('modal-pix-close').focus(), 100);
   });
-  $('modal-pix-close').addEventListener('click', () => {
+  const closePixModal = () => {
     $('modal-pix-overlay').classList.add('hidden');
-  });
+    $('main-content').removeAttribute('aria-hidden');
+    $('btn-open-pix').focus();
+  };
+  $('modal-pix-close').addEventListener('click', closePixModal);
   $('modal-pix-overlay').addEventListener('click', e => {
-    if (e.target === $('modal-pix-overlay')) $('modal-pix-overlay').classList.add('hidden');
+    if (e.target === $('modal-pix-overlay')) closePixModal();
   });
   $('btn-copy-pix').addEventListener('click', (e) => {
     const key = e.currentTarget.dataset.key;
@@ -519,12 +527,17 @@ function openEditModal(id) {
 
 function showModal() {
   $('modal-overlay').classList.remove('hidden');
+  $('main-content').setAttribute('aria-hidden', 'true');
   setTimeout(() => $('form-subcategoria').focus(), 100);
 }
 
 function closeModal() {
   $('modal-overlay').classList.add('hidden');
+  $('main-content').removeAttribute('aria-hidden');
   state.editingId = null;
+  // Retorna o foco ao botão que geralmente abriu
+  const addRowBtn = $('btn-add-row');
+  if (addRowBtn && !addRowBtn.closest('.hidden')) addRowBtn.focus();
 }
 
 async function onFormSubmit(e) {

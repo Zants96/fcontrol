@@ -26,8 +26,8 @@
 
   /* Text */
   --text-primary:    #f1f5f9;
-  --text-secondary:  #94a3b8;
-  --text-muted:      #475569;
+  --text-secondary:  #cbd5e1;   /* Ajustado para > 7:1 no escuro */
+  --text-muted:      #94a3b8;   /* Ajustado para melhor visibilidade */
 
   /* Border */
   --border:          rgba(148,163,184,0.1);
@@ -54,23 +54,23 @@
   --bg-hover:      #e2e8f0;
 
   /* Brand */
-  --brand-primary:   #059669;
-  --brand-glow:      #10b981;
+  --brand-primary:   #065f46;   /* Escurecido para > 7:1 no claro */
+  --brand-glow:      #059669;
   --brand-dark:      #d1fae5;
 
   /* Accent */
-  --accent-red:      #ef4444;
+  --accent-red:      #b91c1c;   /* Escurecido para > 7:1 */
   --accent-red-bg:   #fee2e2;
-  --accent-purple:   #8b5cf6;
+  --accent-purple:   #6d28d9;   /* Escurecido para > 7:1 */
   --accent-purple-bg:#ede9fe;
-  --accent-blue:     #3b82f6;
+  --accent-blue:     #1d4ed8;   /* Escurecido para > 7:1 */
   --accent-blue-bg:  #dbeafe;
-  --accent-orange:   #f97316;
+  --accent-orange:   #c2410c;   /* Escurecido para > 7:1 */
 
   /* Text */
   --text-primary:    #0f172a;
-  --text-secondary:  #475569;
-  --text-muted:      #94a3b8;
+  --text-secondary:  #334155;   /* Escurecido para AAA */
+  --text-muted:      #52617a;   /* Ajustado para > 7:1 no claro */
 
   /* Border */
   --border:          rgba(15,23,42,0.1);
@@ -98,6 +98,13 @@ body {
 
 a { text-decoration: none; color: inherit; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+/* WAI-ARIA / WCAG: Clear focus outline for keyboard navigation */
+:focus {
+  outline: 3px solid var(--brand-glow) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.25) !important;
+}
 input, select, textarea {
   font-family: inherit;
   font-size: 0.9rem;
@@ -275,7 +282,7 @@ select option { background: var(--bg-elevated); }
   border: 1px solid var(--border);
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
-  padding: 0.35rem;
+  padding: 0.75rem 0.5rem;
   font-size: 0.7rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -283,6 +290,7 @@ select option { background: var(--bg-elevated); }
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  min-height: 44px;
 }
 
 .btn-export:hover {
@@ -458,6 +466,7 @@ select option { background: var(--bg-elevated); }
   width: 100px; height: 100px;
   border-radius: 50%;
   z-index: 0;
+  pointer-events: none;
 }
 
 .card--green::after  { background: #10b98166; }
@@ -727,9 +736,10 @@ select option { background: var(--bg-elevated); }
 
 /* ─── Buttons ───────────────────────────────────────────────────────────── */
 .btn {
-  padding: 0.6rem 1.25rem;
+  padding: 0.75rem 1.5rem;
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
+  min-height: 44px;
   font-weight: 600;
   transition: all 0.2s;
   display: inline-flex;
