@@ -47,6 +47,15 @@ public class Lancamento {
     @Column
     private Integer dia;
 
+    @Column
+    private Integer parcelaActual;
+
+    @Column
+    private Integer totalParcelas;
+
+    @Column
+    private String grupoId;
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 
