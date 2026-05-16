@@ -401,9 +401,8 @@ function initModal() {
   $('modal-pix-overlay').addEventListener('click', e => {
     if (e.target === $('modal-pix-overlay')) $('modal-pix-overlay').classList.add('hidden');
   });
-  $('btn-copy-pix').addEventListener('click', () => {
-    const key = $('pix-key').textContent;
-    // Fallback para navegadores que não suportam navigator.clipboard (ou contextos não-seguros)
+  $('btn-copy-pix').addEventListener('click', (e) => {
+    const key = e.currentTarget.dataset.key;
     if (navigator.clipboard && window.isSecureContext) {
       navigator.clipboard.writeText(key).then(() => showToast('Chave PIX copiada!'));
     } else {
@@ -449,6 +448,10 @@ function openCreateModal() {
   $('form-categoria').value = cat;
   populateSubcategoriaSelect(cat, null);
 
+  // Reseta parcelas
+  $('group-parcelas').classList.remove('hidden');
+  $('form-parcelas').value = 1;
+
   showModal();
 }
 
@@ -472,6 +475,10 @@ function openEditModal(id) {
 
   // Popula subcategorias e mantém o valor atual selecionado
   populateSubcategoriaSelect(item.categoria, item.subcategoria);
+
+  // Exibe sempre o campo de parcelas (conforme plano) e preenche o valor
+  $('group-parcelas').classList.remove('hidden');
+  $('form-parcelas').value = item.totalParcelas || 1;
 
   showModal();
 }
@@ -504,6 +511,7 @@ async function onFormSubmit(e) {
     dia:        $('form-dia').value ? parseInt($('form-dia').value) : null,
     parcelas:   $('form-parcelas') ? parseInt($('form-parcelas').value) : null,
     categoria:  $('form-categoria').value,
+    parcelas:   parseInt($('form-parcelas').value || 1),
   };
 
   const btn = $('btn-save');
@@ -535,20 +543,33 @@ async function onFormSubmit(e) {
 // ─── EXCLUIR ─────────────────────────────────────────────────────────────────
 async function excluir(id) {
   const item = state.lancamentos.find(l => l.id === id);
-  const label = item ? `"${item.subcategoria}"` : `#${id}`;
-  if (!confirm(`Excluir o lançamento ${label}?`)) return;
+  if (!item) return;
+
+  const label = `"${item.subcategoria}"`;
+  let excluirProximos = !!(item.grupoId && item.parcelaActual);
+
+  const msg = excluirProximos 
+    ? `Excluir o lançamento ${label} e TODAS as parcelas futuras desta série?`
+    : `Excluir o lançamento ${label}?`;
+
+  if (!confirm(msg)) return;
 
   try {
-    await Api.excluirLancamento(id);
-    const row = $(`row-${id}`);
-    if (row) {
-      row.style.opacity = '0';
-      row.style.transition = 'opacity 0.3s';
-      setTimeout(() => loadTabela(), 300);
-    } else {
+    await Api.excluirLancamento(id, excluirProximos);
+    
+    if (excluirProximos) {
       loadTabela();
+    } else {
+      const row = $(`row-${id}`);
+      if (row) {
+        row.style.opacity = '0';
+        row.style.transition = 'opacity 0.3s';
+        setTimeout(() => loadTabela(), 300);
+      } else {
+        loadTabela();
+      }
     }
-    showToast('Lançamento excluído.', 'success');
+    showToast(excluirProximos ? 'Série de lançamentos excluída.' : 'Lançamento excluído.', 'success');
   } catch (err) {
     showToast(err.message, 'error');
   }

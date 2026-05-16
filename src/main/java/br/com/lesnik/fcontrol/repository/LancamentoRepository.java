@@ -41,8 +41,17 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
 
     boolean existsByAnoAndCategoriaAndSubcategoria(Integer ano, Categoria categoria, String subcategoria);
 
-    /** Remove todos os registros com valor zero — limpa dados da inicialização automática antiga */
     @Modifying
     @Query("DELETE FROM Lancamento l WHERE l.valor = 0")
     int deleteAllZeroValue();
+
+    List<Lancamento> findByGrupoId(String grupoId);
+
+    @Modifying
+    @Query("DELETE FROM Lancamento l WHERE l.grupoId = :grupoId AND l.parcelaActual > :parcela")
+    void deleteByGrupoIdAndParcelaActualGreaterThan(@Param("grupoId") String grupoId, @Param("parcela") Integer parcela);
+
+    @Modifying
+    @Query("DELETE FROM Lancamento l WHERE l.grupoId = :grupoId AND l.parcelaActual >= :parcela")
+    void deleteByGrupoIdAndParcelaActualGreaterThanEqual(@Param("grupoId") String grupoId, @Param("parcela") Integer parcela);
 }
