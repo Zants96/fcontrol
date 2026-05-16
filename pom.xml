@@ -9,10 +9,10 @@
 		<relativePath/>
 	</parent>
 	<groupId>br.com.lesnik</groupId>
-	<artifactId>fcontrol</artifactId>
+	<artifactId>mytwocents</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>fcontrol</name>
-	<description>Controle Financeiro Pessoal</description>
+	<name>MyTwoCents</name>
+	<description>MyTwoCents - Controle Financeiro Pessoal</description>
 
 	<properties>
 		<java.version>17</java.version>

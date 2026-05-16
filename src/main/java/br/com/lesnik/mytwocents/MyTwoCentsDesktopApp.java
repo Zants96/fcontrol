@@ -1,4 +1,4 @@
-package br.com.lesnik.fcontrol;
+package br.com.lesnik.mytwocents;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -17,7 +17,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 
-public class FControlDesktopApp extends Application {
+public class MyTwoCentsDesktopApp extends Application {
 
     private ConfigurableApplicationContext springContext;
     private Stage primaryStage;
@@ -84,7 +84,7 @@ public class FControlDesktopApp extends Application {
                     FileChooser fileChooser = new FileChooser();
                     fileChooser.setTitle("Selecionar Backup para Restaurar");
                     fileChooser.getExtensionFilters().add(
-                        new FileChooser.ExtensionFilter("Backup do FControl (*.sql)", "*.sql")
+                        new FileChooser.ExtensionFilter("Backup do MyTwoCents (*.sql)", "*.sql")
                     );
 
                     File file = fileChooser.showOpenDialog(primaryStage);
@@ -168,7 +168,7 @@ public class FControlDesktopApp extends Application {
             System.setProperty("spring.main.headless", "false");
 
             // Inicia o contexto do Spring Boot
-            springContext = SpringApplication.run(FcontrolApplication.class, getParameters().getRaw().toArray(new String[0]));
+            springContext = SpringApplication.run(MyTwoCentsApplication.class, getParameters().getRaw().toArray(new String[0]));
         } catch (Throwable e) {
             // Captura Throwable para garantir que erros graves (como de JRE/jlink) sejam reportados na UI
             e.printStackTrace();
@@ -195,7 +195,7 @@ public class FControlDesktopApp extends Application {
         // Intercepta e renderiza de forma nativa diálogos do Javascript como o confirm() da exclusão
         webView.getEngine().setConfirmHandler(message -> {
             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.CONFIRMATION, message, javafx.scene.control.ButtonType.YES, javafx.scene.control.ButtonType.NO);
-            alert.setTitle("FControl - Confirmação");
+            alert.setTitle("MyTwoCents - Confirmação");
             alert.setHeaderText(null);
             alert.showAndWait();
             return alert.getResult() == javafx.scene.control.ButtonType.YES;
@@ -226,7 +226,7 @@ public class FControlDesktopApp extends Application {
 
         Scene scene = new Scene(root, 1280, 720);
 
-        primaryStage.setTitle("FControl - Financeiro");
+        primaryStage.setTitle("MyTwoCents - Financeiro");
         primaryStage.setScene(scene);
         primaryStage.setMinWidth(1280);
         primaryStage.setMinHeight(720);

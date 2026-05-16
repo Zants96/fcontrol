@@ -1,6 +1,6 @@
-package br.com.lesnik.fcontrol.dto;
+package br.com.lesnik.mytwocents.dto;
 
-import br.com.lesnik.fcontrol.model.Categoria;
+import br.com.lesnik.mytwocents.model.Categoria;
 import lombok.*;
 
 import java.math.BigDecimal;

@@ -82,7 +82,7 @@ jobs:
       run: |
         mkdir -p target/jpackage-input
         # Copia o JAR com nome genérico para evitar erro de versão no jpackage
-        cp target/fcontrol-*.jar target/jpackage-input/fcontrol.jar
+        cp target/mytwocents-*.jar target/jpackage-input/mytwocents.jar
         $JAVA_HOME/bin/jlink --add-modules java.se,jdk.unsupported,java.management,java.desktop,java.naming,java.sql,java.net.http,java.instrument,java.rmi,java.security.jgss,jdk.crypto.ec,jdk.charsets,jdk.localedata,java.xml,java.management.rmi,jdk.jsobject,jdk.xml.dom,jdk.zipfs,jdk.crypto.cryptoki,jdk.naming.dns --output target/custom-jre --no-header-files --no-man-pages
 
     - name: Run jpackage
@@ -100,22 +100,22 @@ jobs:
 
         $JAVA_HOME/bin/jpackage \
           --input target/jpackage-input \
-          --name "FControl" \
-          --main-jar "fcontrol.jar" \
+          --name "MyTwoCents" \
+          --main-jar "mytwocents.jar" \
           --type ${{ matrix.type }} \
           --dest release \
           --app-version "$VERSION" \
-          --description "FControl - Gerenciamento Financeiro" \
+          --description "MyTwoCents - Gerenciamento Financeiro" \
           --vendor "Leandro Jose Lesnik" \
           --icon "$ICON" \
           --runtime-image target/custom-jre --resource-dir src/main/resources/package/linux --verbose \
           ${{ matrix.os == 'windows-latest' && '--win-shortcut --win-menu --win-dir-chooser' || '' }} \
-          ${{ matrix.os == 'ubuntu-latest' && '--linux-shortcut --linux-package-name fcontrol --linux-app-category Office --linux-menu-group Office' || '' }}
+          ${{ matrix.os == 'ubuntu-latest' && '--linux-shortcut --linux-package-name mytwocents --linux-app-category Office --linux-menu-group Office' || '' }}
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: fcontrol-${{ matrix.target }}
+        name: mytwocents-${{ matrix.target }}
         path: release/*
 
   release:
@@ -141,7 +141,7 @@ jobs:
             ${{ needs.version.outputs.changelog }}
             
             ---
-            *Gerado automaticamente pelo FControl Build System*
+            *Gerado automaticamente pelo MyTwoCents Build System*
           files: artifacts/*
           draft: false
           prerelease: false

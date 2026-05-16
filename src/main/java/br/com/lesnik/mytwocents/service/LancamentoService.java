@@ -1,10 +1,10 @@
-package br.com.lesnik.fcontrol.service;
+package br.com.lesnik.mytwocents.service;
 
-import br.com.lesnik.fcontrol.dto.DashboardDTO;
-import br.com.lesnik.fcontrol.dto.LancamentoDTO;
-import br.com.lesnik.fcontrol.model.Categoria;
-import br.com.lesnik.fcontrol.model.Lancamento;
-import br.com.lesnik.fcontrol.repository.LancamentoRepository;
+import br.com.lesnik.mytwocents.dto.DashboardDTO;
+import br.com.lesnik.mytwocents.dto.LancamentoDTO;
+import br.com.lesnik.mytwocents.model.Categoria;
+import br.com.lesnik.mytwocents.model.Lancamento;
+import br.com.lesnik.mytwocents.repository.LancamentoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

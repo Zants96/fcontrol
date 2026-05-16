@@ -1,10 +1,10 @@
 [Desktop Entry]
-Name=FControl
+Name=MyTwoCents
 Comment=Controle Financeiro Pessoal
-Exec=/opt/fcontrol/bin/FControl
-Icon=fcontrol
+Exec=/opt/mytwocents/bin/MyTwoCents
+Icon=MyTwoCents
 Terminal=false
 Type=Application
 Categories=Office;Finance;
 StartupNotify=true
-StartupWMClass=FControl
+StartupWMClass=MyTwoCents
