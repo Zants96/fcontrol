@@ -42,14 +42,15 @@ public class ExportService {
 
         // Header condicional: inclui Mês apenas quando é exportação geral
         if (incluirMes) {
-            sb.append("Ano;Mes;Categoria;Subcategoria;Descricao;Valor\n");
+            sb.append("Ano;Mes;Dia;Categoria;Subcategoria;Descricao;Valor\n");
         } else {
-            sb.append("Ano;Categoria;Subcategoria;Descricao;Valor\n");
+            sb.append("Ano;Dia;Categoria;Subcategoria;Descricao;Valor\n");
         }
 
         for (LancamentoDTO l : lancamentos) {
             sb.append(l.getAno()).append(";");
             if (incluirMes) sb.append(MESES[l.getMes() - 1]).append(";");
+            sb.append(l.getDia() != null ? String.format("%02d", l.getDia()) : "").append(";");
             sb.append(l.getCategoria()).append(";")
                     .append(l.getSubcategoria()).append(";")
                     .append(l.getDescricao().replace(";", ",")).append(";")
@@ -94,16 +95,17 @@ public class ExportService {
         // Isso otimiza o espaço horizontal no PDF para as descrições.
         PdfPTable table;
         if (incluirMes) {
-            table = new PdfPTable(5);
+            table = new PdfPTable(6);
             table.setWidthPercentage(100);
-            table.setWidths(new float[]{1.5f, 2f, 2.5f, 4f, 2.5f});
+            table.setWidths(new float[]{1.5f, 2f, 1.2f, 2.5f, 4f, 2.5f});
             addTableHeader(table, fontHeader, "Mês");
         } else {
-            table = new PdfPTable(4);
+            table = new PdfPTable(5);
             table.setWidthPercentage(100);
-            table.setWidths(new float[]{2f, 2.5f, 4.5f, 2.5f});
+            table.setWidths(new float[]{2f, 1.2f, 2.5f, 4.5f, 2.5f});
         }
         addTableHeader(table, fontHeader, "Tipo");
+        addTableHeader(table, fontHeader, "Dia");
         addTableHeader(table, fontHeader, "Subcategoria");
         addTableHeader(table, fontHeader, "Descrição");
         addTableHeader(table, fontHeader, "Valor");
@@ -113,22 +115,28 @@ public class ExportService {
 
         NumberFormat brFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
 
+        Color colorOdd = Color.WHITE;
+        Color colorEven = new Color(245, 245, 245); // Cinza bem claro
+        int rowIdx = 0;
+
         for (LancamentoDTO l : lancamentos) {
-            if (incluirMes) table.addCell(new Phrase(MESES[l.getMes() - 1], fontRow));
-            table.addCell(new Phrase(formatarCategoria(l.getCategoria()), fontRow));
-            table.addCell(new Phrase(l.getSubcategoria(), fontRow));
-            table.addCell(new Phrase(l.getDescricao(), fontRow));
+            Color bgColor = (rowIdx % 2 == 0) ? colorOdd : colorEven;
+
+            if (incluirMes) addRowCell(table, MESES[l.getMes() - 1], fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, formatarCategoria(l.getCategoria()), fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, l.getDia() != null ? String.format("%02d", l.getDia()) : "-", fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, l.getSubcategoria(), fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, l.getDescricao(), fontRow, bgColor, Element.ALIGN_LEFT);
             
             String valorFormatado = brFormat.format(l.getValor());
-            PdfPCell cellValor = new PdfPCell(new Phrase(valorFormatado, fontRow));
-            cellValor.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            table.addCell(cellValor);
+            addRowCell(table, valorFormatado, fontRow, bgColor, Element.ALIGN_RIGHT);
 
             if (l.getCategoria().name().equals("RECEITA")) {
                 totalReceitas = totalReceitas.add(l.getValor());
             } else {
                 totalGastos = totalGastos.add(l.getValor());
             }
+            rowIdx++;
         }
 
         document.add(table);
@@ -139,12 +147,19 @@ public class ExportService {
         resumo.setSpacingBefore(10);
         document.add(resumo);
 
-        document.add(new Paragraph("Total Receitas: " + brFormat.format(totalReceitas), fontRow));
-        document.add(new Paragraph("Total Despesas: " + brFormat.format(totalGastos), fontRow));
+        if (categoria == null || categoria == Categoria.RECEITA) {
+            document.add(new Paragraph("Total Receitas: " + brFormat.format(totalReceitas), fontRow));
+        }
         
-        BigDecimal saldo = totalReceitas.subtract(totalGastos);
-        Font fontSaldo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, saldo.compareTo(BigDecimal.ZERO) >= 0 ? new Color(16, 185, 129) : Color.RED);
-        document.add(new Paragraph("Saldo Final: " + brFormat.format(saldo), fontSaldo));
+        if (categoria == null || categoria != Categoria.RECEITA) {
+            document.add(new Paragraph("Total Despesas: " + brFormat.format(totalGastos), fontRow));
+        }
+        
+        if (categoria == null) {
+            BigDecimal saldo = totalReceitas.subtract(totalGastos);
+            Font fontSaldo = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, saldo.compareTo(BigDecimal.ZERO) >= 0 ? new Color(16, 185, 129) : Color.RED);
+            document.add(new Paragraph("Saldo Final: " + brFormat.format(saldo), fontSaldo));
+        }
 
         document.close();
         return out.toByteArray();
@@ -178,5 +193,14 @@ public class ExportService {
         header.setPhrase(new Phrase(text, font));
         header.setPadding(5);
         table.addCell(header);
+    }
+
+    private void addRowCell(PdfPTable table, String text, Font font, Color bgColor, int align) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setBackgroundColor(bgColor);
+        cell.setHorizontalAlignment(align);
+        cell.setBorderColor(new Color(200, 200, 200));
+        cell.setPadding(5);
+        table.addCell(cell);
     }
 }
