@@ -1,5 +1,6 @@
 package br.com.lesnik.mytwocents.controller;
 
+import br.com.lesnik.mytwocents.service.CryptoService;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -19,29 +20,39 @@ import java.sql.Statement;
 public class BackupController {
 
     private final DataSource dataSource;
+    private final CryptoService cryptoService;
 
-    public BackupController(DataSource dataSource) {
+    public BackupController(DataSource dataSource, CryptoService cryptoService) {
         this.dataSource = dataSource;
+        this.cryptoService = cryptoService;
     }
 
     @GetMapping("/export")
-    public ResponseEntity<Resource> exportBackup() {
+    public ResponseEntity<Resource> exportBackup(@RequestHeader("X-Backup-Password") String password) {
         try {
-            File tempFile = File.createTempFile("backup", ".sql");
+            if (password == null || password.isBlank()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // 1. Gera o SQL puro em um arquivo temporário
+            File tempSqlFile = File.createTempFile("backup", ".sql");
             try (Connection conn = dataSource.getConnection();
                  Statement stmt = conn.createStatement()) {
-                stmt.execute("SCRIPT TO '" + tempFile.getAbsolutePath() + "'");
+                stmt.execute("SCRIPT TO '" + tempSqlFile.getAbsolutePath() + "'");
             }
             
-            byte[] data = Files.readAllBytes(tempFile.toPath());
-            tempFile.delete();
+            // 2. Lê os bytes e encripta com a senha do usuário
+            byte[] rawData = Files.readAllBytes(tempSqlFile.toPath());
+            byte[] encryptedData = cryptoService.encrypt(rawData, password);
+            
+            tempSqlFile.delete();
 
-            ByteArrayResource resource = new ByteArrayResource(data);
+            ByteArrayResource resource = new ByteArrayResource(encryptedData);
 
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mytwocents_backup.sql")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mytwocents_backup.mtc")
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(data.length)
+                    .contentLength(encryptedData.length)
                     .body(resource);
 
         } catch (Exception e) {
@@ -51,25 +62,40 @@ public class BackupController {
     }
 
     @PostMapping("/import")
-    public ResponseEntity<String> importBackup(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<String> importBackup(
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("X-Backup-Password") String password) {
         try {
-            File tempFile = File.createTempFile("restore", ".sql");
-            file.transferTo(tempFile);
+            if (password == null || password.isBlank()) {
+                return ResponseEntity.badRequest().body("Senha não fornecida.");
+            }
+
+            // 1. Recebe o arquivo encriptado e desencripta usando a senha
+            byte[] encryptedData = file.getBytes();
+            byte[] decryptedData = cryptoService.decrypt(encryptedData, password);
+
+            // 2. Salva o SQL desencriptado em um arquivo temporário para o H2 rodar
+            File tempSqlFile = File.createTempFile("restore", ".sql");
+            Files.write(tempSqlFile.toPath(), decryptedData);
 
             try (Connection conn = dataSource.getConnection();
                  Statement stmt = conn.createStatement()) {
                 // Remove tudo primeiro
                 stmt.execute("DROP ALL OBJECTS");
                 // Roda o script de restauracao
-                stmt.execute("RUNSCRIPT FROM '" + tempFile.getAbsolutePath() + "'");
+                stmt.execute("RUNSCRIPT FROM '" + tempSqlFile.getAbsolutePath() + "'");
             }
 
-            tempFile.delete();
+            tempSqlFile.delete();
             return ResponseEntity.ok("Backup restaurado com sucesso!");
 
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body("Erro ao restaurar backup: " + e.getMessage());
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && (errorMsg.contains("padding") || errorMsg.contains("Given final block not properly padded"))) {
+                return ResponseEntity.status(401).body("Senha incorreta! Não foi possível desencriptar o backup.");
+            }
+            return ResponseEntity.internalServerError().body("Erro ao restaurar backup: " + errorMsg);
         }
     }
 }

@@ -207,7 +207,7 @@ function triggerExport(format, isFullReport = false) {
 
   // Ambiente JavaFX Desktop: usa FileChooser nativo do sistema
   if (window.javaBridge) {
-    window.javaBridge.saveFile(url, fileName);
+    window.javaBridge.saveFile(url, fileName, null);
     return;
   }
 
@@ -470,6 +470,14 @@ function initModal() {
     e.target.value = value ? 'R$ ' + value : '';
   });
 
+  // Máscara do campo Dia: apenas 2 dígitos, range 1-31
+  $('form-dia').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 2);
+    if (v && parseInt(v) > 31) v = '31';
+    if (v && parseInt(v) < 0) v = '';
+    e.target.value = v;
+  });
+
 
   // Atualiza subcategorias quando a categoria muda
   $('form-categoria').addEventListener('change', () => {
@@ -549,13 +557,28 @@ async function onFormSubmit(e) {
     return;
   }
 
+  const rawValor = $('form-valor').value.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+  const valor = parseFloat(rawValor);
+
+  if (isNaN(valor) || valor <= 0) {
+    showToast('Informe um valor válido maior que zero.', 'error');
+    return;
+  }
+
+  const diaRaw = $('form-dia').value;
+  const dia = diaRaw ? parseInt(diaRaw) : null;
+  if (dia !== null && (isNaN(dia) || dia < 1 || dia > 31)) {
+    showToast('O dia deve ser um número entre 1 e 31.', 'error');
+    return;
+  }
+
   const dto = {
     subcategoria,
     descricao:  $('form-descricao').value.trim() || subcategoria,
-    valor:      parseFloat($('form-valor').value.replace('R$ ', '').replace(/\./g, '').replace(',', '.')),
+    valor:      valor,
     mes:        parseInt($('form-mes').value),
     ano:        state.ano,
-    dia:        $('form-dia').value ? parseInt($('form-dia').value) : null,
+    dia:        dia,
     categoria:  $('form-categoria').value,
     parcelas:   parseInt($('form-parcelas').value || 1),
   };
@@ -632,7 +655,10 @@ function showToast(message, type = 'success') {
     ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><polyline points="20 6 9 17 4 12"/></svg>`
     : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
   
-  toast.innerHTML = icon + `<span>${message}</span>`;
+  toast.innerHTML = icon;
+  const span = document.createElement('span');
+  span.textContent = message;
+  toast.appendChild(span);
   toast.className = `toast toast--${type}`;
   toast.classList.remove('hidden');
 
@@ -657,7 +683,7 @@ function escHtml(str) {
 
 // ─── BACKUP E RESTAURAÇÃO ─────────────────────────────────────────────────────
 function initBackup() {
-  $('btn-export-backup')?.addEventListener('click', handleExportBackup);
+  $('btn-export-backup')?.addEventListener('click', exportBackup);
   $('btn-import-backup')?.addEventListener('click', () => {
     if (window.javaBridge) {
         window.javaBridge.importFile();
@@ -668,34 +694,43 @@ function initBackup() {
   $('file-import-backup')?.addEventListener('change', handleImportBackup);
 }
 
-async function handleExportBackup() {
+async function exportBackup() {
   const btn = $('btn-export-backup');
   const originalHtml = btn.innerHTML;
-  btn.innerHTML = 'Gerando backup...';
-  btn.disabled = true;
-
+  
   try {
-    const res = await fetch('/api/backup/export');
-    if (!res.ok) throw new Error('Falha ao exportar banco de dados.');
-    
-    const fileName = `mytwocents_backup_${new Date().toISOString().split('T')[0]}.sql`;
-    
-    // Tratamento para ambiente JavaFX com WebEngine
+    const msg = "DEFINA UMA SENHA PARA ESTE BACKUP:\n\n" +
+                "IMPORTANTE! Esta senha será necessária para restaurar seus dados futuramente.\n" +
+                "Se você esquecê-la, NÃO será possível recuperar este arquivo de backup.\n" +
+                "Digite a senha desejada:";
+    const pwd = prompt(msg);
+    if (!pwd) return;
+
+    btn.innerHTML = 'Gerando...';
+    btn.disabled = true;
+
+    // No modo nativo (JavaBridge), pedimos ao Java para abrir o diálogo de salvar
     if (window.javaBridge) {
-      window.javaBridge.saveFile('/api/backup/export', fileName);
+      window.javaBridge.saveFile('/api/backup/export', `mytwocents_backup_${new Date().toISOString().split('T')[0]}.mtc`, pwd);
       showToast('O explorador de arquivos será aberto.');
       return;
     }
 
+    // Modo Web puro (fallback)
+    const res = await fetch('/api/backup/export', {
+      headers: { 'X-Backup-Password': pwd }
+    });
+    if (!res.ok) throw new Error('Falha ao exportar banco de dados.');
+    
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = fileName;
+    a.download = `mytwocents_backup_${new Date().toISOString().split('T')[0]}.mtc`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    showToast('Backup exportado com sucesso (Verifique seus downloads)');
+    showToast('Backup exportado com sucesso!');
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
@@ -707,6 +742,12 @@ async function handleExportBackup() {
 async function handleImportBackup(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  const pwd = prompt("Digite a senha deste backup para desencriptar:");
+  if (!pwd) {
+    e.target.value = '';
+    return;
+  }
 
   if (!confirm('ATENÇÃO: A restauração substituirá TODOS os dados atuais. Deseja continuar?')) {
     e.target.value = '';
@@ -724,12 +765,13 @@ async function handleImportBackup(e) {
   try {
     const res = await fetch('/api/backup/import', {
       method: 'POST',
+      headers: { 'X-Backup-Password': pwd },
       body: formData
     });
     
+    const msg = await res.text();
     if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || 'Falha ao restaurar banco.');
+        throw new Error(msg || 'Falha ao restaurar banco.');
     }
     
     showToast('Backup restaurado! Recarregando sistema...');

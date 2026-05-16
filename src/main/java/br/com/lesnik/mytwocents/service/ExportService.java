@@ -52,13 +52,23 @@ public class ExportService {
             if (incluirMes) sb.append(MESES[l.getMes() - 1]).append(";");
             sb.append(l.getDia() != null ? String.format("%02d", l.getDia()) : "").append(";");
             sb.append(l.getCategoria()).append(";")
-                    .append(l.getSubcategoria()).append(";")
-                    .append(l.getDescricao().replace(";", ",")).append(";")
+                    .append(sanitizarCampoCsv(l.getSubcategoria())).append(";")
+                    .append(sanitizarCampoCsv(l.getDescricao())).append(";")
                     .append(l.getValor().toString().replace(".", ","))
                     .append("\n");
         }
 
         return sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    private String sanitizarCampoCsv(String valor) {
+        if (valor == null) return "";
+        String limpo = valor.replace(";", ",");
+        // Previne injeção de fórmulas no Excel (CSV Injection)
+        if (limpo.startsWith("=") || limpo.startsWith("+") || limpo.startsWith("-") || limpo.startsWith("@")) {
+            return "'" + limpo;
+        }
+        return limpo;
     }
 
     public byte[] exportarPdf(Integer ano, Integer mes, Categoria categoria) {
