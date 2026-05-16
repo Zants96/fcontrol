@@ -55,7 +55,6 @@ public class Lancamento {
 
     @Column
     private String grupoId;
-
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 
