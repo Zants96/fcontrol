@@ -223,10 +223,15 @@
     <!-- Toolbar -->
     <div class="table-toolbar">
       <div class="month-tabs" id="month-tabs"></div>
-      <div class="table-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-        <button class="btn-export" id="btn-export-cat-csv" title="Exportar CSV desta Categoria/Mês" style="height: 38px;">CSV</button>
-        <button class="btn-export" id="btn-export-cat-pdf" title="Exportar PDF desta Categoria/Mês" style="height: 38px;">PDF</button>
-        <button class="btn btn--primary" id="btn-add-row">+ Adicionar</button>
+      <div class="table-actions" style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+        <div style="display: flex; gap: 0.5rem; align-items: center; margin-right: 1rem;">
+          <label>Exportar:</label>
+          <button class="btn-export" id="btn-export-cat-csv" title="Exportar CSV desta Categoria/Mês" style="height: 38px;">CSV</button>
+          <button class="btn-export" id="btn-export-cat-pdf" title="Exportar PDF desta Categoria/Mês" style="height: 38px;">PDF</button>
+        </div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <button class="btn btn--primary" id="btn-add-row">+ Adicionar</button>
+        </div>
       </div>
     </div>
 

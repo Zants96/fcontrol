@@ -115,23 +115,28 @@ public class ExportService {
 
         NumberFormat brFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
 
+        Color colorOdd = Color.WHITE;
+        Color colorEven = new Color(245, 245, 245); // Cinza bem claro
+        int rowIdx = 0;
+
         for (LancamentoDTO l : lancamentos) {
-            if (incluirMes) table.addCell(new Phrase(MESES[l.getMes() - 1], fontRow));
-            table.addCell(new Phrase(formatarCategoria(l.getCategoria()), fontRow));
-            table.addCell(new Phrase(l.getDia() != null ? String.format("%02d", l.getDia()) : "-", fontRow));
-            table.addCell(new Phrase(l.getSubcategoria(), fontRow));
-            table.addCell(new Phrase(l.getDescricao(), fontRow));
+            Color bgColor = (rowIdx % 2 == 0) ? colorOdd : colorEven;
+
+            if (incluirMes) addRowCell(table, MESES[l.getMes() - 1], fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, formatarCategoria(l.getCategoria()), fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, l.getDia() != null ? String.format("%02d", l.getDia()) : "-", fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, l.getSubcategoria(), fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, l.getDescricao(), fontRow, bgColor, Element.ALIGN_LEFT);
             
             String valorFormatado = brFormat.format(l.getValor());
-            PdfPCell cellValor = new PdfPCell(new Phrase(valorFormatado, fontRow));
-            cellValor.setHorizontalAlignment(Element.ALIGN_RIGHT);
-            table.addCell(cellValor);
+            addRowCell(table, valorFormatado, fontRow, bgColor, Element.ALIGN_RIGHT);
 
             if (l.getCategoria().name().equals("RECEITA")) {
                 totalReceitas = totalReceitas.add(l.getValor());
             } else {
                 totalGastos = totalGastos.add(l.getValor());
             }
+            rowIdx++;
         }
 
         document.add(table);
@@ -188,5 +193,14 @@ public class ExportService {
         header.setPhrase(new Phrase(text, font));
         header.setPadding(5);
         table.addCell(header);
+    }
+
+    private void addRowCell(PdfPTable table, String text, Font font, Color bgColor, int align) {
+        PdfPCell cell = new PdfPCell(new Phrase(text, font));
+        cell.setBackgroundColor(bgColor);
+        cell.setHorizontalAlignment(align);
+        cell.setBorderColor(new Color(200, 200, 200));
+        cell.setPadding(5);
+        table.addCell(cell);
     }
 }
