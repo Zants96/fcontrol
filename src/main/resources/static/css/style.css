@@ -385,9 +385,8 @@ select option { background: var(--bg-elevated); }
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  -moz-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
 }
 
 .topbar-left { display: flex; align-items: center; gap: 1rem; }
@@ -780,9 +779,8 @@ select option { background: var(--bg-elevated); }
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  -moz-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
