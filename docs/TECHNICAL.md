@@ -1,4 +1,4 @@
-# FControl – Documentação Técnica
+# MyTwoCents – Documentação Técnica
 
 Este documento explica cada arquivo do projeto em detalhe: o que faz, por que existe e como funciona.
 
@@ -15,10 +15,10 @@ Controller  →  Service  →  Repository  →  Database
 
 ---
 
-### `FcontrolApplication.java`
+### `MyTwoCentsApplication.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/FcontrolApplication.java
+src/main/java/br/com/lesnik/mytwocents/MyTwoCentsApplication.java
 ```
 
 **O que é:** Ponto de entrada da aplicação Spring Boot.
@@ -34,7 +34,7 @@ Você não precisa modificar este arquivo normalmente.
 ### `model/Categoria.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/model/Categoria.java
+src/main/java/br/com/lesnik/mytwocents/model/Categoria.java
 ```
 
 **O que é:** Um `enum` (enumeração) que define os três tipos possíveis de lançamento financeiro.
@@ -54,7 +54,7 @@ src/main/java/br/com/lesnik/fcontrol/model/Categoria.java
 ### `model/Lancamento.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/model/Lancamento.java
+src/main/java/br/com/lesnik/mytwocents/model/Lancamento.java
 ```
 
 **O que é:** A entidade principal representando cada lançamento financeiro no banco de dados.
@@ -89,7 +89,7 @@ src/main/java/br/com/lesnik/fcontrol/model/Lancamento.java
 ### `repository/LancamentoRepository.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/repository/LancamentoRepository.java
+src/main/java/br/com/lesnik/mytwocents/repository/LancamentoRepository.java
 ```
 
 **O que é:** Interface responsável pelo acesso ao banco de dados. Estende `JpaRepository`, o que significa que já herda dezenas de operações prontas (save, findById, findAll, delete, etc.).
@@ -114,7 +114,7 @@ src/main/java/br/com/lesnik/fcontrol/repository/LancamentoRepository.java
 ### `dto/LancamentoDTO.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/dto/LancamentoDTO.java
+src/main/java/br/com/lesnik/mytwocents/dto/LancamentoDTO.java
 ```
 
 **O que é:** DTO (Data Transfer Object) — um objeto simples para trafegar dados entre o frontend e o backend através da API.
@@ -133,7 +133,7 @@ Banco  →  Lancamento (entidade)  →  LancamentoService  →  LancamentoDTO  �
 ### `dto/DashboardDTO.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/dto/DashboardDTO.java
+src/main/java/br/com/lesnik/mytwocents/dto/DashboardDTO.java
 ```
 
 **O que é:** DTO específico para o endpoint do dashboard, carregando todos os dados agregados necessários para os gráficos e cards.
@@ -158,7 +158,7 @@ src/main/java/br/com/lesnik/fcontrol/dto/DashboardDTO.java
 ### `service/LancamentoService.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/service/LancamentoService.java
+src/main/java/br/com/lesnik/mytwocents/service/LancamentoService.java
 ```
 
 **O que é:** A camada de negócio — onde ficam as regras e cálculos da aplicação. O Controller chama o Service, e o Service chama o Repository.
@@ -195,7 +195,7 @@ src/main/java/br/com/lesnik/fcontrol/service/LancamentoService.java
 ### `controller/LancamentoController.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/controller/LancamentoController.java
+src/main/java/br/com/lesnik/mytwocents/controller/LancamentoController.java
 ```
 
 **O que é:** A camada de API REST — recebe requisições HTTP, delega ao Service e retorna respostas JSON.
@@ -223,7 +223,7 @@ src/main/java/br/com/lesnik/fcontrol/controller/LancamentoController.java
 ### `config/CorsConfig.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/config/CorsConfig.java
+src/main/java/br/com/lesnik/mytwocents/config/CorsConfig.java
 ```
 
 **O que é:** Configuração de CORS (Cross-Origin Resource Sharing).
@@ -237,7 +237,7 @@ src/main/java/br/com/lesnik/fcontrol/config/CorsConfig.java
 ### `config/DataInitializer.java`
 
 ```
-src/main/java/br/com/lesnik/fcontrol/config/DataInitializer.java
+src/main/java/br/com/lesnik/mytwocents/config/DataInitializer.java
 ```
 
 **O que é:** Componente que roda automaticamente ao iniciar a aplicação e popula o banco com dados padrão.
@@ -267,11 +267,11 @@ src/main/resources/application.properties
 
 ```properties
 # Nome da aplicação (aparece nos logs)
-spring.application.name=fcontrol
+spring.application.name=mytwocents
 
-# Caminho do arquivo H2 (./fcontrol-db.mv.db na pasta do projeto)
+# Caminho do arquivo H2 (./mytwocents-db.mv.db na pasta do projeto)
 # AUTO_SERVER=TRUE permite múltiplas conexões simultâneas (ex: console H2 + app)
-spring.datasource.url=jdbc:h2:file:./fcontrol-db;AUTO_SERVER=TRUE
+spring.datasource.url=jdbc:h2:file:./mytwocents-db;AUTO_SERVER=TRUE
 
 spring.datasource.driver-class-name=org.h2.Driver
 spring.datasource.username=sa

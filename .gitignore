@@ -32,7 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 
-### FControl Custom ###
+### MyTwoCents Custom ###
 *.mv.db
 *.trace.db
 release/

@@ -1,10 +1,10 @@
-package br.com.lesnik.fcontrol.controller;
+package br.com.lesnik.mytwocents.controller;
 
-import br.com.lesnik.fcontrol.dto.DashboardDTO;
-import br.com.lesnik.fcontrol.dto.LancamentoDTO;
-import br.com.lesnik.fcontrol.model.Categoria;
-import br.com.lesnik.fcontrol.service.ExportService;
-import br.com.lesnik.fcontrol.service.LancamentoService;
+import br.com.lesnik.mytwocents.dto.DashboardDTO;
+import br.com.lesnik.mytwocents.dto.LancamentoDTO;
+import br.com.lesnik.mytwocents.model.Categoria;
+import br.com.lesnik.mytwocents.service.ExportService;
+import br.com.lesnik.mytwocents.service.LancamentoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -110,7 +110,7 @@ public class LancamentoController {
         
         Categoria categoria = resolverCategoria(view);
         byte[] data = exportService.exportarCsv(ano, mes, categoria);
-        String filename = gerarNomeArquivo("fcontrol", ano, mes, view, "csv");
+        String filename = gerarNomeArquivo("mytwocents", ano, mes, view, "csv");
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
@@ -126,7 +126,7 @@ public class LancamentoController {
         
         Categoria categoria = resolverCategoria(view);
         byte[] data = exportService.exportarPdf(ano, mes, categoria);
-        String filename = gerarNomeArquivo("fcontrol", ano, mes, view, "pdf");
+        String filename = gerarNomeArquivo("mytwocents", ano, mes, view, "pdf");
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
@@ -146,7 +146,7 @@ public class LancamentoController {
     }
 
     private String gerarNomeArquivo(String prefix, Integer ano, Integer mes, String view, String ext) {
-        StringBuilder name = new StringBuilder("FControl");
+        StringBuilder name = new StringBuilder("MyTwoCents");
         name.append(" - ").append(ano);
         
         if (mes != null && mes > 0 && mes <= 12) {

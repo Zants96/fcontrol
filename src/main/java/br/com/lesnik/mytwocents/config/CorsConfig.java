@@ -1,4 +1,4 @@
-package br.com.lesnik.fcontrol.config;
+package br.com.lesnik.mytwocents.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

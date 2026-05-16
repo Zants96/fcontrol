@@ -1,6 +1,6 @@
-4# 📖 Manual do Usuário — FControl
+# 📖 Manual do Usuário — MyTwoCents
 
-Bem-vindo ao **FControl**! Este guia foi criado para ajudar você a tirar o máximo proveito da sua aplicação de controle financeiro.
+Bem-vindo ao **MyTwoCents**! Este guia foi criado para ajudar você a tirar o máximo proveito da sua aplicação de controle financeiro.
 
 ---
 
@@ -8,14 +8,14 @@ Bem-vindo ao **FControl**! Este guia foi criado para ajudar você a tirar o máx
 
 ### Como Instalar (Linux)
 
-1. Localize o arquivo `FControl.rpm`.
+1. Localize o arquivo `MyTwoCents.rpm`.
 2. Dê dois cliques no arquivo para abrir o instalador do seu sistema (Gnome Software ou similar).
 3. Clique em **Instalar**.
-4. Procure por "FControl" no seu menu de aplicativos e abra-o.
+4. Procure por "MyTwoCents" no seu menu de aplicativos e abra-o.
 
 ### Onde os Dados são Guardados?
 
-Seus lançamentos são salvos automaticamente no seu computador em uma pasta oculta chamada `.fcontrol` dentro da sua pasta pessoal. Isso garante que você nunca perca seus dados, mesmo que desinstale o app.
+Seus lançamentos são salvos automaticamente no seu computador em uma pasta oculta chamada `.mytwocents` dentro da sua pasta pessoal. Isso garante que você nunca perca seus dados, mesmo que desinstale o app.
 
 ---
 
@@ -62,7 +62,7 @@ Dividimos suas finanças em três categorias simples:
 
 ## 4. Exportação de Relatórios
 
-O FControl permite que você leve seus dados para qualquer lugar:
+O MyTwoCents permite que você leve seus dados para qualquer lugar:
 
 - **PDF**: Ideal para impressão ou envio por e-mail. Um relatório profissional com totais e saldos.
 - **CSV**: Perfeito para quem gosta de manipular dados no Excel ou Google Sheets.
@@ -83,7 +83,7 @@ O FControl permite que você leve seus dados para qualquer lugar:
 
 Se o app apresentar algum erro ou não abrir:
 
-1. Verifique se não há outra janela do FControl já aberta.
+1. Verifique se não há outra janela do MyTwoCents já aberta.
 2. Tente reiniciar o computador.
 3. Certifique-se de que seu usuário tem permissão de escrita na sua pasta pessoal.
 

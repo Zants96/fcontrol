@@ -1,7 +1,7 @@
-package br.com.lesnik.fcontrol.service;
+package br.com.lesnik.mytwocents.service;
 
-import br.com.lesnik.fcontrol.dto.LancamentoDTO;
-import br.com.lesnik.fcontrol.model.Categoria;
+import br.com.lesnik.mytwocents.dto.LancamentoDTO;
+import br.com.lesnik.mytwocents.model.Categoria;
 import com.lowagie.text.*;
 import com.lowagie.text.Font;
 import com.lowagie.text.pdf.PdfPCell;
@@ -78,7 +78,7 @@ public class ExportService {
         Font fontRow = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.BLACK);
 
         // Título
-        Paragraph title = new Paragraph("FControl - Relatório Financeiro", fontTitle);
+        Paragraph title = new Paragraph("MyTwoCents - Relatório Financeiro", fontTitle);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
 
