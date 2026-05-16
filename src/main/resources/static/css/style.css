@@ -306,6 +306,7 @@ select option { background: var(--bg-elevated); }
   border: 1px solid var(--border);
   color: var(--text-primary);
   border-radius: var(--radius-sm);
+  min-width: 8.5rem;
   padding: 0.3rem 0.6rem;
   font-size: 0.85rem;
   font-family: inherit;
