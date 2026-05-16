@@ -147,8 +147,8 @@ function renderDonutChart(data) {
       datasets: [{
         data: entries.map(([,v]) => parseFloat(v)),
         backgroundColor: DONUT_COLORS.slice(0, entries.length).map(c => c + 'cc'),
-        borderColor: '#111827',
-        borderWidth: 2,
+        borderColor: document.documentElement.getAttribute('data-theme') === 'light' ? '#ccd9ecff' : '#111827',
+        borderWidth: 1,
         hoverBorderWidth: 0,
       }],
     },
@@ -161,7 +161,7 @@ function renderDonutChart(data) {
           position: 'right',
           labels: {
             color: '#94a3b8',
-            font: { family: 'Inter', size: 10 },
+            font: { family: 'Inter', size: 12 },
             boxWidth: 10,
             padding: 8,
           },
@@ -203,7 +203,7 @@ function renderLineChart(data) {
         borderWidth: 2.5,
         pointBackgroundColor: saldos.map(v => v >= 0 ? '#34d399' : '#f87171'),
         pointBorderColor: '#111827',
-        pointBorderWidth: 2,
+        pointBorderWidth: 1,
         pointRadius: 5,
         pointHoverRadius: 7,
         fill: true,
@@ -408,8 +408,8 @@ function renderMonthlyDonut(gastosPorSubcategoria, suffix = '') {
       datasets: [{
         data: entries.map(([,v]) => v),
         backgroundColor: DONUT_COLORS.slice(0, entries.length).map(c => c + 'cc'),
-        borderColor: '#111827',
-        borderWidth: 2,
+        borderColor: document.documentElement.getAttribute('data-theme') === 'light' ? '#ccd9ecff' : '#111827',
+        borderWidth: 1,
         hoverBorderWidth: 0,
       }],
     },
@@ -422,7 +422,7 @@ function renderMonthlyDonut(gastosPorSubcategoria, suffix = '') {
           position: 'right',
           labels: {
             color: '#94a3b8',
-            font: { family: 'Inter', size: 10 },
+            font: { family: 'Inter', size: 12 },
             boxWidth: 10,
             padding: 8,
           },

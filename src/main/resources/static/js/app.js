@@ -68,8 +68,28 @@ document.addEventListener('DOMContentLoaded', () => {
   initExport();
   initBackup();
   initMonthlyDashboard();
+  initTheme();
   navigateTo('dashboard');
 });
+
+// ─── Tema (Light/Dark) ────────────────────────────────────────────────────────
+function initTheme() {
+  const saved = localStorage.getItem('fcontrol-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  
+  const setTheme = (t) => {
+    if (saved === t) return; // evita reload desnecessário se já estiver no tema
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('fcontrol-theme', t);
+    setTimeout(() => location.reload(), 50);
+  };
+
+  const btnLight = $('btn-theme-light');
+  const btnDark = $('btn-theme-dark');
+  
+  if (btnLight) btnLight.addEventListener('click', () => setTheme('light'));
+  if (btnDark) btnDark.addEventListener('click', () => setTheme('dark'));
+}
 
 // ─── Ano e Data ───────────────────────────────────────────────────────────────
 function initYearSelector() {

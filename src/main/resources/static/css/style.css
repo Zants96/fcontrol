@@ -46,6 +46,42 @@
   --shadow-glow: 0 0 24px rgba(16,185,129,0.15);
 }
 
+:root[data-theme="light"] {
+  /* Background */
+  --bg-base:       #f8fafc;
+  --bg-surface:    #ffffff;
+  --bg-elevated:   #f1f5f9;
+  --bg-hover:      #e2e8f0;
+
+  /* Brand */
+  --brand-primary:   #059669;
+  --brand-glow:      #10b981;
+  --brand-dark:      #d1fae5;
+
+  /* Accent */
+  --accent-red:      #ef4444;
+  --accent-red-bg:   #fee2e2;
+  --accent-purple:   #8b5cf6;
+  --accent-purple-bg:#ede9fe;
+  --accent-blue:     #3b82f6;
+  --accent-blue-bg:  #dbeafe;
+  --accent-orange:   #f97316;
+
+  /* Text */
+  --text-primary:    #0f172a;
+  --text-secondary:  #475569;
+  --text-muted:      #94a3b8;
+
+  /* Border */
+  --border:          rgba(15,23,42,0.1);
+  --border-active:   rgba(5,150,105,0.4);
+
+  /* Shadows */
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.1);
+  --shadow-md:  0 4px 16px rgba(0,0,0,0.1);
+  --shadow-glow: 0 0 24px rgba(5,150,105,0.15);
+}
+
 /* ─── Reset & Base ──────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -117,7 +153,7 @@ select option { background: var(--bg-elevated); }
 .logo-text {
   font-size: 1.3rem;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--text-primary);
   letter-spacing: 0.5px;
 }
 
@@ -342,6 +378,8 @@ select option { background: var(--bg-elevated); }
   top: 0;
   z-index: 50;
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  -moz-backdrop-filter: blur(12px);
 }
 
 .topbar-left { display: flex; align-items: center; gap: 1rem; }
@@ -392,6 +430,8 @@ select option { background: var(--bg-elevated); }
   position: relative;
   overflow: hidden;
   transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
 }
 
 .card:hover {
@@ -731,6 +771,8 @@ select option { background: var(--bg-elevated); }
   inset: 0;
   background: rgba(0,0,0,0.7);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  -moz-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
