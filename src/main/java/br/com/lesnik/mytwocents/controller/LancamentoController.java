@@ -154,12 +154,12 @@ public class LancamentoController {
         }
         
         if (view != null && !view.equalsIgnoreCase("dashboard")) {
-            String aba = switch (view) {
+            String aba = switch (view != null ? view.toLowerCase() : "") {
                 case "receitas" -> "Receitas";
                 case "gastos" -> "Gastos";
                 case "gastos-fixos" -> "Gastos Fixos";
                 case "assinaturas" -> "Assinaturas";
-                default -> view;
+                default -> "Geral";
             };
             name.append(" - ").append(aba);
         } else {

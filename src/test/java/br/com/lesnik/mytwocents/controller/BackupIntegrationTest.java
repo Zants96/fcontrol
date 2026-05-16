@@ -27,7 +27,7 @@ class BackupIntegrationTest {
 
         // 1. Testa Exportação
         byte[] encryptedBackup = mockMvc.perform(get("/api/backup/export")
-                .param("password", password))
+                .header("X-Backup-Password", password))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=mytwocents_backup.mtc"))
                 .andReturn().getResponse().getContentAsByteArray();
@@ -37,14 +37,14 @@ class BackupIntegrationTest {
         
         mockMvc.perform(multipart("/api/backup/import")
                 .file(file)
-                .param("password", password))
+                .header("X-Backup-Password", password))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Backup restaurado com sucesso!"));
 
         // 3. Testa Importação com Senha Errada
         mockMvc.perform(multipart("/api/backup/import")
                 .file(file)
-                .param("password", "wrong-password"))
+                .header("X-Backup-Password", "wrong-password"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(content().string("Senha incorreta! Não foi possível desencriptar o backup."));
     }

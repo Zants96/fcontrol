@@ -21,8 +21,6 @@ public class LancamentoService {
 
     private final LancamentoRepository repository;
 
-    /** Categorias que representam saídas de dinheiro (gastos) para cálculos do dashboard */
-    private static final List<Categoria> CATS_GASTO = List.of(Categoria.GASTO, Categoria.GASTO_FIXO, Categoria.ASSINATURA);
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 

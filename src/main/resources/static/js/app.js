@@ -207,7 +207,7 @@ function triggerExport(format, isFullReport = false) {
 
   // Ambiente JavaFX Desktop: usa FileChooser nativo do sistema
   if (window.javaBridge) {
-    window.javaBridge.saveFile(url, fileName);
+    window.javaBridge.saveFile(url, fileName, null);
     return;
   }
 
@@ -470,6 +470,14 @@ function initModal() {
     e.target.value = value ? 'R$ ' + value : '';
   });
 
+  // Máscara do campo Dia: apenas 2 dígitos, range 1-31
+  $('form-dia').addEventListener('input', e => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 2);
+    if (v && parseInt(v) > 31) v = '31';
+    if (v && parseInt(v) < 0) v = '';
+    e.target.value = v;
+  });
+
 
   // Atualiza subcategorias quando a categoria muda
   $('form-categoria').addEventListener('change', () => {
@@ -557,13 +565,20 @@ async function onFormSubmit(e) {
     return;
   }
 
+  const diaRaw = $('form-dia').value;
+  const dia = diaRaw ? parseInt(diaRaw) : null;
+  if (dia !== null && (isNaN(dia) || dia < 1 || dia > 31)) {
+    showToast('O dia deve ser um número entre 1 e 31.', 'error');
+    return;
+  }
+
   const dto = {
     subcategoria,
     descricao:  $('form-descricao').value.trim() || subcategoria,
     valor:      valor,
     mes:        parseInt($('form-mes').value),
     ano:        state.ano,
-    dia:        $('form-dia').value ? parseInt($('form-dia').value) : null,
+    dia:        dia,
     categoria:  $('form-categoria').value,
     parcelas:   parseInt($('form-parcelas').value || 1),
   };
@@ -685,8 +700,8 @@ async function exportBackup() {
   
   try {
     const msg = "DEFINA UMA SENHA PARA ESTE BACKUP:\n\n" +
-                "IMPORTANTE! Esta senha será necessária para restaurar seus dados futuramente. " +
-                "Se você esquecê-la, NÃO será possível recuperar este arquivo de backup.\n\n" +
+                "IMPORTANTE! Esta senha será necessária para restaurar seus dados futuramente.\n" +
+                "Se você esquecê-la, NÃO será possível recuperar este arquivo de backup.\n" +
                 "Digite a senha desejada:";
     const pwd = prompt(msg);
     if (!pwd) return;
@@ -696,13 +711,15 @@ async function exportBackup() {
 
     // No modo nativo (JavaBridge), pedimos ao Java para abrir o diálogo de salvar
     if (window.javaBridge) {
-      window.javaBridge.saveFile(`/api/backup/export?password=${encodeURIComponent(pwd)}`, `mytwocents_backup_${new Date().toISOString().split('T')[0]}.mtc`);
+      window.javaBridge.saveFile('/api/backup/export', `mytwocents_backup_${new Date().toISOString().split('T')[0]}.mtc`, pwd);
       showToast('O explorador de arquivos será aberto.');
       return;
     }
 
     // Modo Web puro (fallback)
-    const res = await fetch(`/api/backup/export?password=${encodeURIComponent(pwd)}`);
+    const res = await fetch('/api/backup/export', {
+      headers: { 'X-Backup-Password': pwd }
+    });
     if (!res.ok) throw new Error('Falha ao exportar banco de dados.');
     
     const blob = await res.blob();
@@ -746,8 +763,9 @@ async function handleImportBackup(e) {
   btn.disabled = true;
 
   try {
-    const res = await fetch(`/api/backup/import?password=${encodeURIComponent(pwd)}`, {
+    const res = await fetch('/api/backup/import', {
       method: 'POST',
+      headers: { 'X-Backup-Password': pwd },
       body: formData
     });
     
