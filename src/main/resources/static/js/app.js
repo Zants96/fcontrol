@@ -145,13 +145,13 @@ function refreshView() {
 }
 
 // ─── Exportação ──────────────────────────────────────────────────────────────
-function buildExportUrl(format) {
-  // Dashboard exporta o ano inteiro, sem filtro de mês
-  const mes = state.view === 'dashboard' ? 0 : state.mes;
-  return `/api/lancamentos/export/${format}?ano=${state.ano}&mes=${mes}&view=${state.view}`;
+function buildExportUrl(format, isFullReport) {
+  const mes = isFullReport ? 0 : state.mes;
+  const view = isFullReport ? 'dashboard' : state.view;
+  return `/api/lancamentos/export/${format}?ano=${state.ano}&mes=${mes}&view=${view}`;
 }
 
-function buildFileName(format) {
+function buildFileName(format, isFullReport) {
   const MESES_NOME = [
     'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
     'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
@@ -164,17 +164,19 @@ function buildFileName(format) {
     'dashboard': 'Geral'
   };
   let name = `FControl - ${state.ano}`;
-  // Só inclui mês no nome se NÃO for dashboard
-  if (state.view !== 'dashboard' && state.mes > 0) {
-    name += ` - ${MESES_NOME[state.mes - 1]}`;
+  const mes = isFullReport ? 0 : state.mes;
+  const view = isFullReport ? 'dashboard' : state.view;
+  
+  if (mes > 0) {
+    name += ` - ${MESES_NOME[mes - 1]}`;
   }
-  name += ` - ${VIEW_NOMES[state.view] || 'Geral'}`;
+  name += ` - ${VIEW_NOMES[view] || 'Geral'}`;
   return `${name}.${format}`;
 }
 
-function triggerExport(format) {
-  const url = buildExportUrl(format);
-  const fileName = buildFileName(format);
+function triggerExport(format, isFullReport = false) {
+  const url = buildExportUrl(format, isFullReport);
+  const fileName = buildFileName(format, isFullReport);
 
   // Ambiente JavaFX Desktop: usa FileChooser nativo do sistema
   if (window.javaBridge) {
@@ -202,8 +204,13 @@ function triggerExport(format) {
 }
 
 function initExport() {
-  $('btn-export-csv').addEventListener('click', () => triggerExport('csv'));
-  $('btn-export-pdf').addEventListener('click', () => triggerExport('pdf'));
+  $('btn-export-csv').addEventListener('click', () => triggerExport('csv', true));
+  $('btn-export-pdf').addEventListener('click', () => triggerExport('pdf', true));
+  
+  const catCsv = $('btn-export-cat-csv');
+  if (catCsv) catCsv.addEventListener('click', () => triggerExport('csv', false));
+  const catPdf = $('btn-export-cat-pdf');
+  if (catPdf) catPdf.addEventListener('click', () => triggerExport('pdf', false));
 }
 
 // ─── Mobile Menu ─────────────────────────────────────────────────────────────
