@@ -28,7 +28,7 @@ public class BackupController {
     }
 
     @GetMapping("/export")
-    public ResponseEntity<Resource> exportBackup(@RequestParam("password") String password) {
+    public ResponseEntity<Resource> exportBackup(@RequestHeader("X-Backup-Password") String password) {
         try {
             if (password == null || password.isBlank()) {
                 return ResponseEntity.badRequest().build();
@@ -64,7 +64,7 @@ public class BackupController {
     @PostMapping("/import")
     public ResponseEntity<String> importBackup(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("password") String password) {
+            @RequestHeader("X-Backup-Password") String password) {
         try {
             if (password == null || password.isBlank()) {
                 return ResponseEntity.badRequest().body("Senha não fornecida.");

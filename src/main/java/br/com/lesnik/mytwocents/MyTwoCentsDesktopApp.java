@@ -35,7 +35,7 @@ public class MyTwoCentsDesktopApp extends Application {
      * Permite ao JS solicitar o download de arquivos usando o FileChooser do sistema.
      */
     public class JavaBridge {
-        public void saveFile(String urlPath, String suggestedName) {
+        public void saveFile(String urlPath, String suggestedName, String password) {
             Platform.runLater(() -> {
                 try {
                     // Determina a extensão para o filtro do FileChooser
@@ -55,6 +55,9 @@ public class MyTwoCentsDesktopApp extends Application {
                     URL url = new URL("http://localhost:8085" + urlPath);
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("GET");
+                    if (password != null) {
+                        conn.setRequestProperty("X-Backup-Password", password);
+                    }
 
                     try (InputStream in = conn.getInputStream();
                          FileOutputStream out = new FileOutputStream(file)) {
@@ -116,7 +119,8 @@ public class MyTwoCentsDesktopApp extends Application {
                     String boundary = "---" + System.currentTimeMillis();
                     java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
                     java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                            .uri(java.net.URI.create("http://localhost:8085/api/backup/import?password=" + java.net.URLEncoder.encode(password, "UTF-8")))
+                            .uri(java.net.URI.create("http://localhost:8085/api/backup/import"))
+                            .header("X-Backup-Password", password)
                             .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                             .POST(createMultipartBody(file, boundary))
                             .build();
