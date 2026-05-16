@@ -84,11 +84,21 @@ public class MyTwoCentsDesktopApp extends Application {
                     FileChooser fileChooser = new FileChooser();
                     fileChooser.setTitle("Selecionar Backup para Restaurar");
                     fileChooser.getExtensionFilters().add(
-                        new FileChooser.ExtensionFilter("Backup do MyTwoCents (*.sql)", "*.sql")
+                        new FileChooser.ExtensionFilter("Backup Encriptado (*.mtc)", "*.mtc")
                     );
 
                     File file = fileChooser.showOpenDialog(primaryStage);
                     if (file == null) return; // Usuário cancelou
+
+                    // Pedir a senha do backup
+                    javafx.scene.control.TextInputDialog pwdDialog = new javafx.scene.control.TextInputDialog();
+                    pwdDialog.setTitle("Senha do Backup");
+                    pwdDialog.setHeaderText("Este backup está encriptado.");
+                    pwdDialog.setContentText("Digite a senha usada na exportação:");
+                    pwdDialog.showAndWait();
+
+                    String password = pwdDialog.getResult();
+                    if (password == null || password.isBlank()) return;
 
                     // Confirmar acao no Java para garantir seguranca extra
                     javafx.scene.control.Alert confirm = new javafx.scene.control.Alert(
@@ -106,7 +116,7 @@ public class MyTwoCentsDesktopApp extends Application {
                     String boundary = "---" + System.currentTimeMillis();
                     java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
                     java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                            .uri(java.net.URI.create("http://localhost:8085/api/backup/import"))
+                            .uri(java.net.URI.create("http://localhost:8085/api/backup/import?password=" + java.net.URLEncoder.encode(password, "UTF-8")))
                             .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                             .POST(createMultipartBody(file, boundary))
                             .build();
@@ -199,6 +209,16 @@ public class MyTwoCentsDesktopApp extends Application {
             alert.setHeaderText(null);
             alert.showAndWait();
             return alert.getResult() == javafx.scene.control.ButtonType.YES;
+        });
+
+        // Intercepta e renderiza prompts do Javascript (necessário para a senha do backup)
+        webView.getEngine().setPromptHandler(promptData -> {
+            javafx.scene.control.TextInputDialog dialog = new javafx.scene.control.TextInputDialog(promptData.getDefaultValue());
+            dialog.setTitle("MyTwoCents - Entrada de Dados");
+            dialog.setHeaderText(null);
+            dialog.setContentText(promptData.getMessage());
+            java.util.Optional<String> result = dialog.showAndWait();
+            return result.orElse(null);
         });
 
         // Carrega o site local e injeta a Bridge
