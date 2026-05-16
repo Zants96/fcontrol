@@ -69,10 +69,10 @@
     </div>
     
     <div class="sidebar-item-row">
-      <label>Exportar</label>
+      <label>Relatório</label>
       <div class="export-btns">
-        <button class="btn-export" id="btn-export-csv" title="Exportar Planilha CSV">CSV</button>
-        <button class="btn-export" id="btn-export-pdf" title="Exportar Relatório PDF">PDF</button>
+        <button class="btn-export" id="btn-export-csv" title="Exportar Planilha CSV (Ano Inteiro)">CSV</button>
+        <button class="btn-export" id="btn-export-pdf" title="Exportar Relatório PDF (Ano Inteiro)">PDF</button>
       </div>
     </div>
     <hr>
@@ -223,7 +223,11 @@
     <!-- Toolbar -->
     <div class="table-toolbar">
       <div class="month-tabs" id="month-tabs"></div>
-      <button class="btn btn--primary" id="btn-add-row">+ Adicionar</button>
+      <div class="table-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+        <button class="btn-export" id="btn-export-cat-csv" title="Exportar CSV desta Categoria/Mês" style="height: 38px;">CSV</button>
+        <button class="btn-export" id="btn-export-cat-pdf" title="Exportar PDF desta Categoria/Mês" style="height: 38px;">PDF</button>
+        <button class="btn btn--primary" id="btn-add-row">+ Adicionar</button>
+      </div>
     </div>
 
     <!-- ─── DASHBOARD MENSAL DA TABELA ─────────────────────────────────────────── -->
