@@ -225,6 +225,43 @@
       <button class="btn btn--primary" id="btn-add-row">+ Adicionar</button>
     </div>
 
+    <!-- ─── DASHBOARD MENSAL DA TABELA ─────────────────────────────────────────── -->
+    <div class="cards-grid" id="monthly-cards-tabela" style="margin-top: 1rem;">
+      <div class="card card--green">
+        <div class="card-label">Receitas do Mês</div>
+        <div class="card-value" id="card-t-receitas">R$ 0,00</div>
+      </div>
+      <div class="card card--red">
+        <div class="card-label">Gastos do Mês</div>
+        <div class="card-value" id="card-t-gastos">R$ 0,00</div>
+      </div>
+      <div class="card card--purple">
+        <div class="card-label">Assinaturas do Mês</div>
+        <div class="card-value" id="card-t-assinaturas">R$ 0,00</div>
+      </div>
+      <div class="card card--blue">
+        <div class="card-label">Saldo do Mês</div>
+        <div class="card-value" id="card-t-saldo">R$ 0,00</div>
+      </div>
+    </div>
+    
+    <div class="charts-row" style="margin-bottom: 1.5rem;">
+      <div class="chart-card chart-card--wide">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Distribuição de Gastos do Mês</h2>
+        </div>
+        <div class="chart-wrapper chart-wrapper--donut">
+          <canvas id="chart-donut-monthly-tabela"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Top 5 Gastos do Mês</h2>
+        </div>
+        <div class="top-list" id="top-gastos-monthly-tabela"></div>
+      </div>
+    </div>
+
     <!-- Table Area -->
     <div class="table-container">
       <table class="data-table" id="data-table">
@@ -233,6 +270,7 @@
             <th>Subcategoria</th>
             <th>Descrição</th>
             <th>Valor (R$)</th>
+            <th>Dia</th>
             <th class="col-actions">Ações</th>
           </tr>
         </thead>
@@ -241,6 +279,7 @@
           <tr class="totals-row">
             <td colspan="2"><strong>Total do Mês</strong></td>
             <td id="table-total"><strong>R$ 0,00</strong></td>
+            <td></td>
             <td></td>
           </tr>
         </tfoot>
@@ -317,6 +356,10 @@
             <option value="12">Dezembro</option>
           </select>
         </div>
+        <div class="form-group">
+          <label for="form-dia">Dia</label>
+          <input type="number" id="form-dia" min="1" max="31" placeholder="Ex: 15" />
+        </div>
       </div>
 
       <div class="form-group">
@@ -345,7 +388,7 @@
       <button class="modal-close" id="modal-pix-close">✕</button>
     </div>
     <div class="modal-body pix-body">
-      <p style="text-align: center; margin-bottom: 1rem; color: var(--text-secondary);">Gostou do <b>FControl</b>? Ajude com uma doação PIX!</p>
+      <p style="text-align: center; margin-bottom: 1rem; color: var(--text-secondary);">Gostou do <b>FControl</b>? Uma doação é bem-vinda! =)</p>
       <div style="text-align: center; margin-bottom: 1rem;">
         <img src="pix.png" alt="QR Code PIX" style="width: 200px; border-radius: var(--radius); border: 2px solid var(--border);">
       </div>

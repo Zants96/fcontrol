@@ -18,4 +18,5 @@ public class LancamentoDTO {
     private BigDecimal valor;
     private Integer mes;
     private Integer ano;
+    private Integer dia;
 }

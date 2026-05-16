@@ -43,6 +43,10 @@ public class Lancamento {
     @Column(nullable = false)
     private Integer ano;
 
+    /** Dia do lançamento (opcional) */
+    @Column
+    private Integer dia;
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 

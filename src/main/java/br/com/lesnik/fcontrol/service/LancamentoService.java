@@ -65,6 +65,7 @@ public class LancamentoService {
         lancamento.setValor(dto.getValor());
         lancamento.setMes(dto.getMes());
         lancamento.setAno(dto.getAno());
+        lancamento.setDia(dto.getDia());
 
         return toDTO(repository.save(lancamento));
     }
@@ -150,6 +151,7 @@ public class LancamentoService {
                 .valor(l.getValor())
                 .mes(l.getMes())
                 .ano(l.getAno())
+                .dia(l.getDia())
                 .build();
     }
 
@@ -161,6 +163,7 @@ public class LancamentoService {
                 .valor(dto.getValor())
                 .mes(dto.getMes())
                 .ano(dto.getAno())
+                .dia(dto.getDia())
                 .build();
     }
 }
