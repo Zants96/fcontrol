@@ -134,6 +134,13 @@ function navigateTo(view) {
     $('view-configuracoes')?.classList.remove('hidden');
   } else {
     state.categoria = CATEGORIA_VIEW[view];
+    
+    const labelTipo = CATEGORIA_LABEL[state.categoria] || 'Gastos';
+    const tDist = $('title-dist-tabela');
+    const tTop = $('title-top-tabela');
+    if (tDist) tDist.textContent = `Distribuição de ${labelTipo} do Mês`;
+    if (tTop) tTop.textContent = `Top 5 ${labelTipo} do Mês`;
+
     $('view-tabela').classList.remove('hidden');
     buildMonthTabs();
     loadTabela();
