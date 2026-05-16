@@ -1,9 +1,9 @@
-package br.com.lesnik.fcontrol.controller;
+package br.com.lesnik.mytwocents.controller;
 
-import br.com.lesnik.fcontrol.dto.LancamentoDTO;
-import br.com.lesnik.fcontrol.model.Categoria;
-import br.com.lesnik.fcontrol.service.ExportService;
-import br.com.lesnik.fcontrol.service.LancamentoService;
+import br.com.lesnik.mytwocents.dto.LancamentoDTO;
+import br.com.lesnik.mytwocents.model.Categoria;
+import br.com.lesnik.mytwocents.service.ExportService;
+import br.com.lesnik.mytwocents.service.LancamentoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

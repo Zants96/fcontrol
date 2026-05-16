@@ -1,4 +1,4 @@
-package br.com.lesnik.fcontrol.model;
+package br.com.lesnik.mytwocents.model;
 
 public enum Categoria {
     RECEITA,

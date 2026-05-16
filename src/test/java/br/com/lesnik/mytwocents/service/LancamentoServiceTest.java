@@ -1,9 +1,9 @@
-package br.com.lesnik.fcontrol.service;
+package br.com.lesnik.mytwocents.service;
 
-import br.com.lesnik.fcontrol.dto.DashboardDTO;
-import br.com.lesnik.fcontrol.model.Categoria;
-import br.com.lesnik.fcontrol.model.Lancamento;
-import br.com.lesnik.fcontrol.repository.LancamentoRepository;
+import br.com.lesnik.mytwocents.dto.DashboardDTO;
+import br.com.lesnik.mytwocents.model.Categoria;
+import br.com.lesnik.mytwocents.model.Lancamento;
+import br.com.lesnik.mytwocents.repository.LancamentoRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -93,7 +93,7 @@ class LancamentoServiceTest {
     @Test
     @DisplayName("Deve criar múltiplos lançamentos quando informado o número de parcelas")
     void deveCriarMultiplosLancamentosQuandoParcelado() {
-        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+        br.com.lesnik.mytwocents.dto.LancamentoDTO dto = br.com.lesnik.mytwocents.dto.LancamentoDTO.builder()
                 .descricao("Internet")
                 .categoria(Categoria.GASTO_FIXO)
                 .subcategoria("Internet")
@@ -105,7 +105,7 @@ class LancamentoServiceTest {
 
         when(repository.save(any(Lancamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        br.com.lesnik.fcontrol.dto.LancamentoDTO result = service.criar(dto);
+        br.com.lesnik.mytwocents.dto.LancamentoDTO result = service.criar(dto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDescricao()).contains("1/3");
@@ -125,7 +125,7 @@ class LancamentoServiceTest {
                 .mes(1).ano(2026).categoria(Categoria.GASTO_FIXO).valor(new BigDecimal("100"))
                 .build();
 
-        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+        br.com.lesnik.mytwocents.dto.LancamentoDTO dto = br.com.lesnik.mytwocents.dto.LancamentoDTO.builder()
                 .descricao("Net").categoria(Categoria.GASTO_FIXO).valor(new BigDecimal("100"))
                 .mes(1).ano(2026).parcelas(5) // De 3 para 5
                 .build();
@@ -149,7 +149,7 @@ class LancamentoServiceTest {
                 .mes(1).ano(2026).categoria(Categoria.GASTO_FIXO).valor(new BigDecimal("100"))
                 .build();
 
-        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+        br.com.lesnik.mytwocents.dto.LancamentoDTO dto = br.com.lesnik.mytwocents.dto.LancamentoDTO.builder()
                 .descricao("Net").categoria(Categoria.GASTO_FIXO).valor(new BigDecimal("101"))
                 .mes(1).ano(2026).parcelas(3) // De 5 para 3
                 .build();
@@ -174,7 +174,7 @@ class LancamentoServiceTest {
                 .mes(1).ano(2026).categoria(Categoria.GASTO).valor(new BigDecimal("100"))
                 .build();
 
-        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+        br.com.lesnik.mytwocents.dto.LancamentoDTO dto = br.com.lesnik.mytwocents.dto.LancamentoDTO.builder()
                 .descricao("Compra única").categoria(Categoria.GASTO).valor(new BigDecimal("100"))
                 .mes(1).ano(2026).parcelas(2) // De 1 para 2
                 .build();
@@ -195,7 +195,7 @@ class LancamentoServiceTest {
     @Test
     @DisplayName("Não deve duplicar sufixo quando descrição já contém um (X/Y)")
     void deveNaoDuplicarSufixoQuandoJaExisteNaDescricao() {
-        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+        br.com.lesnik.mytwocents.dto.LancamentoDTO dto = br.com.lesnik.mytwocents.dto.LancamentoDTO.builder()
                 .descricao("Internet (1/3)") // Sufixo já presente (enviado erroneamente pela UI talvez)
                 .categoria(Categoria.GASTO_FIXO)
                 .subcategoria("Internet")
@@ -206,7 +206,7 @@ class LancamentoServiceTest {
 
         when(repository.save(any(Lancamento.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        br.com.lesnik.fcontrol.dto.LancamentoDTO result = service.criar(dto);
+        br.com.lesnik.mytwocents.dto.LancamentoDTO result = service.criar(dto);
 
         assertThat(result.getDescricao()).doesNotContain("(1/3) (1/3)");
         assertThat(result.getDescricao()).contains("Internet (1/3)");
@@ -222,7 +222,7 @@ class LancamentoServiceTest {
                 .mes(1).ano(2026).categoria(Categoria.ASSINATURA).valor(new BigDecimal("30"))
                 .build();
 
-        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+        br.com.lesnik.mytwocents.dto.LancamentoDTO dto = br.com.lesnik.mytwocents.dto.LancamentoDTO.builder()
                 .descricao("Spotify (1/5) (1/5)") // Enviado pela UI ou por estado anterior
                 .categoria(Categoria.ASSINATURA).valor(new BigDecimal("30"))
                 .mes(1).ano(2026).parcelas(5)
@@ -271,7 +271,7 @@ class LancamentoServiceTest {
                 .mes(1).ano(2026).categoria(Categoria.GASTO).valor(new BigDecimal("100"))
                 .build();
 
-        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+        br.com.lesnik.mytwocents.dto.LancamentoDTO dto = br.com.lesnik.mytwocents.dto.LancamentoDTO.builder()
                 .descricao("Academia")
                 .mes(2).ano(2026).parcelas(5) // Expande de 3 para 5
                 .categoria(Categoria.GASTO).valor(new BigDecimal("100"))
@@ -302,7 +302,7 @@ class LancamentoServiceTest {
         Lancamento p3 = Lancamento.builder().id(3L).parcelaActual(3).totalParcelas(3).grupoId(grupoId).mes(8).ano(2024).categoria(Categoria.GASTO).subcategoria("S").build();
 
         // Editando P2 para Junho (mês 6) -> Antecipando 1 mês
-        br.com.lesnik.fcontrol.dto.LancamentoDTO dto = br.com.lesnik.fcontrol.dto.LancamentoDTO.builder()
+        br.com.lesnik.mytwocents.dto.LancamentoDTO dto = br.com.lesnik.mytwocents.dto.LancamentoDTO.builder()
                 .descricao("Internet").categoria(Categoria.GASTO).subcategoria("S").valor(new BigDecimal("100"))
                 .mes(6).ano(2024).parcelas(3)
                 .build();

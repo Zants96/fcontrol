@@ -1,7 +1,7 @@
-package br.com.lesnik.fcontrol.repository;
+package br.com.lesnik.mytwocents.repository;
 
-import br.com.lesnik.fcontrol.model.Categoria;
-import br.com.lesnik.fcontrol.model.Lancamento;
+import br.com.lesnik.mytwocents.model.Categoria;
+import br.com.lesnik.mytwocents.model.Lancamento;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

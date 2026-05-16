@@ -2,7 +2,7 @@
 setlocal
 
 echo "============================================================"
-echo "    FControl - Criador de Instalador Windows (.msi/.exe)"
+echo "    MyTwoCents - Criador de Instalador Windows (.msi/.exe)"
 echo "============================================================"
 echo.
 echo Requisitos:
@@ -17,13 +17,13 @@ if "%JAVA_HOME%"=="" (
     exit /b 1
 )
 
-echo [1/3] Compilando o FControl com Maven...
+echo [1/3] Compilando o MyTwoCents com Maven...
 call mvnw.cmd clean package -DskipTests
 
 rmdir /s /q release
 mkdir release
 mkdir target\jpackage-input
-copy target\fcontrol-*.jar target\jpackage-input\
+copy target\mytwocents-*.jar target\jpackage-input\
 
 echo.
 echo [2/3] Criando JRE Customizado com jlink...
@@ -33,12 +33,12 @@ echo.
 echo [3/3] Empacotando Instalador Nativo do Windows...
 "%JAVA_HOME%\bin\jpackage" ^
   --input target\jpackage-input ^
-  --name "FControl" ^
-  --main-jar "fcontrol-0.0.1-SNAPSHOT.jar" ^
+  --name "MyTwoCents" ^
+  --main-jar "mytwocents-0.0.1-SNAPSHOT.jar" ^
   --type exe ^
   --dest release ^
   --app-version 1.0.0 ^
-  --description "FControl - Controle Financeiro" ^
+  --description "MyTwoCents - Controle Financeiro" ^
   --vendor "Zantetsu" ^
   --icon "src\main\resources\static\icon.ico" ^
   --win-shortcut ^
