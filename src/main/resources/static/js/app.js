@@ -68,8 +68,28 @@ document.addEventListener('DOMContentLoaded', () => {
   initExport();
   initBackup();
   initMonthlyDashboard();
+  initTheme();
   navigateTo('dashboard');
 });
+
+// ─── Tema (Light/Dark) ────────────────────────────────────────────────────────
+function initTheme() {
+  const saved = localStorage.getItem('fcontrol-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  
+  const setTheme = (t) => {
+    if (saved === t) return; // evita reload desnecessário se já estiver no tema
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('fcontrol-theme', t);
+    setTimeout(() => location.reload(), 50);
+  };
+
+  const btnLight = $('btn-theme-light');
+  const btnDark = $('btn-theme-dark');
+  
+  if (btnLight) btnLight.addEventListener('click', () => setTheme('light'));
+  if (btnDark) btnDark.addEventListener('click', () => setTheme('dark'));
+}
 
 // ─── Ano e Data ───────────────────────────────────────────────────────────────
 function initYearSelector() {
@@ -222,8 +242,11 @@ function initExport() {
 
 // ─── Mobile Menu ─────────────────────────────────────────────────────────────
 function initMenuToggle() {
-  $('menu-toggle').addEventListener('click', () => {
+  const btn = $('menu-toggle');
+  btn.addEventListener('click', () => {
     $('sidebar').classList.toggle('open');
+    const isOpen = $('sidebar').classList.contains('open');
+    btn.setAttribute('aria-expanded', isOpen);
   });
 }
 
@@ -408,12 +431,17 @@ function initModal() {
   // PIX Modal
   $('btn-open-pix').addEventListener('click', () => {
     $('modal-pix-overlay').classList.remove('hidden');
+    $('main-content').setAttribute('aria-hidden', 'true');
+    setTimeout(() => $('modal-pix-close').focus(), 100);
   });
-  $('modal-pix-close').addEventListener('click', () => {
+  const closePixModal = () => {
     $('modal-pix-overlay').classList.add('hidden');
-  });
+    $('main-content').removeAttribute('aria-hidden');
+    $('btn-open-pix').focus();
+  };
+  $('modal-pix-close').addEventListener('click', closePixModal);
   $('modal-pix-overlay').addEventListener('click', e => {
-    if (e.target === $('modal-pix-overlay')) $('modal-pix-overlay').classList.add('hidden');
+    if (e.target === $('modal-pix-overlay')) closePixModal();
   });
   $('btn-copy-pix').addEventListener('click', (e) => {
     const key = e.currentTarget.dataset.key;
@@ -499,12 +527,17 @@ function openEditModal(id) {
 
 function showModal() {
   $('modal-overlay').classList.remove('hidden');
+  $('main-content').setAttribute('aria-hidden', 'true');
   setTimeout(() => $('form-subcategoria').focus(), 100);
 }
 
 function closeModal() {
   $('modal-overlay').classList.add('hidden');
+  $('main-content').removeAttribute('aria-hidden');
   state.editingId = null;
+  // Retorna o foco ao botão que geralmente abriu
+  const addRowBtn = $('btn-add-row');
+  if (addRowBtn && !addRowBtn.closest('.hidden')) addRowBtn.focus();
 }
 
 async function onFormSubmit(e) {
