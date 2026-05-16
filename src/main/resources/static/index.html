@@ -141,7 +141,7 @@
       </div>
       <div class="chart-card">
         <div class="chart-card-header">
-          <h2 class="chart-title">Distribuição de Gastos</h2>
+          <h2 class="chart-title">Distribuição Consolidada (Ano)</h2>
         </div>
         <div class="chart-wrapper chart-wrapper--donut">
           <canvas id="chart-donut"></canvas>
@@ -161,7 +161,7 @@
       </div>
       <div class="chart-card">
         <div class="chart-card-header">
-          <h2 class="chart-title">Top 5 Maiores Gastos</h2>
+          <h2 class="chart-title">Top 5 Consolidados (Ano)</h2>
         </div>
         <div class="top-list" id="top-gastos"></div>
       </div>
@@ -201,7 +201,7 @@
     <div class="charts-row">
       <div class="chart-card chart-card--wide">
         <div class="chart-card-header">
-          <h2 class="chart-title">Distribuição de Gastos do Mês</h2>
+          <h2 class="chart-title">Distribuição Gastos do Mês</h2>
         </div>
         <div class="chart-wrapper chart-wrapper--donut">
           <canvas id="chart-donut-monthly"></canvas>
@@ -235,30 +235,12 @@
       </div>
     </div>
 
-    <!-- ─── DASHBOARD MENSAL DA TABELA ─────────────────────────────────────────── -->
-    <div class="cards-grid" id="monthly-cards-tabela" style="margin-top: 1rem;">
-      <div class="card card--green">
-        <div class="card-label">Receitas do Mês</div>
-        <div class="card-value" id="card-t-receitas">R$ 0,00</div>
-      </div>
-      <div class="card card--red">
-        <div class="card-label">Gastos do Mês</div>
-        <div class="card-value" id="card-t-gastos">R$ 0,00</div>
-      </div>
-      <div class="card card--purple">
-        <div class="card-label">Assinaturas do Mês</div>
-        <div class="card-value" id="card-t-assinaturas">R$ 0,00</div>
-      </div>
-      <div class="card card--blue">
-        <div class="card-label">Saldo do Mês</div>
-        <div class="card-value" id="card-t-saldo">R$ 0,00</div>
-      </div>
-    </div>
+
     
     <div class="charts-row" style="margin-bottom: 1.5rem;">
       <div class="chart-card chart-card--wide">
         <div class="chart-card-header">
-          <h2 class="chart-title">Distribuição de Gastos do Mês</h2>
+          <h2 class="chart-title" id="title-dist-tabela">Distribuição de Gastos do Mês</h2>
         </div>
         <div class="chart-wrapper chart-wrapper--donut">
           <canvas id="chart-donut-monthly-tabela"></canvas>
@@ -266,7 +248,7 @@
       </div>
       <div class="chart-card">
         <div class="chart-card-header">
-          <h2 class="chart-title">Top 5 Gastos do Mês</h2>
+          <h2 class="chart-title" id="title-top-tabela">Top 5 Gastos do Mês</h2>
         </div>
         <div class="top-list" id="top-gastos-monthly-tabela"></div>
       </div>
