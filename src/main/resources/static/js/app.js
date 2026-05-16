@@ -509,7 +509,6 @@ async function onFormSubmit(e) {
     mes:        parseInt($('form-mes').value),
     ano:        state.ano,
     dia:        $('form-dia').value ? parseInt($('form-dia').value) : null,
-    parcelas:   $('form-parcelas') ? parseInt($('form-parcelas').value) : null,
     categoria:  $('form-categoria').value,
     parcelas:   parseInt($('form-parcelas').value || 1),
   };
