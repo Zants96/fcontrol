@@ -98,6 +98,12 @@ body {
 
 a { text-decoration: none; color: inherit; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
+
+/* WAI-ARIA / WCAG: Clear focus outline for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+}
 input, select, textarea {
   font-family: inherit;
   font-size: 0.9rem;

@@ -15,15 +15,15 @@
 <body>
 
 <!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ -->
-<aside class="sidebar" id="sidebar">
+<aside class="sidebar" id="sidebar" aria-label="Barra Lateral">
   <div class="sidebar-logo">
-    <div class="logo-icon">
+    <div class="logo-icon" aria-hidden="true">
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
     </div>
     <span class="logo-text">FControl</span>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" aria-label="Navegação Principal">
     <a href="#" class="nav-item active" id="nav-dashboard" data-view="dashboard">
       <span class="nav-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
@@ -78,8 +78,8 @@
     <hr>
     <div class="sidebar-copyright">
       &copy; 2026 Leandro Lesnik
-      <button class="btn-apoiar" id="btn-open-pix">
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+      <button class="btn-apoiar" id="btn-open-pix" aria-label="Apoiar projeto via PIX">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px; vertical-align: middle;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
         Apoiar
       </button>
     </div>
@@ -88,12 +88,13 @@
 </aside>
 
 <!-- ═══ MAIN CONTENT ═══════════════════════════════════════════════════════ -->
-<main class="main-content">
+<main class="main-content" id="main-content">
 
   <!-- TOP BAR -->
   <header class="topbar">
     <div class="topbar-left">
-      <button class="menu-toggle" id="menu-toggle">        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+      <button class="menu-toggle" id="menu-toggle" aria-label="Abrir ou fechar menu" aria-expanded="false" aria-controls="sidebar">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
       </button>
       <h1 class="page-title" id="page-title">Dashboard</h1>
     </div>
@@ -316,11 +317,11 @@
 </main>
 
 <!-- ═══ MODAL: ADD/EDIT LANÇAMENTO ════════════════════════════════════════ -->
-<div class="modal-overlay hidden" id="modal-overlay">
-  <div class="modal" id="modal">
+<div class="modal-overlay hidden" id="modal-overlay" aria-hidden="true">
+  <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <div class="modal-header">
       <h2 class="modal-title" id="modal-title">Novo Lançamento</h2>
-      <button class="modal-close" id="modal-close">✕</button>
+      <button class="modal-close" id="modal-close" aria-label="Fechar janela">✕</button>
     </div>
     <form id="lancamento-form">
       <input type="hidden" id="form-id" />
@@ -386,11 +387,11 @@
 </div>
 
 <!-- ═══ MODAL: PIX ═════════════════════════════════════════════════════ -->
-<div class="modal-overlay hidden" id="modal-pix-overlay">
-  <div class="modal modal-pix">
+<div class="modal-overlay hidden" id="modal-pix-overlay" aria-hidden="true">
+  <div class="modal modal-pix" role="dialog" aria-modal="true" aria-labelledby="modal-pix-title">
     <div class="modal-header">
-      <h2 class="modal-title">Obrigado pelo apoio ❤!</h2>
-      <button class="modal-close" id="modal-pix-close">✕</button>
+      <h2 class="modal-title" id="modal-pix-title">Obrigado pelo apoio ❤!</h2>
+      <button class="modal-close" id="modal-pix-close" aria-label="Fechar janela">✕</button>
     </div>
     <div class="modal-body pix-body">
       <p style="text-align: center; margin-bottom: 1rem; color: var(--text-secondary);">Gostou do <b>FControl</b>? =)</p>
@@ -407,7 +408,7 @@
 </div>
 
 <!-- ═══ TOAST NOTIFICATION ════════════════════════════════════════════════ -->
-<div class="toast hidden" id="toast"></div>
+<div class="toast hidden" id="toast" role="alert" aria-live="assertive"></div>
 
 <script src="/js/api.js"></script>
 <script src="/js/charts.js"></script>
