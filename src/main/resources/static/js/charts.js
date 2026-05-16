@@ -65,16 +65,24 @@ const chartDefaults = {
   },
 };
 
-function destroyIfExists(instance) {
-  if (instance) { try { instance.destroy(); } catch(_) {} }
+function destroyIfExists(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (canvas) {
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+      existingChart.destroy();
+    }
+  }
 }
 
 /**
  * Gráfico de barras: Receitas vs Gastos por mês
  */
 function renderBarChart(data) {
-  destroyIfExists(chartBar);
-  const ctx = document.getElementById('chart-bar').getContext('2d');
+  destroyIfExists('chart-bar');
+  const canvas = document.getElementById('chart-bar');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
 
   const totalGastos = (data.gastosPorMes || []).map((g, i) =>
     (parseFloat(g) + parseFloat(data.assinaturasPorMes?.[i] ?? 0))
@@ -116,7 +124,7 @@ function renderBarChart(data) {
  * Gráfico donut: Distribuição de gastos por subcategoria
  */
 function renderDonutChart(data) {
-  destroyIfExists(chartDonut);
+  destroyIfExists('chart-donut');
   
   let canvas = document.getElementById('chart-donut');
   if (!canvas) {
@@ -181,8 +189,10 @@ function renderDonutChart(data) {
  * Gráfico de linha: Evolução do saldo mensal
  */
 function renderLineChart(data) {
-  destroyIfExists(chartLine);
-  const ctx = document.getElementById('chart-line').getContext('2d');
+  destroyIfExists('chart-line');
+  const canvas = document.getElementById('chart-line');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
 
   const saldos = (data.saldoPorMes || []).map(parseFloat);
 
@@ -372,12 +382,7 @@ let chartDonutMonthlyTabela = null;
 
 function renderMonthlyDonut(gastosPorSubcategoria, suffix = '') {
   const canvasId = `chart-donut-monthly${suffix}`;
-  
-  if (suffix === '') {
-    destroyIfExists(chartDonutMonthly);
-  } else {
-    destroyIfExists(chartDonutMonthlyTabela);
-  }
+  destroyIfExists(canvasId);
   
   let canvas = document.getElementById(canvasId);
   if (!canvas) {

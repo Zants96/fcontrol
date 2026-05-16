@@ -100,11 +100,20 @@ a { text-decoration: none; color: inherit; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 
 /* WAI-ARIA / WCAG: Clear focus outline for keyboard navigation */
+/* 
 :focus {
   outline: 3px solid var(--brand-glow) !important;
   outline-offset: 2px !important;
   box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.25) !important;
+} 
+*/
+
+:focus {
+  outline: 1px solid var(--brand-glow) !important;
+  outline-offset: 1px !important;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.25) !important;
 }
+
 input, select, textarea {
   font-family: inherit;
   font-size: 0.9rem;
