@@ -532,6 +532,7 @@ async function onFormSubmit(e) {
       await Api.criarLancamento(dto);
       showToast('Lançamento criado!', 'success');
     }
+    _dashboardData = null; // Invalida o cache do dashboard
     closeModal();
     if (state.view === 'dashboard') {
       loadDashboard();
@@ -562,6 +563,7 @@ async function excluir(id) {
 
   try {
     await Api.excluirLancamento(id, excluirProximos);
+    _dashboardData = null; // Invalida o cache do dashboard
     
     if (excluirProximos) {
       loadTabela();
