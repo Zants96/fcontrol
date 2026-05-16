@@ -17,6 +17,7 @@ jobs:
     outputs:
       new_tag: ${{ steps.tag_action.outputs.new_tag }}
       clean_version: ${{ steps.tag_action.outputs.new_version }}
+      changelog: ${{ steps.tag_action.outputs.changelog }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -135,7 +136,13 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.new_tag }}
           name: Release ${{ needs.version.outputs.new_tag }}
+          body: |
+            ## 🛠️ O que mudou nesta versão:
+            ${{ needs.version.outputs.changelog }}
+            
+            ---
+            *Gerado automaticamente pelo FControl Build System*
           files: artifacts/*
           draft: false
           prerelease: false
-          generate_release_notes: true
+          generate_release_notes: false
