@@ -369,6 +369,54 @@ async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
       porSubcat[sub] = (porSubcat[sub] || 0) + parseFloat(l.valor);
     });
 
+    // Calcular o total mensal dos itens filtrados
+    const totalVal = filteredLancamentos.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
+
+    if (prefix === 'm-') {
+      const valEl = document.getElementById('top-total-monthly-val');
+      if (valEl) {
+        valEl.textContent = fmtCurrency(totalVal);
+      }
+    } else if (prefix === 't-') {
+      const titleEl = document.getElementById('title-total-tabela');
+      const valEl = document.getElementById('top-total-tabela-val');
+      if (valEl && typeof state !== 'undefined' && state.categoria) {
+        if (titleEl) {
+          if (state.categoria === 'RECEITA') {
+            titleEl.textContent = 'Total Recebido no Mês';
+          } else if (state.categoria === 'GASTO') {
+            titleEl.textContent = 'Total Gasto no Mês';
+          } else if (state.categoria === 'GASTO_FIXO') {
+            titleEl.textContent = 'Total Gasto Fixo no Mês';
+          } else if (state.categoria === 'ASSINATURA') {
+            titleEl.textContent = 'Total de Assinaturas no Mês';
+          } else {
+            const labels = {
+              RECEITA:    'Receitas',
+              GASTO:      'Gastos',
+              GASTO_FIXO: 'Gastos Fixos',
+              ASSINATURA: 'Assinaturas',
+            };
+            const labelTipo = labels[state.categoria] || 'Gastos';
+            titleEl.textContent = `Total de ${labelTipo} no Mês`;
+          }
+        }
+        valEl.textContent = fmtCurrency(totalVal);
+        
+        // Seta a classe de cor de acordo com a categoria
+        valEl.className = 'top-total-value'; // reseta
+        if (state.categoria === 'RECEITA') {
+          valEl.classList.add('top-total-value--green');
+        } else if (state.categoria === 'GASTO') {
+          valEl.classList.add('top-total-value--red');
+        } else if (state.categoria === 'GASTO_FIXO') {
+          valEl.classList.add('top-total-value--orange');
+        } else if (state.categoria === 'ASSINATURA') {
+          valEl.classList.add('top-total-value--purple');
+        }
+      }
+    }
+
     const suffixChart = prefix === 'm-' ? '' : '-tabela';
 
     renderMonthlyDonut(porSubcat, suffixChart);
