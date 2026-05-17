@@ -6,10 +6,17 @@ env:
 on:
   push:
     branches:
+      - "hotfix/*"
+      - "fix/*"
+      - "docs/*"
+      - "chore/*"
+      - "style/*"
+      - "refactor/*"
+      - "test/*"
       - "feat/*"
       - "feature/*"
-      - develop
-      - release
+      - "develop"
+      - "release"
   workflow_dispatch:
 
 jobs:
@@ -19,48 +26,64 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - name: Calculate destination branch
-        id: vars
-        run: |
-          if [[ "${{ github.ref_name }}" == feat/* || "${{ github.ref_name }}" == feature/* ]]; then
-            echo "dest=develop" >> $GITHUB_OUTPUT
-            echo "title=🛠️ [Auto-PR] Feature -> Develop" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
-            echo "dest=release" >> $GITHUB_OUTPUT
-            echo "title=🔄 [Auto-PR] Develop -> Release (Homologação)" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref_name }}" == "release" ]]; then
-            echo "dest=main" >> $GITHUB_OUTPUT
-            echo "title=🚀 [Auto-PR] Release -> Main (Produção)" >> $GITHUB_OUTPUT
-          fi
-
       - name: Create Pull Request via API
-        if: steps.vars.outputs.dest != ''
         uses: actions/github-script@v7
         with:
           script: |
             const head = context.ref.replace('refs/heads/', '');
-            const base = '${{ steps.vars.outputs.dest }}';
-            const title = '${{ steps.vars.outputs.title }}';
-            
-            // Verifica se o PR já existe
-            const { data: pulls } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: `${context.repo.owner}:${head}`,
-              base: base,
-              state: 'open'
-            });
-            
-            if (pulls.length > 0) {
-              console.log(`PR já existe: ${pulls[0].html_url}`);
-            } else {
-              const { data: pr } = await github.rest.pulls.create({
+            let targets = [];
+
+            if (head.startsWith('feat/') || head.startsWith('feature/') || 
+                head.startsWith('fix/') || head.startsWith('docs/') || 
+                head.startsWith('chore/') || head.startsWith('style/') || 
+                head.startsWith('refactor/') || head.startsWith('test/')) {
+              targets.push({
+                base: 'develop',
+                title: `🛠️ [Auto-PR] ${head} -> Develop`
+              });
+            } else if (head.startsWith('hotfix/')) {
+              // Hotfixes vão imediatamente para main (produção) E develop (sincronização)
+              targets.push({
+                base: 'main',
+                title: `🚀 [Auto-PR] ${head} -> Main (Produção)`
+              });
+              targets.push({
+                base: 'develop',
+                title: `🛠️ [Auto-PR] ${head} -> Develop (Sincronização)`
+              });
+            } else if (head === 'develop') {
+              targets.push({
+                base: 'release',
+                title: '🔄 [Auto-PR] Develop -> Release (Homologação)'
+              });
+            } else if (head === 'release') {
+              targets.push({
+                base: 'main',
+                title: '🚀 [Auto-PR] Release -> Main (Produção)'
+              });
+            }
+
+            for (const target of targets) {
+              // Verifica se o PR já existe
+              const { data: pulls } = await github.rest.pulls.list({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                title: title,
-                head: head,
-                base: base,
-                body: `Este é um Pull Request automático gerado pelo fluxo Git Flow.\n\n- **Origem:** ${head}\n- **Destino:** ${base}\n\nPor favor, valide as alterações antes do merge.`
+                head: `${context.repo.owner}:${head}`,
+                base: target.base,
+                state: 'open'
               });
-              console.log(`PR criado com sucesso: ${pr.html_url}`);
+
+              if (pulls.length > 0) {
+                console.log(`PR já existe para ${target.base}: ${pulls[0].html_url}`);
+              } else {
+                const { data: pr } = await github.rest.pulls.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: target.title,
+                  head: head,
+                  base: target.base,
+                  body: `Este é um Pull Request automático gerado pelo fluxo Git Flow.\n\n- **Origem:** ${head}\n- **Destino:** ${target.base}\n\nPor favor, valide as alterações antes do merge.`
+                });
+                console.log(`PR criado com sucesso para ${target.base}: ${pr.html_url}`);
+              }
             }
