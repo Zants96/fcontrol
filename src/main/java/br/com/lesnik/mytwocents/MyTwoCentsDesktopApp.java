@@ -204,7 +204,15 @@ public class MyTwoCentsDesktopApp extends Application {
                 primaryStage.getIcons().add(new javafx.scene.image.Image(iconStream));
             }
         } catch (Exception ignored) {}
-        primaryStage.setOnCloseRequest(event -> shutdownApp());
+        primaryStage.setOnCloseRequest(event -> {
+            event.consume(); // Cancela o encerramento imediato do JavaFX
+            showAutoClosingAlert(Alert.AlertType.INFORMATION, 
+                "Encerrando o MyTwoCents", 
+                "Todas as conexões ativas e o banco de dados estão sendo encerrados com total segurança.", 
+                5, 
+                this::shutdownApp
+            );
+        });
 
         // ── Determinar estado do banco de dados ──
         File markerFile = new File(ENCRYPTED_MARKER);
@@ -224,15 +232,26 @@ public class MyTwoCentsDesktopApp extends Application {
                 "Seus dados atuais serão protegidos com esta senha.\n" +
                 "Todos os seus lançamentos serão preservados."
             );
-            if (masterPassword == null) { Platform.exit(); return; }
+            if (masterPassword == null) {
+                showAutoClosingAlert(Alert.AlertType.INFORMATION,
+                    "Configuração Cancelada",
+                    "A configuração da senha foi cancelada pelo usuário.",
+                    5,
+                    this::shutdownApp
+                );
+                return;
+            }
 
             try {
                 migrateDatabase(masterPassword);
             } catch (Exception e) {
                 e.printStackTrace();
-                showErrorAlert("Erro na Migração",
-                    "Não foi possível encriptar o banco de dados.\n\n" + e.getMessage());
-                Platform.exit();
+                showAutoClosingAlert(Alert.AlertType.ERROR,
+                    "Erro na Migração",
+                    "Não foi possível encriptar o banco de dados e a aplicação será encerrada.\n\nErro: " + e.getMessage(),
+                    5,
+                    this::shutdownApp
+                );
                 return;
             }
         } else {
@@ -240,7 +259,15 @@ public class MyTwoCentsDesktopApp extends Application {
             masterPassword = showSetupDialog(
                 "Você está configurando o MyTwoCents pela primeira vez."
             );
-            if (masterPassword == null) { Platform.exit(); return; }
+            if (masterPassword == null) {
+                showAutoClosingAlert(Alert.AlertType.INFORMATION,
+                    "Configuração Cancelada",
+                    "A configuração inicial foi cancelada pelo usuário.",
+                    5,
+                    this::shutdownApp
+                );
+                return;
+            }
         }
 
         // Configura o datasource encriptado para o Spring
@@ -265,6 +292,12 @@ public class MyTwoCentsDesktopApp extends Application {
 
     // ─── DIÁLOGOS DE SENHA ───────────────────────────────────────────────────────
 
+    private enum PasswordValidationResult {
+        SUCCESS,
+        WRONG_PASSWORD,
+        DB_LOCKED
+    }
+
     /**
      * Loop de login: pede a senha e valida. Repete até acertar ou cancelar.
      */
@@ -272,11 +305,27 @@ public class MyTwoCentsDesktopApp extends Application {
         while (true) {
             String password = showLoginDialog();
             if (password == null) {
-                Platform.exit();
+                showAutoClosingAlert(Alert.AlertType.INFORMATION,
+                    "Acesso Cancelado",
+                    "O login foi cancelado pelo usuário.",
+                    5,
+                    this::shutdownApp
+                );
                 return null;
             }
-            if (validatePassword(password)) {
+            PasswordValidationResult result = validatePassword(password);
+            if (result == PasswordValidationResult.SUCCESS) {
                 return password;
+            } else if (result == PasswordValidationResult.DB_LOCKED) {
+                showAutoClosingAlert(Alert.AlertType.ERROR,
+                    "Banco de Dados Bloqueado",
+                    "O banco de dados está em uso ou bloqueado por outra instância do aplicativo.\n" +
+                    "O aplicativo será encerrado de forma segura para evitar corrupção dos dados.\n\n" +
+                    "Por favor, feche qualquer outra janela do MyTwoCents e tente novamente.",
+                    5,
+                    this::shutdownApp
+                );
+                return null;
             }
             showErrorAlert("Senha Incorreta",
                 "A senha informada não corresponde ao banco de dados.\nTente novamente.");
@@ -425,12 +474,16 @@ public class MyTwoCentsDesktopApp extends Application {
     /**
      * Valida a senha contra o banco H2 encriptado existente.
      */
-    private boolean validatePassword(String password) {
+    private PasswordValidationResult validatePassword(String password) {
         String url = "jdbc:h2:file:" + DB_DIR + File.separator + DB_NAME + ";CIPHER=AES;IFEXISTS=TRUE";
         try (Connection conn = DriverManager.getConnection(url, "sa", password + " ")) {
-            return true;
+            return PasswordValidationResult.SUCCESS;
         } catch (SQLException e) {
-            return false;
+            String message = e.getMessage();
+            if (message != null && (message.contains("locked") || message.contains("already in use") || message.contains("bloqueado"))) {
+                return PasswordValidationResult.DB_LOCKED;
+            }
+            return PasswordValidationResult.WRONG_PASSWORD;
         }
     }
 
@@ -572,5 +625,45 @@ public class MyTwoCentsDesktopApp extends Application {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    private void showAutoClosingAlert(Alert.AlertType alertType, String title, String message, int seconds, Runnable onFinished) {
+        Alert alert = new Alert(alertType);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        
+        ButtonType closeButton = new ButtonType("Fechar Imediatamente", ButtonBar.ButtonData.OK_DONE);
+        alert.getDialogPane().getButtonTypes().setAll(closeButton);
+
+        final int[] remaining = {seconds};
+        alert.setContentText(message + "\n\nFechando automaticamente em " + remaining[0] + " segundos...");
+        alert.show();
+
+        javafx.animation.Timeline timeline = new javafx.animation.Timeline(
+            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1), event -> {
+                remaining[0]--;
+                if (remaining[0] <= 0) {
+                    alert.close();
+                } else {
+                    alert.setContentText(message + "\n\nFechando automaticamente em " + remaining[0] + " segundos...");
+                }
+            })
+        );
+        timeline.setCycleCount(seconds);
+        timeline.setOnFinished(e -> {
+            alert.close();
+            if (onFinished != null) {
+                onFinished.run();
+            }
+        });
+        
+        alert.setOnHidden(e -> {
+            timeline.stop();
+            if (onFinished != null) {
+                onFinished.run();
+            }
+        });
+        
+        timeline.play();
     }
 }
