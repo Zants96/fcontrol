@@ -15,8 +15,8 @@ const SUBCATEGORIAS = {
     'Restaurante', 'Saúde & Beleza', 'Taxas/Impostos', 'Transporte', 'Vestuário', 'Viagens'
   ],
   GASTO_FIXO: [
-    'Água', 'Aluguel/Prestação', 'Condomínio', 'Energia/Luz', 'Impostos', 
-    'Internet', 'Investimentos', 'Outros', 'Seguro', 'Seguro Residencial', 
+    'Água', 'Aluguel', 'Condomínio', 'Energia/Luz', 'Impostos', 
+    'Internet', 'Investimentos', 'Outros', 'Prestação', 'Seguro', 'Seguro Residencial', 
     'Telefonia'
   ],
   ASSINATURA: [
@@ -158,8 +158,22 @@ function navigateTo(view) {
     const labelTipo = CATEGORIA_LABEL[state.categoria] || 'Gastos';
     const tDist = $('title-dist-tabela');
     const tTop = $('title-top-tabela');
+    const tTotal = $('title-total-tabela');
     if (tDist) tDist.textContent = `Distribuição de ${labelTipo} do Mês`;
     if (tTop) tTop.textContent = `Top 5 ${labelTipo} do Mês`;
+    if (tTotal) {
+      if (state.categoria === 'RECEITA') {
+        tTotal.textContent = 'Total Recebido no Mês';
+      } else if (state.categoria === 'GASTO') {
+        tTotal.textContent = 'Total Gasto no Mês';
+      } else if (state.categoria === 'GASTO_FIXO') {
+        tTotal.textContent = 'Total Gasto Fixo no Mês';
+      } else if (state.categoria === 'ASSINATURA') {
+        tTotal.textContent = 'Total de Assinaturas no Mês';
+      } else {
+        tTotal.textContent = `Total de ${labelTipo} no Mês`;
+      }
+    }
 
     $('view-tabela').classList.remove('hidden');
     buildMonthTabs();

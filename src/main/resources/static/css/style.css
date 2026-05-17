@@ -553,6 +553,37 @@ select option { background: var(--bg-elevated); }
   justify-content: center;
 }
 
+/* ─── Top Total Value (Above list) ──────────────────────────────────────── */
+.top-total-container {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px dashed var(--border);
+}
+
+.top-total-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.top-total-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.top-total-value--green  { color: var(--brand-glow); }
+.top-total-value--red    { color: var(--accent-red); }
+.top-total-value--purple { color: var(--accent-purple); }
+.top-total-value--blue   { color: var(--accent-blue); }
+.top-total-value--orange { color: var(--accent-orange); }
+
 /* ─── Top Gastos List ───────────────────────────────────────────────────── */
 .top-list {
   display: flex;

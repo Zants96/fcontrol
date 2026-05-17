@@ -27,6 +27,7 @@ public class DataInitializer implements CommandLineRunner {
         if (removed > 0) {
             log.info("Limpeza: {} registro(s) com valor zero removido(s).", removed);
         }
+
         log.info("Banco de dados pronto. Total de lançamentos: {}", repository.count());
     }
 }
