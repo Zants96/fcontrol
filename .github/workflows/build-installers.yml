@@ -1,8 +1,5 @@
 name: Build and Release Multi-Platform Installers
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 on:
   push:
     branches: [ "main" ]
@@ -38,7 +35,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: windows-latest
+          - os: windows-2022
             target: Windows-EXE
             type: exe
           - os: ubuntu-latest
@@ -90,7 +87,7 @@ jobs:
       run: |
         # Configurar ícone baseado na plataforma
         ICON="src/main/resources/static/icon.png"
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+        if [ "${{ matrix.os }}" == "windows-2022" ]; then
           ICON="src/main/resources/static/icon.ico"
         fi
 
@@ -109,7 +106,7 @@ jobs:
           --vendor "Leandro Jose Lesnik" \
           --icon "$ICON" \
           --runtime-image target/custom-jre --resource-dir src/main/resources/package/linux --verbose \
-          ${{ matrix.os == 'windows-latest' && '--win-shortcut --win-menu --win-dir-chooser' || '' }} \
+          ${{ matrix.os == 'windows-2022' && '--win-shortcut --win-menu --win-dir-chooser' || '' }} \
           ${{ matrix.os == 'ubuntu-latest' && '--linux-shortcut --linux-package-name mytwocents --linux-app-category Office --linux-menu-group Office' || '' }}
 
     - name: Upload Artifact
