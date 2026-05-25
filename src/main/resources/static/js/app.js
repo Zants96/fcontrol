@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initBackup();
   initMonthlyDashboard();
   initTheme();
+  initAiChat();
   navigateTo('dashboard');
 });
 
@@ -139,19 +140,25 @@ function navigateTo(view) {
     gastos:          'Gastos',
     'gastos-fixos':  'Gastos Fixos',
     assinaturas:     'Assinaturas',
+    'assistente-ia': 'Assistente IA',
     configuracoes:   'Configurações',
   };
   $('page-title').textContent = titles[view] || view;
 
   $('view-dashboard').classList.add('hidden');
   $('view-tabela').classList.add('hidden');
+  $('view-assistente-ia')?.classList.add('hidden');
   $('view-configuracoes')?.classList.add('hidden');
 
   if (view === 'dashboard') {
     $('view-dashboard').classList.remove('hidden');
     loadDashboard();
+  } else if (view === 'assistente-ia') {
+    $('view-assistente-ia').classList.remove('hidden');
+    loadAiInsights('ai-insights-chat');
   } else if (view === 'configuracoes') {
     $('view-configuracoes')?.classList.remove('hidden');
+    checkAiKeyStatus();
   } else {
     state.categoria = CATEGORIA_VIEW[view];
     
@@ -279,6 +286,9 @@ async function loadDashboard() {
     const mesSel = document.getElementById('select-dash-mes');
     const mesSelecionado = mesSel ? parseInt(mesSel.value) : (new Date().getMonth() + 1);
     renderMonthlyDashboard(data, mesSelecionado);
+
+    // Insights da IA (com cache de 4h)
+    loadAiInsights('ai-insights-dashboard');
   } catch (err) {
     showToast('Erro ao carregar dashboard: ' + err.message, 'error');
     console.error(err);
@@ -348,6 +358,11 @@ async function loadTabela() {
       _dashboardData = await Api.getDashboard(state.ano);
     }
     renderMonthlyDashboard(_dashboardData, state.mes, 't-');
+    
+    // Insights focados por categoria e mês selecionado
+    if (typeof loadAiInsightsTabela === 'function') {
+      loadAiInsightsTabela();
+    }
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div><p>${err.message}</p></div></td></tr>`;
     showToast(err.message, 'error');
