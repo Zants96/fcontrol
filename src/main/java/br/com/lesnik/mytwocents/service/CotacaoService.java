@@ -42,6 +42,12 @@ public class CotacaoService {
     /** Cache simples: ticker → (preço, timestamp) */
     private final Map<String, CachedPrice> cache = new ConcurrentHashMap<>();
 
+    private BigDecimal cachedSelic;
+    private BigDecimal cachedIpca;
+    private Instant lastSelicFetch;
+    private Instant lastIpcaFetch;
+    private static final Duration MACRO_CACHE_DURATION = Duration.ofHours(24);
+
     private record CachedPrice(BigDecimal preco, Instant timestamp) {
         boolean isValid() {
             return Instant.now().isBefore(timestamp.plus(CACHE_DURATION));
@@ -50,6 +56,7 @@ public class CotacaoService {
 
     /**
      * Atualiza as cotações de todos os ativos ativos via BrAPI.
+     * 
      * @param brapiToken token da conta gratuita do BrAPI
      * @return número de ativos atualizados com sucesso
      */
@@ -67,8 +74,9 @@ public class CotacaoService {
             try {
                 // Verifica cache
                 CachedPrice cached = cache.get(ativo.getTicker());
-                boolean nomeFaltando = (ativo.getNome() == null || ativo.getNome().isBlank() || ativo.getNome().equalsIgnoreCase(ativo.getTicker()));
-                
+                boolean nomeFaltando = (ativo.getNome() == null || ativo.getNome().isBlank()
+                        || ativo.getNome().equalsIgnoreCase(ativo.getTicker()));
+
                 if (!nomeFaltando && cached != null && cached.isValid()) {
                     ativo.setPrecoAtual(cached.preco());
                     ativoRepository.save(ativo);
@@ -83,6 +91,18 @@ public class CotacaoService {
                     if (result.nome() != null && !result.nome().isBlank()) {
                         ativo.setNome(result.nome());
                     }
+                    // Atualiza o logo se a API retornou
+                    if (result.logoUrl() != null && !result.logoUrl().isBlank()) {
+                        ativo.setLogoUrl(result.logoUrl());
+                    }
+                    // Atualiza o setor se a API retornou
+                    if (result.sector() != null && !result.sector().isBlank()) {
+                        ativo.setSector(result.sector());
+                    }
+                    // Atualiza o nome completo se a API retornou
+                    if (result.longName() != null && !result.longName().isBlank()) {
+                        ativo.setLongName(result.longName());
+                    }
                     ativoRepository.save(ativo);
                     cache.put(ativo.getTicker(), new CachedPrice(result.preco(), Instant.now()));
                     atualizados++;
@@ -96,7 +116,8 @@ public class CotacaoService {
         return atualizados;
     }
 
-    private record CotacaoResult(BigDecimal preco, String nome) {}
+    private record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName) {
+    }
 
     /**
      * Busca a cotação de um ativo específico.
@@ -133,17 +154,51 @@ public class CotacaoService {
         if (results.isArray() && !results.isEmpty()) {
             JsonNode first = results.get(0);
             double price = first.path("regularMarketPrice").asDouble(0);
-            
+
             String name = null;
-            if (first.hasNonNull("longName")) {
-                name = formatarNomeCurto(first.get("longName").asText());
-            } else if (first.hasNonNull("shortName")) {
+            if (first.hasNonNull("shortName")) {
                 name = first.get("shortName").asText();
+            } else if (first.hasNonNull("longName")) {
+                name = formatarNomeCurto(first.get("longName").asText());
+            } else if (first.hasNonNull("name")) {
+                name = formatarNomeCurto(first.get("name").asText());
+            }
+
+            String logoUrl = null;
+            if (first.hasNonNull("logourl")) {
+                logoUrl = first.get("logourl").asText();
+            }
+
+            String sector = null;
+            if (first.hasNonNull("sector")) {
+                sector = first.get("sector").asText();
+            } else if (first.hasNonNull("segment")) {
+                sector = first.get("segment").asText();
+            } else if (first.hasNonNull("segmentoAtuacao")) {
+                sector = first.get("segmentoAtuacao").asText();
+            } else if (first.has("summaryProfile")) {
+                JsonNode profile = first.path("summaryProfile");
+                if (profile.hasNonNull("sector")) {
+                    sector = profile.get("sector").asText();
+                } else if (profile.hasNonNull("segment")) {
+                    sector = profile.get("segment").asText();
+                } else if (profile.hasNonNull("segmentoAtuacao")) {
+                    sector = profile.get("segmentoAtuacao").asText();
+                }
+            }
+
+            String longName = null;
+            if (first.hasNonNull("longName")) {
+                longName = first.get("longName").asText();
+            } else if (first.hasNonNull("name")) {
+                longName = first.get("name").asText();
+            } else if (first.hasNonNull("shortName")) {
+                longName = first.get("shortName").asText();
             }
 
             if (price > 0) {
                 BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
-                return new CotacaoResult(p, name);
+                return new CotacaoResult(p, name, logoUrl, sector, longName);
             }
         }
 
@@ -175,9 +230,12 @@ public class CotacaoService {
             JsonNode first = coins.get(0);
             double price = first.path("regularMarketPrice").asDouble(0);
             String name = first.path("coinName").asText(null);
+            String logoUrl = first.path("coinImageUrl").asText(null);
+            String sector = "Criptomoedas";
+            String longName = name;
             if (price > 0) {
                 BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
-                return new CotacaoResult(p, name);
+                return new CotacaoResult(p, name, logoUrl, sector, longName);
             }
         }
 
@@ -185,7 +243,8 @@ public class CotacaoService {
     }
 
     private String formatarNomeCurto(String nome) {
-        if (nome == null) return null;
+        if (nome == null)
+            return null;
         String curto = nome
                 .replaceAll("(?i)\\s+S\\.?A\\.?\\b", "")
                 .replaceAll("(?i)\\bS\\.?A\\.?\\b", "")
@@ -201,10 +260,137 @@ public class CotacaoService {
         if (palavras.length > 3) {
             curto = palavras[0] + " " + palavras[1] + " " + palavras[2];
         }
-        
+
         if (curto.length() > 25) {
             curto = curto.substring(0, 25).trim();
         }
         return curto;
+    }
+
+    private BigDecimal getRateFromBCB(String seriesCode, BigDecimal fallbackValue) {
+        try {
+            String url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs." + seriesCode + "/dados/ultimos/1?formato=json";
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(10))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                if (root.isArray() && !root.isEmpty()) {
+                    JsonNode first = root.get(0);
+                    String valStr = first.path("valor").asText();
+                    if (valStr != null && !valStr.isBlank()) {
+                        return new BigDecimal(valStr).setScale(2, java.math.RoundingMode.HALF_UP);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Erro ao buscar série BCB {}: {}", seriesCode, e.getMessage());
+        }
+        return fallbackValue;
+    }
+
+    public BigDecimal getSelicRate(String token) {
+        if (cachedSelic != null && lastSelicFetch != null &&
+                Duration.between(lastSelicFetch, Instant.now()).compareTo(MACRO_CACHE_DURATION) < 0) {
+            return cachedSelic;
+        }
+
+        // Tenta Banco Central do Brasil (BCB) primeiro (100% gratuito e oficial)
+        BigDecimal rate = getRateFromBCB("1178", null);
+        if (rate != null) {
+            cachedSelic = rate;
+            lastSelicFetch = Instant.now();
+            log.info("Taxa Selic atualizada via Banco Central do Brasil (SGS 1178): {}", cachedSelic);
+            return cachedSelic;
+        }
+
+        // Fallback para BrAPI se houver token
+        if (token != null && !token.isBlank()) {
+            try {
+                String url = "https://brapi.dev/api/v2/prime-rate?country=brazil&historical=false&token=" + token;
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofSeconds(10))
+                        .GET()
+                        .build();
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    JsonNode root = objectMapper.readTree(response.body());
+                    JsonNode nodes = root.has("results") ? root.get("results") : root.get("prime-rate");
+                    if (nodes != null && nodes.isArray() && !nodes.isEmpty()) {
+                        JsonNode first = nodes.get(0);
+                        double r = first.path("value").asDouble(first.path("rate").asDouble(0));
+                        if (r > 0) {
+                            cachedSelic = BigDecimal.valueOf(r).setScale(2, java.math.RoundingMode.HALF_UP);
+                            lastSelicFetch = Instant.now();
+                            log.info("Taxa Selic atualizada via BrAPI: {}", cachedSelic);
+                            return cachedSelic;
+                        }
+                    }
+                } else {
+                    log.warn("BrAPI prime-rate retornou status {} para Selic", response.statusCode());
+                }
+            } catch (Exception e) {
+                log.error("Erro ao buscar taxa Selic da BrAPI: {}", e.getMessage());
+            }
+        }
+
+        // Fallback final
+        if (cachedSelic != null) return cachedSelic;
+        return BigDecimal.valueOf(10.75); // Selic de fallback
+    }
+
+    public BigDecimal getIpcaRate(String token) {
+        if (cachedIpca != null && lastIpcaFetch != null &&
+                Duration.between(lastIpcaFetch, Instant.now()).compareTo(MACRO_CACHE_DURATION) < 0) {
+            return cachedIpca;
+        }
+
+        // Tenta Banco Central do Brasil (BCB) primeiro (100% gratuito e oficial)
+        BigDecimal rate = getRateFromBCB("13522", null);
+        if (rate != null) {
+            cachedIpca = rate;
+            lastIpcaFetch = Instant.now();
+            log.info("Taxa IPCA atualizada via Banco Central do Brasil (SGS 13522): {}", cachedIpca);
+            return cachedIpca;
+        }
+
+        // Fallback para BrAPI se houver token
+        if (token != null && !token.isBlank()) {
+            try {
+                String url = "https://brapi.dev/api/v2/inflation?country=brazil&historical=false&token=" + token;
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofSeconds(10))
+                        .GET()
+                        .build();
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    JsonNode root = objectMapper.readTree(response.body());
+                    JsonNode nodes = root.has("results") ? root.get("results") : root.get("inflation");
+                    if (nodes != null && nodes.isArray() && !nodes.isEmpty()) {
+                        JsonNode first = nodes.get(0);
+                        double r = first.path("value").asDouble(first.path("rate").asDouble(0));
+                        if (r > 0) {
+                            cachedIpca = BigDecimal.valueOf(r).setScale(2, java.math.RoundingMode.HALF_UP);
+                            lastIpcaFetch = Instant.now();
+                            log.info("Taxa IPCA atualizada via BrAPI: {}", cachedIpca);
+                            return cachedIpca;
+                        }
+                    }
+                } else {
+                    log.warn("BrAPI inflation retornou status {} para IPCA", response.statusCode());
+                }
+            } catch (Exception e) {
+                log.error("Erro ao buscar taxa IPCA da BrAPI: {}", e.getMessage());
+            }
+        }
+
+        // Fallback final
+        if (cachedIpca != null) return cachedIpca;
+        return BigDecimal.valueOf(4.50); // IPCA de fallback
     }
 }

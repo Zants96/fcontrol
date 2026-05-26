@@ -110,11 +110,14 @@ async function sendAiMessage() {
       
       if (result.error) {
         addChatMessage('ai', `❌ ${result.error}`);
+      } else if (result.investimentos && result.investimentos.length > 0) {
+        addChatMessage('ai', `📈 **Encontrei ${result.investimentos.length} lançamentos de investimentos/proventos!**\n\n${result.resumo || ''}`);
+        renderInvestimentoParsePreview(result.investimentos);
       } else if (result.items && result.items.length > 0) {
         addChatMessage('ai', `📋 **Encontrei ${result.items.length} transações!**\n\n${result.resumo || ''}`);
         renderParsePreview(result.items);
       } else {
-        addChatMessage('ai', '🤔 Não consegui identificar transações no texto. Tente colar novamente com mais detalhes.');
+        addChatMessage('ai', '🤔 Não consegui identificar transações ou investimentos no texto. Tente colar novamente com mais detalhes.');
       }
     } else {
       // Chat normal com histórico de contexto
@@ -154,8 +157,8 @@ function detectDocument(text) {
   // Se mais de 50% das linhas têm valores e são pelo menos 3 linhas
   if (linhasComValor >= 3 && linhasComValor / lines.length > 0.3) return true;
   
-  // Detecta palavras-chave de fatura/boleto
-  const keywords = /fatura|boleto|comprovante|extrato|recibo|nota fiscal|nf-?e|cartão|nubank|inter|itaú|bradesco|santander|c6|pagamento/i;
+  // Detecta palavras-chave de fatura/boleto/investimento
+  const keywords = /fatura|boleto|comprovante|extrato|recibo|nota fiscal|nf-?e|cartão|nubank|inter|itaú|bradesco|santander|c6|pagamento|investimento|ação|ações|fii|tesouro|custódia|carteira|provento|dividendo|rendimento/i;
   if (keywords.test(text) && linhasComValor >= 2) return true;
   
   return false;
@@ -335,6 +338,169 @@ function cancelParsedItems() {
   if (preview) preview.remove();
   aiState.pendingItems = null;
   addChatMessage('ai', '❌ Transações descartadas.');
+}
+
+function renderInvestimentoParsePreview(investimentos) {
+  const container = $('ai-chat-messages');
+  if (!container) return;
+
+  const operacaoLabels = {
+    COMPRA: '🔵 Compra',
+    VENDA: '🟢 Venda',
+    DIVIDENDO: '💰 Dividendo/Provento',
+  };
+
+  const ativoLabels = {
+    ACAO: 'Ações',
+    FII: 'FIIs',
+    RENDA_FIXA: 'Renda Fixa',
+    TESOURO_DIRETO: 'Tesouro Direto',
+    ETF: 'ETFs',
+    CRIPTO: 'Cripto',
+  };
+
+  const previewHtml = `
+    <div class="ai-msg ai-msg--ai" id="ai-parse-preview">
+      <div class="ai-msg-avatar">📈</div>
+      <div class="ai-msg-bubble ai-parse-bubble">
+        <table class="ai-parse-table">
+          <thead>
+            <tr>
+              <th>Ativo (Ticker)</th>
+              <th>Operação</th>
+              <th>Tipo Ativo</th>
+              <th>Qtd</th>
+              <th>Preço Unit.</th>
+              <th>Valor Total</th>
+              <th>Taxa/Venc.</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${investimentos.map((item, i) => {
+              const tipoOp = item.tipoOperacao || 'COMPRA';
+              const badgeClass = tipoOp.toLowerCase();
+              
+              // Formata taxa/vencimento se existirem
+              let extraInfo = '-';
+              if (item.taxa && item.indexador) {
+                extraInfo = `${item.indexador} + ${item.taxa}%`;
+              } else if (item.taxa) {
+                extraInfo = `${item.taxa}%`;
+              } else if (item.indexador) {
+                extraInfo = item.indexador;
+              }
+              if (item.dataVencimento) {
+                extraInfo += ` (${item.dataVencimento})`;
+              }
+
+              return `
+                <tr id="parse-row-${i}">
+                  <td><strong>${escHtml(item.ticker)}</strong></td>
+                  <td><span class="ai-cat-badge ai-cat-badge--${badgeClass}">${operacaoLabels[tipoOp] || tipoOp}</span></td>
+                  <td>${ativoLabels[item.tipoAtivo] || item.tipoAtivo || '-'}</td>
+                  <td>${item.quantidade != null ? parseFloat(item.quantidade).toFixed(4).replace(/\.?0+$/, '') : '0'}</td>
+                  <td class="cell-valor">${fmtCurrency(parseFloat(item.precoUnitario || 0))}</td>
+                  <td class="cell-valor">${fmtCurrency(parseFloat(item.valorTotal || 0))}</td>
+                  <td><small style="color: var(--text-muted)">${escHtml(extraInfo)}</small></td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+        <div class="ai-parse-actions">
+          <button class="btn btn--primary" id="btn-parse-confirm" onclick="confirmParsedInvestimentos()">
+            ✅ Cadastrar Todos (${investimentos.length} itens)
+          </button>
+          <button class="btn btn--secondary" id="btn-parse-cancel" onclick="cancelParsedInvestimentos()">
+            ✕ Descartar
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.insertAdjacentHTML('beforeend', previewHtml);
+  container.scrollTop = container.scrollHeight;
+
+  // Salva investimentos para uso posterior
+  aiState.pendingInvestimentos = investimentos;
+}
+
+async function confirmParsedInvestimentos() {
+  if (!aiState.pendingInvestimentos || aiState.pendingInvestimentos.length === 0) return;
+
+  const btn = $('btn-parse-confirm');
+  if (btn) {
+    btn.textContent = 'Cadastrando...';
+    btn.disabled = true;
+  }
+
+  let success = 0;
+  let errors = 0;
+
+  for (const item of aiState.pendingInvestimentos) {
+    try {
+      const ano = state.ano;
+      const mes = String(state.mes).padStart(2, '0');
+      const dia = String(item.dia || new Date().getDate()).padStart(2, '0');
+      const dataIso = `${ano}-${mes}-${dia}`;
+
+      await Api.criarLancamentoInvestimento({
+        ticker: item.ticker,
+        tipoAtivo: item.tipoAtivo || 'ACAO',
+        tipoOperacao: item.tipoOperacao || 'COMPRA',
+        data: dataIso,
+        quantidade: parseFloat(item.quantidade || 0),
+        precoUnitario: parseFloat(item.precoUnitario || 0),
+        custos: parseFloat(item.custos || 0),
+        valorTotal: parseFloat(item.valorTotal || 0),
+        dataVencimento: item.dataVencimento ? converterDataBrParaIso(item.dataVencimento) : null,
+        indexador: item.indexador || null,
+        taxa: item.taxa != null ? parseFloat(item.taxa) : null
+      });
+      success++;
+    } catch (e) {
+      errors++;
+      console.error('Erro ao cadastrar investimento:', item, e);
+    }
+  }
+
+  // Remove o preview
+  const preview = $('ai-parse-preview');
+  if (preview) preview.remove();
+
+  // Feedback
+  let msg = `✅ **${success} lançamento${success > 1 ? 's' : ''} de investimento cadastrado${success > 1 ? 's' : ''} com sucesso!**`;
+  if (errors > 0) msg += `\n⚠️ ${errors} lançamento(s) falharam.`;
+  addChatMessage('ai', msg);
+
+  // Limpa
+  aiState.pendingInvestimentos = null;
+  _dashboardData = null; // Invalida cache do dashboard financeiro
+  _invDashboardData = null; // Invalida cache do dashboard de investimentos
+
+  showToast(`${success} investimentos cadastrados!`, 'success');
+  
+  // Se estiver na tela de investimentos, recarrega os dados dela para atualizar dinamicamente!
+  if (state.currentView === 'investimentos' && typeof carregarDadosInvestimentos === 'function') {
+    carregarDadosInvestimentos();
+  }
+}
+
+function cancelParsedInvestimentos() {
+  const preview = $('ai-parse-preview');
+  if (preview) preview.remove();
+  aiState.pendingInvestimentos = null;
+  addChatMessage('ai', '❌ Lançamentos de investimentos descartados.');
+}
+
+function converterDataBrParaIso(dataBr) {
+  if (!dataBr) return null;
+  const parts = dataBr.split('/');
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+  }
+  return dataBr;
 }
 
 // ─── Insights Automáticos ────────────────────────────────────────────────────

@@ -25,6 +25,8 @@ public class InvestimentoService {
     private final AtivoRepository ativoRepository;
     private final InvestimentoLancamentoRepository lancamentoRepository;
     private final LancamentoRepository financeiroRepository;
+    private final CotacaoService cotacaoService;
+    private final br.com.lesnik.mytwocents.repository.AiConfigRepository aiConfigRepository;
 
     // ─── CRUD DE LANÇAMENTOS ─────────────────────────────────────────────────
 
@@ -65,7 +67,16 @@ public class InvestimentoService {
                 .precoUnitario(precoUnit)
                 .custos(custos)
                 .valorTotal(valorTotal)
+                .dataVencimento(dto.getDataVencimento())
+                .indexador(dto.getIndexador())
+                .taxa(dto.getTaxa())
                 .build();
+
+        if (dto.getTipoAtivo() == TipoAtivo.RENDA_FIXA || dto.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO) {
+            ativo.setDataVencimento(dto.getDataVencimento());
+            ativo.setIndexador(dto.getIndexador());
+            ativo.setTaxa(dto.getTaxa());
+        }
 
         lancamento = lancamentoRepository.save(lancamento);
 
@@ -102,6 +113,9 @@ public class InvestimentoService {
         if (dto.getCustos() != null) lancamento.setCustos(dto.getCustos());
         if (dto.getValorTotal() != null) lancamento.setValorTotal(dto.getValorTotal());
         if (dto.getData() != null) lancamento.setData(dto.getData());
+        if (dto.getDataVencimento() != null) lancamento.setDataVencimento(dto.getDataVencimento());
+        if (dto.getIndexador() != null) lancamento.setIndexador(dto.getIndexador());
+        if (dto.getTaxa() != null) lancamento.setTaxa(dto.getTaxa());
 
         lancamentoRepository.save(lancamento);
 
@@ -166,13 +180,29 @@ public class InvestimentoService {
             ativos = ativoRepository.findByAtivoTrueOrderByTipoAtivoAscTickerAsc();
         }
 
-        BigDecimal patrimonioTotal = ativos.stream()
-                .map(a -> a.getQuantidade().multiply(a.getPrecoAtual()))
+        String token = aiConfigRepository.findFirstByOrderByIdDesc()
+                .map(AiConfig::getBrapiToken)
+                .orElse(null);
+        BigDecimal selicRate = cotacaoService.getSelicRate(token);
+        BigDecimal ipcaRate = cotacaoService.getIpcaRate(token);
+
+        List<AtivoDTO> dtos = ativos.stream()
+                .map(a -> toAtivoDTO(a, BigDecimal.ZERO, selicRate, ipcaRate))
+                .collect(Collectors.toList());
+
+        BigDecimal patrimonioTotal = dtos.stream()
+                .map(AtivoDTO::getValorTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return ativos.stream()
-                .map(a -> toAtivoDTO(a, patrimonioTotal))
-                .collect(Collectors.toList());
+        if (patrimonioTotal.compareTo(BigDecimal.ZERO) > 0) {
+            for (AtivoDTO dto : dtos) {
+                BigDecimal percent = dto.getValorTotal().divide(patrimonioTotal, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
+                dto.setPercentCarteira(percent);
+            }
+        }
+
+        return dtos;
     }
 
     @Transactional
@@ -182,8 +212,14 @@ public class InvestimentoService {
         ativo.setPrecoAtual(novoPreco);
         ativoRepository.save(ativo);
 
-        BigDecimal patrimonioTotal = calcularPatrimonioTotal();
-        return toAtivoDTO(ativo, patrimonioTotal);
+        String token = aiConfigRepository.findFirstByOrderByIdDesc()
+                .map(AiConfig::getBrapiToken)
+                .orElse(null);
+        BigDecimal selicRate = cotacaoService.getSelicRate(token);
+        BigDecimal ipcaRate = cotacaoService.getIpcaRate(token);
+
+        BigDecimal patrimonioTotal = calcularPatrimonioTotal(selicRate, ipcaRate);
+        return toAtivoDTO(ativo, patrimonioTotal, selicRate, ipcaRate);
     }
 
     @Transactional
@@ -194,10 +230,20 @@ public class InvestimentoService {
         if (dto.getNome() != null) ativo.setNome(dto.getNome());
         if (dto.getMetaPercent() != null) ativo.setMetaPercent(dto.getMetaPercent());
         if (dto.getPrecoAtual() != null) ativo.setPrecoAtual(dto.getPrecoAtual());
+        if (dto.getDataVencimento() != null) ativo.setDataVencimento(dto.getDataVencimento());
+        if (dto.getIndexador() != null) ativo.setIndexador(dto.getIndexador());
+        if (dto.getTaxa() != null) ativo.setTaxa(dto.getTaxa());
 
         ativoRepository.save(ativo);
-        BigDecimal patrimonioTotal = calcularPatrimonioTotal();
-        return toAtivoDTO(ativo, patrimonioTotal);
+
+        String token = aiConfigRepository.findFirstByOrderByIdDesc()
+                .map(AiConfig::getBrapiToken)
+                .orElse(null);
+        BigDecimal selicRate = cotacaoService.getSelicRate(token);
+        BigDecimal ipcaRate = cotacaoService.getIpcaRate(token);
+
+        BigDecimal patrimonioTotal = calcularPatrimonioTotal(selicRate, ipcaRate);
+        return toAtivoDTO(ativo, patrimonioTotal, selicRate, ipcaRate);
     }
 
     // ─── DASHBOARD ──────────────────────────────────────────────────────────
@@ -206,7 +252,20 @@ public class InvestimentoService {
     public InvestimentoDashboardDTO calcularDashboard() {
         List<Ativo> ativos = ativoRepository.findByAtivoTrueOrderByTipoAtivoAscTickerAsc();
 
-        BigDecimal patrimonioTotal = BigDecimal.ZERO;
+        String token = aiConfigRepository.findFirstByOrderByIdDesc()
+                .map(AiConfig::getBrapiToken)
+                .orElse(null);
+        BigDecimal selicRate = cotacaoService.getSelicRate(token);
+        BigDecimal ipcaRate = cotacaoService.getIpcaRate(token);
+
+        List<AtivoDTO> dtos = ativos.stream()
+                .map(a -> toAtivoDTO(a, BigDecimal.ZERO, selicRate, ipcaRate))
+                .toList();
+
+        BigDecimal patrimonioTotal = dtos.stream()
+                .map(AtivoDTO::getValorTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         BigDecimal valorInvestido = BigDecimal.ZERO;
         BigDecimal dividendosTotal = BigDecimal.ZERO;
 
@@ -215,22 +274,26 @@ public class InvestimentoService {
         Map<TipoAtivo, BigDecimal> investidoPorTipo = new LinkedHashMap<>();
         Map<TipoAtivo, BigDecimal> dividendosPorTipo = new LinkedHashMap<>();
 
-        for (Ativo a : ativos) {
-            BigDecimal valorAtivo = a.getQuantidade().multiply(a.getPrecoAtual());
+        for (int i = 0; i < ativos.size(); i++) {
+            Ativo a = ativos.get(i);
+            AtivoDTO dto = dtos.get(i);
+
+            if (patrimonioTotal.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal percent = dto.getValorTotal().divide(patrimonioTotal, 4, RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100));
+                dto.setPercentCarteira(percent);
+            }
+
+            BigDecimal valorAtivo = dto.getValorTotal();
             BigDecimal custoAtivo = a.getQuantidade().multiply(a.getPrecoMedio());
-            patrimonioTotal = patrimonioTotal.add(valorAtivo);
+            
             valorInvestido = valorInvestido.add(custoAtivo);
             dividendosTotal = dividendosTotal.add(a.getDividendosTotal());
 
             distribuicao.merge(a.getTipoAtivo(), valorAtivo, BigDecimal::add);
             investidoPorTipo.merge(a.getTipoAtivo(), custoAtivo, BigDecimal::add);
             dividendosPorTipo.merge(a.getTipoAtivo(), a.getDividendosTotal(), BigDecimal::add);
-        }
 
-        // Montar ativos por tipo com % carteira
-        final BigDecimal ptFinal = patrimonioTotal;
-        for (Ativo a : ativos) {
-            AtivoDTO dto = toAtivoDTO(a, ptFinal);
             ativosPorTipo.computeIfAbsent(a.getTipoAtivo(), k -> new ArrayList<>()).add(dto);
         }
 
@@ -249,8 +312,8 @@ public class InvestimentoService {
             }
 
             BigDecimal percentCarteira = BigDecimal.ZERO;
-            if (ptFinal.compareTo(BigDecimal.ZERO) > 0) {
-                percentCarteira = valorTipo.divide(ptFinal, 4, RoundingMode.HALF_UP)
+            if (patrimonioTotal.compareTo(BigDecimal.ZERO) > 0) {
+                percentCarteira = valorTipo.divide(patrimonioTotal, 4, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100));
             }
 
@@ -454,23 +517,110 @@ public class InvestimentoService {
         if (ativo.getQuantidade().compareTo(BigDecimal.ZERO) <= 0) {
             ativo.setAtivo(false);
         }
+
+        if (ativo.getTipoAtivo() == TipoAtivo.RENDA_FIXA || ativo.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO) {
+            ativo.setDataVencimento(null);
+            ativo.setIndexador(null);
+            ativo.setTaxa(null);
+            for (int i = ordenados.size() - 1; i >= 0; i--) {
+                InvestimentoLancamento l = ordenados.get(i);
+                if (l.getIndexador() != null || l.getDataVencimento() != null) {
+                    ativo.setDataVencimento(l.getDataVencimento());
+                    ativo.setIndexador(l.getIndexador());
+                    ativo.setTaxa(l.getTaxa());
+                    break;
+                }
+            }
+        }
+
         ativoRepository.save(ativo);
     }
 
     // ─── UTILITÁRIOS ────────────────────────────────────────────────────────
 
-    private BigDecimal calcularPatrimonioTotal() {
+    private BigDecimal calcularPatrimonioTotal(BigDecimal selicRate, BigDecimal ipcaRate) {
         return ativoRepository.findByAtivoTrueOrderByTipoAtivoAscTickerAsc().stream()
-                .map(a -> a.getQuantidade().multiply(a.getPrecoAtual()))
+                .map(a -> toAtivoDTO(a, BigDecimal.ZERO, selicRate, ipcaRate).getValorTotal())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private AtivoDTO toAtivoDTO(Ativo a, BigDecimal patrimonioTotal) {
+    private AtivoDTO toAtivoDTO(Ativo a, BigDecimal patrimonioTotal, BigDecimal selicRate, BigDecimal ipcaRate) {
         BigDecimal valorTotal = a.getQuantidade().multiply(a.getPrecoAtual());
+        BigDecimal rendimentoMensal = BigDecimal.ZERO;
+
+        if ((a.getTipoAtivo() == TipoAtivo.RENDA_FIXA || a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
+                && a.getIndexador() != null && a.getTaxa() != null && a.getQuantidade().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal taxaAnual = BigDecimal.ZERO;
+            String index = a.getIndexador().toUpperCase().trim();
+            BigDecimal taxaContratada = a.getTaxa();
+
+            if (index.equals("CDI")) {
+                BigDecimal cdi = selicRate.subtract(BigDecimal.valueOf(0.10));
+                taxaAnual = taxaContratada.multiply(cdi).divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+            } else if (index.equals("SELIC")) {
+                taxaAnual = selicRate.add(taxaContratada);
+            } else if (index.equals("IPCA")) {
+                taxaAnual = ipcaRate.add(taxaContratada);
+            } else if (index.equals("PRE")) {
+                taxaAnual = taxaContratada;
+            }
+
+            if (taxaAnual.compareTo(BigDecimal.ZERO) > 0) {
+                List<InvestimentoLancamento> txs = lancamentoRepository.findByAtivoIdOrderByDataDesc(a.getId()).stream()
+                        .sorted(Comparator.comparing(InvestimentoLancamento::getData)
+                                .thenComparing(InvestimentoLancamento::getId))
+                        .toList();
+
+                if (!txs.isEmpty()) {
+                    double annualRateDouble = taxaAnual.doubleValue() / 100.0;
+                    double dailyRateDouble = Math.pow(1.0 + annualRateDouble, 1.0 / 365.0) - 1.0;
+                    
+                    double currentBalance = 0.0;
+                    java.time.LocalDate lastDate = txs.get(0).getData();
+
+                    for (InvestimentoLancamento tx : txs) {
+                        long days = java.time.temporal.ChronoUnit.DAYS.between(lastDate, tx.getData());
+                        if (days > 0) {
+                            currentBalance = currentBalance * Math.pow(1.0 + dailyRateDouble, days);
+                        }
+                        lastDate = tx.getData();
+
+                        if (tx.getTipoOperacao() == br.com.lesnik.mytwocents.model.TipoOperacao.COMPRA) {
+                            currentBalance += tx.getValorTotal().doubleValue();
+                        } else if (tx.getTipoOperacao() == br.com.lesnik.mytwocents.model.TipoOperacao.VENDA) {
+                            currentBalance -= tx.getValorTotal().doubleValue();
+                        }
+                    }
+
+                    long finalDays = java.time.temporal.ChronoUnit.DAYS.between(lastDate, java.time.LocalDate.now());
+                    if (finalDays > 0) {
+                        currentBalance = currentBalance * Math.pow(1.0 + dailyRateDouble, finalDays);
+                    }
+
+                    if (currentBalance < 0.0) {
+                        currentBalance = 0.0;
+                    }
+
+                    valorTotal = BigDecimal.valueOf(currentBalance).setScale(2, RoundingMode.HALF_UP);
+                }
+
+                double annualRateDouble = taxaAnual.doubleValue() / 100.0;
+                double monthlyRateDouble = Math.pow(1.0 + annualRateDouble, 1.0 / 12.0) - 1.0;
+                BigDecimal taxaMensal = BigDecimal.valueOf(monthlyRateDouble);
+                rendimentoMensal = valorTotal.multiply(taxaMensal).setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+
         BigDecimal variacao = BigDecimal.ZERO;
         BigDecimal lucro = BigDecimal.ZERO;
 
-        if (a.getPrecoMedio().compareTo(BigDecimal.ZERO) > 0) {
+        BigDecimal custoTotal = a.getQuantidade().multiply(a.getPrecoMedio());
+        if (custoTotal.compareTo(BigDecimal.ZERO) > 0) {
+            variacao = valorTotal.subtract(custoTotal)
+                    .divide(custoTotal, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+            lucro = valorTotal.subtract(custoTotal);
+        } else if (a.getPrecoMedio().compareTo(BigDecimal.ZERO) > 0) {
             variacao = a.getPrecoAtual().subtract(a.getPrecoMedio())
                     .divide(a.getPrecoMedio(), 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
@@ -498,6 +648,13 @@ public class InvestimentoService {
                 .metaPercent(a.getMetaPercent())
                 .dividendosTotal(a.getDividendosTotal())
                 .ativo(a.isAtivo())
+                .logoUrl(a.getLogoUrl())
+                .sector(a.getSector())
+                .longName(a.getLongName())
+                .dataVencimento(a.getDataVencimento())
+                .indexador(a.getIndexador())
+                .taxa(a.getTaxa())
+                .rendimentoMensal(rendimentoMensal)
                 .build();
     }
 
@@ -513,6 +670,9 @@ public class InvestimentoService {
                 .precoUnitario(l.getPrecoUnitario())
                 .custos(l.getCustos())
                 .valorTotal(l.getValorTotal())
+                .dataVencimento(l.getDataVencimento())
+                .indexador(l.getIndexador())
+                .taxa(l.getTaxa())
                 .build();
     }
 }
