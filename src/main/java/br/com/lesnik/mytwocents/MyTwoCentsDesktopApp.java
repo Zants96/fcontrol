@@ -604,6 +604,32 @@ public class MyTwoCentsDesktopApp extends Application {
             return dialog.showAndWait().orElse(null);
         });
 
+        // Intercepta cliques em links com target="_blank"
+        webView.getEngine().setCreatePopupHandler(config -> {
+            WebView tempWebView = new WebView();
+            tempWebView.getEngine().locationProperty().addListener((observable, oldValue, newValue) -> {
+                if (newValue != null && !newValue.isEmpty() && !newValue.equals("about:blank")) {
+                    Platform.runLater(() -> {
+                        tempWebView.getEngine().getLoadWorker().cancel();
+                        getHostServices().showDocument(newValue);
+                    });
+                }
+            });
+            return tempWebView.getEngine();
+        });
+
+        // Intercepta navegações diretas para sites externos no próprio WebView
+        webView.getEngine().locationProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.isEmpty() && !newValue.equals("about:blank")) {
+                if (!newValue.startsWith("http://localhost:8085")) {
+                    Platform.runLater(() -> {
+                        webView.getEngine().getLoadWorker().cancel();
+                        getHostServices().showDocument(newValue);
+                    });
+                }
+            }
+        });
+
         // Injeta a JavaBridge quando a página carrega
         webView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal == Worker.State.SUCCEEDED) {
