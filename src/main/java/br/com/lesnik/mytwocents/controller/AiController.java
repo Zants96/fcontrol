@@ -80,4 +80,14 @@ public class AiController {
         InsightResponse response = aiService.gerarInsights(ano, mes, tipo);
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * Gera insights automáticos baseados no portfólio de investimentos.
+     * GET /api/ai/insights/investimentos
+     */
+    @GetMapping("/insights/investimentos")
+    public ResponseEntity<InsightResponse> insightsInvestimentos() {
+        InsightResponse response = aiService.gerarInsightsInvestimentos();
+        return ResponseEntity.ok(response);
+    }
 }

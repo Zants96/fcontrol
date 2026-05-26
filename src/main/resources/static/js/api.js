@@ -106,6 +106,15 @@ const Api = {
   },
 
   /**
+   * Busca insights automáticos da IA focados no portfólio de investimentos.
+   */
+  async getAiInsightsInvestimentos() {
+    const res = await fetch(`${API_BASE}/ai/insights/investimentos`);
+    if (!res.ok) throw new Error('Erro ao buscar insights de investimentos');
+    return res.json();
+  },
+
+  /**
    * Verifica se a IA está configurada.
    */
   async getAiStatus() {
@@ -124,6 +133,98 @@ const Api = {
       body: JSON.stringify({ apiKey, modelo, provider, apiUrl }),
     });
     if (!res.ok) throw new Error('Erro ao salvar configuração da IA');
+    return res.json();
+  },
+
+  // ─── INVESTIMENTOS ──────────────────────────────────────────────────────
+
+  async getInvestimentoDashboard() {
+    const res = await fetch(`${API_BASE}/investimentos/dashboard`);
+    if (!res.ok) throw new Error('Erro ao buscar dashboard de investimentos');
+    return res.json();
+  },
+
+  async getAtivos(tipo) {
+    let url = `${API_BASE}/investimentos/ativos`;
+    if (tipo) url += `?tipo=${tipo}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Erro ao buscar ativos');
+    return res.json();
+  },
+
+  async criarLancamentoInvestimento(dto) {
+    const res = await fetch(`${API_BASE}/investimentos/lancamentos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto),
+    });
+    if (!res.ok) throw new Error('Erro ao criar lançamento de investimento');
+    return res.json();
+  },
+
+  async getLancamentosInvestimento(ativoId) {
+    let url = `${API_BASE}/investimentos/lancamentos`;
+    if (ativoId) url += `?ativoId=${ativoId}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Erro ao buscar lançamentos');
+    return res.json();
+  },
+
+  async excluirLancamentoInvestimento(id) {
+    const res = await fetch(`${API_BASE}/investimentos/lancamentos/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error('Erro ao excluir lançamento');
+  },
+
+  async updateInvestimentoLancamento(id, dto) {
+    const res = await fetch(`${API_BASE}/investimentos/lancamentos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto),
+    });
+    if (!res.ok) throw new Error('Erro ao atualizar lançamento');
+    return res.json();
+  },
+
+  async atualizarPrecoAtivo(id, precoAtual) {
+    const res = await fetch(`${API_BASE}/investimentos/ativos/${id}/preco`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ precoAtual }),
+    });
+    if (!res.ok) throw new Error('Erro ao atualizar preço');
+    return res.json();
+  },
+
+  async atualizarAtivo(id, dto) {
+    const res = await fetch(`${API_BASE}/investimentos/ativos/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dto),
+    });
+    if (!res.ok) throw new Error('Erro ao atualizar ativo');
+    return res.json();
+  },
+
+  async atualizarCotacoes() {
+    const res = await fetch(`${API_BASE}/investimentos/cotacoes/atualizar`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao atualizar cotações');
+    return data;
+  },
+
+  async saveBrapiToken(token) {
+    const res = await fetch(`${API_BASE}/investimentos/brapi/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (!res.ok) throw new Error('Erro ao salvar token BrAPI');
+    return res.json();
+  },
+
+  async getBrapiStatus() {
+    const res = await fetch(`${API_BASE}/investimentos/brapi/status`);
+    if (!res.ok) throw new Error('Erro ao verificar status BrAPI');
     return res.json();
   },
 };
