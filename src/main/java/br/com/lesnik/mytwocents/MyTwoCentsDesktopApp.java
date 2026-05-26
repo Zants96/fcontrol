@@ -268,6 +268,20 @@ public class MyTwoCentsDesktopApp extends Application {
                 );
                 return;
             }
+
+            try {
+                new File(DB_DIR).mkdirs();
+                new File(ENCRYPTED_MARKER).createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+                showAutoClosingAlert(Alert.AlertType.ERROR,
+                    "Erro de Configuração",
+                    "Não foi possível criar os arquivos iniciais.\n\nErro: " + e.getMessage(),
+                    5,
+                    this::shutdownApp
+                );
+                return;
+            }
         }
 
         // Configura o datasource encriptado para o Spring
