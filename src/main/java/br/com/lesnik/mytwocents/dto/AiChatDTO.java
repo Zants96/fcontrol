@@ -44,6 +44,7 @@ public class AiChatDTO {
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class ParseResponse {
         private List<ParsedItem> items;
+        private List<ParsedInvestimentoItem> investimentos;
         private String resumo;
         private String error;
     }
@@ -55,6 +56,21 @@ public class AiChatDTO {
         private String subcategoria;
         private BigDecimal valor;
         private Integer dia;
+    }
+
+    @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+    public static class ParsedInvestimentoItem {
+        private String ticker;
+        private String tipoAtivo;      // ACAO, FII, RENDA_FIXA, ETF, TESOURO_DIRETO, CRIPTO
+        private String tipoOperacao;   // COMPRA, VENDA, DIVIDENDO
+        private BigDecimal quantidade;
+        private BigDecimal precoUnitario;
+        private BigDecimal custos;
+        private BigDecimal valorTotal;
+        private Integer dia;
+        private String dataVencimento; // DD/MM/YYYY
+        private String indexador;
+        private BigDecimal taxa;
     }
 
     // ─── Insights ────────────────────────────────────────────────────────────

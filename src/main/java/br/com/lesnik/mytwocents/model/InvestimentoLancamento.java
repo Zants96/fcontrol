@@ -51,6 +51,15 @@ public class InvestimentoLancamento {
     @Column
     private Long lancamentoFinanceiroId;
 
+    @Column
+    private LocalDate dataVencimento;
+
+    @Column(length = 50)
+    private String indexador;
+
+    @Column(precision = 15, scale = 4)
+    private BigDecimal taxa;
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 
