@@ -37,9 +37,12 @@ public class MyTwoCentsDesktopApp extends Application {
     private Stage primaryStage;
 
     /**
-     * IMPORTANTE: Mantemos uma referência forte (campo da classe) para a JavaBridge.
-     * Sem isso, o Garbage Collector do Java pode coletar o objeto após a primeira chamada do JS,
-     * fazendo com que as chamadas subsequentes do window.javaBridge falhem silenciosamente.
+     * IMPORTANTE: Mantemos uma referência forte (campo da classe) para a
+     * JavaBridge.
+     * Sem isso, o Garbage Collector do Java pode coletar o objeto após a primeira
+     * chamada do JS,
+     * fazendo com que as chamadas subsequentes do window.javaBridge falhem
+     * silenciosamente.
      */
     private JavaBridge javaBridge;
 
@@ -47,7 +50,8 @@ public class MyTwoCentsDesktopApp extends Application {
 
     /**
      * Ponte entre o JavaScript (WebView) e o Java nativo.
-     * Permite ao JS solicitar o download de arquivos usando o FileChooser do sistema.
+     * Permite ao JS solicitar o download de arquivos usando o FileChooser do
+     * sistema.
      */
     public class JavaBridge {
         public void saveFile(String urlPath, String suggestedName, String password) {
@@ -59,11 +63,11 @@ public class MyTwoCentsDesktopApp extends Application {
                     fileChooser.setTitle("Salvar Exportação");
                     fileChooser.setInitialFileName(suggestedName);
                     fileChooser.getExtensionFilters().add(
-                        new FileChooser.ExtensionFilter("Arquivo " + ext, "*." + ext.toLowerCase())
-                    );
+                            new FileChooser.ExtensionFilter("Arquivo " + ext, "*." + ext.toLowerCase()));
 
                     File file = fileChooser.showSaveDialog(primaryStage);
-                    if (file == null) return;
+                    if (file == null)
+                        return;
 
                     URL url = new URL("http://localhost:8085" + urlPath);
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -73,7 +77,7 @@ public class MyTwoCentsDesktopApp extends Application {
                     }
 
                     try (InputStream in = conn.getInputStream();
-                         FileOutputStream out = new FileOutputStream(file)) {
+                            FileOutputStream out = new FileOutputStream(file)) {
                         byte[] buffer = new byte[8192];
                         int bytesRead;
                         while ((bytesRead = in.read(buffer)) != -1) {
@@ -83,7 +87,8 @@ public class MyTwoCentsDesktopApp extends Application {
                     conn.disconnect();
 
                     WebView wv = findWebView(primaryStage.getScene().getRoot());
-                    if (wv != null) wv.getEngine().executeScript("showToast('Arquivo salvo com sucesso!')");
+                    if (wv != null)
+                        wv.getEngine().executeScript("showToast('Arquivo salvo com sucesso!')");
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -98,11 +103,11 @@ public class MyTwoCentsDesktopApp extends Application {
                     FileChooser fileChooser = new FileChooser();
                     fileChooser.setTitle("Selecionar Backup para Restaurar");
                     fileChooser.getExtensionFilters().add(
-                        new FileChooser.ExtensionFilter("Backup Encriptado (*.mtc)", "*.mtc")
-                    );
+                            new FileChooser.ExtensionFilter("Backup Encriptado (*.mtc)", "*.mtc"));
 
                     File file = fileChooser.showOpenDialog(primaryStage);
-                    if (file == null) return;
+                    if (file == null)
+                        return;
 
                     TextInputDialog pwdDialog = new TextInputDialog();
                     pwdDialog.setTitle("Senha do Backup");
@@ -111,18 +116,20 @@ public class MyTwoCentsDesktopApp extends Application {
                     pwdDialog.showAndWait();
 
                     String password = pwdDialog.getResult();
-                    if (password == null || password.isBlank()) return;
+                    if (password == null || password.isBlank())
+                        return;
 
                     Alert confirm = new Alert(
-                        Alert.AlertType.WARNING,
-                        "ATENÇÃO: A restauração substituirá TODOS os dados atuais.\n\nArquivo: " + file.getName() + "\n\nDeseja continuar?",
-                        ButtonType.YES, ButtonType.NO
-                    );
+                            Alert.AlertType.WARNING,
+                            "ATENÇÃO: A restauração substituirá TODOS os dados atuais.\n\nArquivo: " + file.getName()
+                                    + "\n\nDeseja continuar?",
+                            ButtonType.YES, ButtonType.NO);
                     confirm.setTitle("Confirmação de Restauração");
                     confirm.setHeaderText(null);
                     confirm.showAndWait();
 
-                    if (confirm.getResult() != ButtonType.YES) return;
+                    if (confirm.getResult() != ButtonType.YES)
+                        return;
 
                     String boundary = "---" + System.currentTimeMillis();
                     java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
@@ -133,11 +140,14 @@ public class MyTwoCentsDesktopApp extends Application {
                             .POST(createMultipartBody(file, boundary))
                             .build();
 
-                    java.net.http.HttpResponse<String> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+                    java.net.http.HttpResponse<String> response = client.send(request,
+                            java.net.http.HttpResponse.BodyHandlers.ofString());
 
                     if (response.statusCode() == 200) {
                         WebView wv = findWebView(primaryStage.getScene().getRoot());
-                        if (wv != null) wv.getEngine().executeScript("showToast('Backup restaurado! Recarregando...'); setTimeout(() => location.reload(), 1500);");
+                        if (wv != null)
+                            wv.getEngine().executeScript(
+                                    "showToast('Backup restaurado! Recarregando...'); setTimeout(() => location.reload(), 1500);");
                     } else {
                         showErrorInJs("Falha na restauração: " + response.body());
                     }
@@ -149,11 +159,12 @@ public class MyTwoCentsDesktopApp extends Application {
             });
         }
 
-        private java.net.http.HttpRequest.BodyPublisher createMultipartBody(File file, String boundary) throws IOException {
+        private java.net.http.HttpRequest.BodyPublisher createMultipartBody(File file, String boundary)
+                throws IOException {
             byte[] fileBytes = Files.readAllBytes(file.toPath());
             byte[] prefix = ("--" + boundary + "\r\n" +
-                            "Content-Disposition: form-data; name=\"file\"; filename=\"" + file.getName() + "\"\r\n" +
-                            "Content-Type: application/octet-stream\r\n\r\n").getBytes();
+                    "Content-Disposition: form-data; name=\"file\"; filename=\"" + file.getName() + "\"\r\n" +
+                    "Content-Type: application/octet-stream\r\n\r\n").getBytes();
             byte[] suffix = ("\r\n--" + boundary + "--\r\n").getBytes();
 
             byte[] total = new byte[prefix.length + fileBytes.length + suffix.length];
@@ -167,14 +178,17 @@ public class MyTwoCentsDesktopApp extends Application {
         private void showErrorInJs(String msg) {
             try {
                 WebView wv = findWebView(primaryStage.getScene().getRoot());
-                if (wv != null) wv.getEngine().executeScript("showToast('" + msg.replace("'", "") + "', 'error')");
-            } catch (Exception ignored) {}
+                if (wv != null)
+                    wv.getEngine().executeScript("showToast('" + msg.replace("'", "") + "', 'error')");
+            } catch (Exception ignored) {
+            }
         }
 
         private WebView findWebView(javafx.scene.Parent root) {
             if (root instanceof StackPane) {
                 for (javafx.scene.Node node : ((StackPane) root).getChildren()) {
-                    if (node instanceof WebView) return (WebView) node;
+                    if (node instanceof WebView)
+                        return (WebView) node;
                 }
             }
             return null;
@@ -203,15 +217,15 @@ public class MyTwoCentsDesktopApp extends Application {
             if (iconStream != null) {
                 primaryStage.getIcons().add(new javafx.scene.image.Image(iconStream));
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         primaryStage.setOnCloseRequest(event -> {
             event.consume(); // Cancela o encerramento imediato do JavaFX
-            showAutoClosingAlert(Alert.AlertType.INFORMATION, 
-                "Encerrando o MyTwoCents", 
-                "Todas as conexões ativas e o banco de dados estão sendo encerrados com total segurança.", 
-                5, 
-                this::shutdownApp
-            );
+            showAutoClosingAlert(Alert.AlertType.INFORMATION,
+                    "Encerrando o MyTwoCents",
+                    "Todas as conexões ativas e o banco de dados estão sendo encerrados com total segurança.",
+                    5,
+                    this::shutdownApp);
         });
 
         // ── Determinar estado do banco de dados ──
@@ -225,20 +239,19 @@ public class MyTwoCentsDesktopApp extends Application {
         if (isEncrypted) {
             // Banco já criptografado → Loop de Login
             masterPassword = loginLoop();
-            if (masterPassword == null) return;
+            if (masterPassword == null)
+                return;
         } else if (dbExists) {
             // Banco antigo sem criptografia → Migrar
             masterPassword = showSetupDialog(
-                "Seus dados atuais serão protegidos com esta senha.\n" +
-                "Todos os seus lançamentos serão preservados."
-            );
+                    "Seus dados atuais serão protegidos com esta senha.\n" +
+                            "Todos os seus lançamentos serão preservados.");
             if (masterPassword == null) {
                 showAutoClosingAlert(Alert.AlertType.INFORMATION,
-                    "Configuração Cancelada",
-                    "A configuração da senha foi cancelada pelo usuário.",
-                    5,
-                    this::shutdownApp
-                );
+                        "Configuração Cancelada",
+                        "A configuração da senha foi cancelada pelo usuário.",
+                        5,
+                        this::shutdownApp);
                 return;
             }
 
@@ -247,25 +260,23 @@ public class MyTwoCentsDesktopApp extends Application {
             } catch (Exception e) {
                 e.printStackTrace();
                 showAutoClosingAlert(Alert.AlertType.ERROR,
-                    "Erro na Migração",
-                    "Não foi possível encriptar o banco de dados e a aplicação será encerrada.\n\nErro: " + e.getMessage(),
-                    5,
-                    this::shutdownApp
-                );
+                        "Erro na Migração",
+                        "Não foi possível encriptar o banco de dados e a aplicação será encerrada.\n\nErro: "
+                                + e.getMessage(),
+                        5,
+                        this::shutdownApp);
                 return;
             }
         } else {
             // Instalação nova → Setup
             masterPassword = showSetupDialog(
-                "Você está configurando o MyTwoCents pela primeira vez."
-            );
+                    "Você está configurando o MyTwoCents pela primeira vez.");
             if (masterPassword == null) {
                 showAutoClosingAlert(Alert.AlertType.INFORMATION,
-                    "Configuração Cancelada",
-                    "A configuração inicial foi cancelada pelo usuário.",
-                    5,
-                    this::shutdownApp
-                );
+                        "Configuração Cancelada",
+                        "A configuração inicial foi cancelada pelo usuário.",
+                        5,
+                        this::shutdownApp);
                 return;
             }
 
@@ -275,11 +286,10 @@ public class MyTwoCentsDesktopApp extends Application {
             } catch (IOException e) {
                 e.printStackTrace();
                 showAutoClosingAlert(Alert.AlertType.ERROR,
-                    "Erro de Configuração",
-                    "Não foi possível criar os arquivos iniciais.\n\nErro: " + e.getMessage(),
-                    5,
-                    this::shutdownApp
-                );
+                        "Erro de Configuração",
+                        "Não foi possível criar os arquivos iniciais.\n\nErro: " + e.getMessage(),
+                        5,
+                        this::shutdownApp);
                 return;
             }
         }
@@ -320,11 +330,10 @@ public class MyTwoCentsDesktopApp extends Application {
             String password = showLoginDialog();
             if (password == null) {
                 showAutoClosingAlert(Alert.AlertType.INFORMATION,
-                    "Acesso Cancelado",
-                    "O login foi cancelado pelo usuário.",
-                    5,
-                    this::shutdownApp
-                );
+                        "Acesso Cancelado",
+                        "O login foi cancelado pelo usuário.",
+                        5,
+                        this::shutdownApp);
                 return null;
             }
             PasswordValidationResult result = validatePassword(password);
@@ -332,17 +341,16 @@ public class MyTwoCentsDesktopApp extends Application {
                 return password;
             } else if (result == PasswordValidationResult.DB_LOCKED) {
                 showAutoClosingAlert(Alert.AlertType.ERROR,
-                    "Banco de Dados Bloqueado",
-                    "O banco de dados está em uso ou bloqueado por outra instância do aplicativo.\n" +
-                    "O aplicativo será encerrado de forma segura para evitar corrupção dos dados.\n\n" +
-                    "Por favor, feche qualquer outra janela do MyTwoCents e tente novamente.",
-                    5,
-                    this::shutdownApp
-                );
+                        "Banco de Dados Bloqueado",
+                        "O banco de dados está em uso ou bloqueado por outra instância do aplicativo.\n" +
+                                "O aplicativo será encerrado de forma segura para evitar corrupção dos dados.\n\n" +
+                                "Por favor, feche qualquer outra janela do MyTwoCents e tente novamente.",
+                        5,
+                        this::shutdownApp);
                 return null;
             }
             showErrorAlert("Senha Incorreta",
-                "A senha informada não corresponde ao banco de dados.\nTente novamente.");
+                    "A senha informada não corresponde ao banco de dados.\nTente novamente.");
         }
     }
 
@@ -375,12 +383,13 @@ public class MyTwoCentsDesktopApp extends Application {
 
         // Desabilita botão se campo vazio
         dialog.getDialogPane().lookupButton(unlockType)
-              .disableProperty().bind(passwordField.textProperty().isEmpty());
+                .disableProperty().bind(passwordField.textProperty().isEmpty());
 
         Platform.runLater(passwordField::requestFocus);
 
         dialog.setResultConverter(button -> {
-            if (button == unlockType) return passwordField.getText();
+            if (button == unlockType)
+                return passwordField.getText();
             return null;
         });
 
@@ -388,7 +397,8 @@ public class MyTwoCentsDesktopApp extends Application {
     }
 
     /**
-     * Diálogo de Setup (primeira execução ou migração). Pede senha 2x para confirmar.
+     * Diálogo de Setup (primeira execução ou migração). Pede senha 2x para
+     * confirmar.
      */
     private String showSetupDialog(String contextMessage) {
         while (true) {
@@ -431,44 +441,42 @@ public class MyTwoCentsDesktopApp extends Application {
             });
 
             Label warningLabel = new Label(
-                "⚠ IMPORTANTE: Se você esquecer esta senha, seus dados\n" +
-                "NÃO poderão ser recuperados. Faça backups regulares\n" +
-                "pelo menu Configurações."
-            );
+                    "⚠ IMPORTANTE: Se você esquecer esta senha, seus dados\n" +
+                            "NÃO poderão ser recuperados. Faça backups regulares\n" +
+                            "pelo menu Configurações.");
             warningLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-font-size: 11px;");
 
             VBox content = new VBox(10);
             content.setPadding(new Insets(20, 20, 10, 20));
             content.getChildren().addAll(
-                titleLabel, contextLabel,
-                new Separator(),
-                new Label("Senha:"), pwd1,
-                new Label("Confirmar Senha:"), pwd2,
-                matchLabel,
-                new Separator(),
-                warningLabel
-            );
+                    titleLabel, contextLabel,
+                    new Separator(),
+                    new Label("Senha:"), pwd1,
+                    new Label("Confirmar Senha:"), pwd2,
+                    matchLabel,
+                    new Separator(),
+                    warningLabel);
 
             dialog.getDialogPane().setContent(content);
             dialog.getDialogPane().setPrefWidth(450);
 
             // Botão OK só ativo quando senhas coincidem e não estão vazias
             dialog.getDialogPane().lookupButton(createType).disableProperty().bind(
-                Bindings.createBooleanBinding(
-                    () -> pwd1.getText().isEmpty() || !pwd1.getText().equals(pwd2.getText()),
-                    pwd1.textProperty(), pwd2.textProperty()
-                )
-            );
+                    Bindings.createBooleanBinding(
+                            () -> pwd1.getText().isEmpty() || !pwd1.getText().equals(pwd2.getText()),
+                            pwd1.textProperty(), pwd2.textProperty()));
 
             Platform.runLater(pwd1::requestFocus);
 
             dialog.setResultConverter(button -> {
-                if (button == createType) return pwd1.getText();
+                if (button == createType)
+                    return pwd1.getText();
                 return null;
             });
 
             String result = dialog.showAndWait().orElse(null);
-            if (result == null) return null; // Cancelou
+            if (result == null)
+                return null; // Cancelou
 
             // Validações extras
             if (result.contains(" ")) {
@@ -494,7 +502,8 @@ public class MyTwoCentsDesktopApp extends Application {
             return PasswordValidationResult.SUCCESS;
         } catch (SQLException e) {
             String message = e.getMessage();
-            if (message != null && (message.contains("locked") || message.contains("already in use") || message.contains("bloqueado"))) {
+            if (message != null && (message.contains("locked") || message.contains("already in use")
+                    || message.contains("bloqueado"))) {
                 return PasswordValidationResult.DB_LOCKED;
             }
             return PasswordValidationResult.WRONG_PASSWORD;
@@ -526,7 +535,7 @@ public class MyTwoCentsDesktopApp extends Application {
      */
     private void configureEncryptedDatabase(String password) {
         String url = "jdbc:h2:file:" + DB_DIR + File.separator + DB_NAME
-                   + ";CIPHER=AES;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1";
+                + ";CIPHER=AES;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1";
         System.setProperty("spring.datasource.url", url);
         // Formato H2 para banco encriptado: "senhaDoArquivo senhaDoUsuario"
         // Como a senha do SA é vazia, fica: "senhaMestra " (com espaço no final)
@@ -536,7 +545,8 @@ public class MyTwoCentsDesktopApp extends Application {
     // ─── INICIALIZAÇÃO DO APP ────────────────────────────────────────────────────
 
     /**
-     * Mostra uma tela de carregamento elegante e inicia o Spring Boot em segundo plano.
+     * Mostra uma tela de carregamento elegante e inicia o Spring Boot em segundo
+     * plano.
      * Quando o Spring estiver pronto, carrega o WebView com a interface.
      */
     private void showLoadingAndStartApp() {
@@ -557,7 +567,7 @@ public class MyTwoCentsDesktopApp extends Application {
 
         loadingBox.getChildren().addAll(appTitle, spinner, loadingLabel);
 
-        Scene loadingScene = new Scene(loadingBox, 1280, 720);
+        Scene loadingScene = new Scene(loadingBox, 1280, 760);
         primaryStage.setScene(loadingScene);
         primaryStage.show();
 
@@ -570,9 +580,9 @@ public class MyTwoCentsDesktopApp extends Application {
                 e.printStackTrace();
                 Platform.runLater(() -> {
                     showErrorAlert("Erro de Inicialização",
-                        "Não foi possível iniciar o servidor interno.\n\n" +
-                        "Verifique se não há outra instância do app aberta " +
-                        "ou se a porta 8085 está disponível.\n\nErro: " + e.getMessage());
+                            "Não foi possível iniciar o servidor interno.\n\n" +
+                                    "Verifique se não há outra instância do app aberta " +
+                                    "ou se a porta 8085 está disponível.\n\nErro: " + e.getMessage());
                     Platform.exit();
                     System.exit(1);
                 });
@@ -634,8 +644,7 @@ public class MyTwoCentsDesktopApp extends Application {
         webView.getEngine().getLoadWorker().stateProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal == Worker.State.SUCCEEDED) {
                 javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(
-                    javafx.util.Duration.millis(200)
-                );
+                        javafx.util.Duration.millis(200));
                 pause.setOnFinished(e -> {
                     try {
                         javaBridge = new JavaBridge();
@@ -667,28 +676,29 @@ public class MyTwoCentsDesktopApp extends Application {
         alert.showAndWait();
     }
 
-    private void showAutoClosingAlert(Alert.AlertType alertType, String title, String message, int seconds, Runnable onFinished) {
+    private void showAutoClosingAlert(Alert.AlertType alertType, String title, String message, int seconds,
+            Runnable onFinished) {
         Alert alert = new Alert(alertType);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        
+
         ButtonType closeButton = new ButtonType("Fechar Imediatamente", ButtonBar.ButtonData.OK_DONE);
         alert.getDialogPane().getButtonTypes().setAll(closeButton);
 
-        final int[] remaining = {seconds};
+        final int[] remaining = { seconds };
         alert.setContentText(message + "\n\nFechando automaticamente em " + remaining[0] + " segundos...");
         alert.show();
 
         javafx.animation.Timeline timeline = new javafx.animation.Timeline(
-            new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1), event -> {
-                remaining[0]--;
-                if (remaining[0] <= 0) {
-                    alert.close();
-                } else {
-                    alert.setContentText(message + "\n\nFechando automaticamente em " + remaining[0] + " segundos...");
-                }
-            })
-        );
+                new javafx.animation.KeyFrame(javafx.util.Duration.seconds(1), event -> {
+                    remaining[0]--;
+                    if (remaining[0] <= 0) {
+                        alert.close();
+                    } else {
+                        alert.setContentText(
+                                message + "\n\nFechando automaticamente em " + remaining[0] + " segundos...");
+                    }
+                }));
         timeline.setCycleCount(seconds);
         timeline.setOnFinished(e -> {
             alert.close();
@@ -696,14 +706,14 @@ public class MyTwoCentsDesktopApp extends Application {
                 onFinished.run();
             }
         });
-        
+
         alert.setOnHidden(e -> {
             timeline.stop();
             if (onFinished != null) {
                 onFinished.run();
             }
         });
-        
+
         timeline.play();
     }
 }
