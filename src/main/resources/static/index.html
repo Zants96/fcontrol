@@ -54,6 +54,12 @@
       </span>
       <span class="nav-label">Assinaturas</span>
     </a>
+    <a href="#" class="nav-item" id="nav-investimentos" data-view="investimentos">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+      </span>
+      <span class="nav-label">Investimentos</span>
+    </a>
     <div class="nav-divider"></div>
     <a href="#" class="nav-item nav-item--ai" id="nav-assistente-ia" data-view="assistente-ia">
       <span class="nav-icon">
@@ -317,7 +323,98 @@
       </div>
       <div class="section-divider-line"></div>
     </div>
+  </div>
+
+
+  <div id="toast-container"></div>
     <div id="ai-insights-tabela" style="margin-bottom: 2.5rem;"></div>
+
+  </section>
+
+  <!-- ─── VIEW: INVESTIMENTOS ────────────────────────────────────────────── -->
+  <section class="view hidden" id="view-investimentos">
+    
+    <!-- Topbar actions -->
+    <div style="display: flex; justify-content: flex-end; gap: 1.5rem; margin-bottom: 1.5rem;">
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Exportar:</label>
+        <button class="btn-export" id="btn-inv-export-csv" title="Exportar Histórico de Investimentos (CSV)">CSV</button>
+        <button class="btn-export" id="btn-inv-export-pdf" title="Exportar Relatório de Investimentos (PDF)">PDF</button>
+      </div>
+      <div style="display: flex; gap: 0.75rem; align-items: center;">
+        <button class="btn btn--secondary" id="btn-atualizar-cotacoes" onclick="atualizarCotacoesBrapi()">
+          🔄 Atualizar Cotações
+        </button>
+        <button class="btn btn--primary" onclick="openInvModal()">
+          + Adicionar Lançamento
+        </button>
+      </div>
+    </div>
+
+    <!-- Cards de Resumo -->
+    <div class="cards-grid">
+      <div class="card card--blue">
+        <div class="card-label">Patrimônio Total</div>
+        <div class="card-value" id="inv-card-patrimonio">R$ 0,00</div>
+      </div>
+      <div class="card card--orange">
+        <div class="card-label">Valor Investido</div>
+        <div class="card-value" id="inv-card-investido">R$ 0,00</div>
+      </div>
+      <div class="card card--green">
+        <div class="card-label">Lucro Total</div>
+        <div class="card-value" id="inv-card-lucro">R$ 0,00</div>
+        <div class="card-sub" id="inv-card-variacao">0,00%</div>
+      </div>
+      <div class="card card--purple">
+        <div class="card-label">Dividendos Recebidos</div>
+        <div class="card-value" id="inv-card-dividendos">R$ 0,00</div>
+      </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="charts-row">
+      <!-- Evolução Patrimonial (12M) -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Evolução do Patrimônio (12 Meses)</h2>
+        </div>
+        <div class="chart-wrapper" style="height: 280px;">
+          <canvas id="chart-inv-evolucao"></canvas>
+        </div>
+      </div>
+      
+      <!-- Distribuição da Carteira -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Distribuição da Carteira</h2>
+        </div>
+        <div class="chart-wrapper chart-wrapper--donut" style="height: 280px;">
+          <canvas id="chart-inv-dist"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gráfico de Dividendos -->
+    <div class="charts-row" style="margin-top: 1.5rem; grid-template-columns: 1fr;">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Dividendos Recebidos (12 Meses)</h2>
+        </div>
+        <div class="chart-wrapper" style="height: 250px;">
+          <canvas id="chart-inv-dividendos"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Acordeões (Ativos por Tipo) -->
+    <div id="inv-acordeoes"></div>
+
+    <!-- Insights da IA -->
+    <div class="section-divider" style="margin-top: 3rem;">
+      <span id="title-ai-insights-investimentos">🤖 Insights da IA na Carteira</span>
+    </div>
+    <div id="ai-insights-investimentos" style="margin-bottom: 2.5rem;"></div>
 
   </section>
 
@@ -425,6 +522,21 @@
         </div>
         <p id="ai-key-hint-text" style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.75rem;">Crie sua chave gratuitamente em <a href="https://aistudio.google.com/" target="_blank" style="color: var(--brand-glow);">Google AI Studio</a>. Gratuito, sem cartão.</p>
       </div>
+
+      <div class="card">
+        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Integração BrAPI (Cotações)</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Configure seu token do BrAPI para atualizar automaticamente cotações de Ações, FIIs e Criptomoedas. <strong>Gratuito (15.000 requisições/mês)</strong>.</p>
+        <div id="brapi-key-status" style="margin-bottom: 1rem;"></div>
+        
+        <div style="display: flex; gap: 0.5rem; align-items: flex-end; margin-bottom: 0.75rem;">
+          <div style="flex: 1;">
+            <label for="input-brapi-token" style="display: block; font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.25rem;">Token BrAPI</label>
+            <input type="password" id="input-brapi-token" placeholder="Cole seu token aqui..." style="width:100%; padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-primary); font-size: 0.85rem;">
+          </div>
+          <button class="btn btn--primary" id="btn-save-brapi-token" style="white-space: nowrap; height: 40px; min-height: 40px; margin-bottom: 0px;">Salvar</button>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.75rem;">Crie sua conta gratuitamente em <a href="https://brapi.dev/" target="_blank" style="color: var(--brand-glow);">brapi.dev</a> para gerar o token.</p>
+      </div>
     </div>
   </section>
 
@@ -500,6 +612,115 @@
   </div>
 </div>
 
+<!-- ═══ MODAL: LANÇAMENTO DE INVESTIMENTO ═════════════════════════════════ -->
+<div class="modal-overlay hidden" id="inv-modal-overlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="inv-modal-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="inv-modal-title">Adicionar Lançamento (Investimento)</h2>
+      <button class="modal-close" id="inv-modal-close" aria-label="Fechar janela">✕</button>
+    </div>
+    
+    <form id="inv-form" class="modal-form">
+      
+      <!-- Toggle Compra / Venda / Dividendo -->
+      <div class="inv-radio-toggle" style="margin-bottom: 1.5rem;">
+        <label>
+          <input type="radio" name="inv-operacao" value="COMPRA" checked>
+          <span>Compra</span>
+        </label>
+        <label>
+          <input type="radio" name="inv-operacao" value="VENDA">
+          <span>Venda</span>
+        </label>
+        <label>
+          <input type="radio" name="inv-operacao" value="DIVIDENDO">
+          <span>Dividendo</span>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group" style="flex: 1;">
+          <label for="inv-form-tipo">Tipo de Ativo</label>
+          <select id="inv-form-tipo" required>
+            <option value="ACAO">Ações</option>
+            <option value="FII">Fundos Imobiliários (FIIs)</option>
+            <option value="RENDA_FIXA">Renda Fixa</option>
+            <option value="ETF">ETFs</option>
+            <option value="TESOURO_DIRETO">Tesouro Direto</option>
+            <option value="CRIPTO">Criptomoedas</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="inv-form-ticker">Ativo (Ticker)</label>
+          <input type="text" id="inv-form-ticker" placeholder="Ex: BBAS3, RZTR11" required style="text-transform: uppercase;" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inv-form-data">Data</label>
+          <input type="date" id="inv-form-data" required />
+        </div>
+        <div class="form-group" id="inv-group-quantidade">
+          <label for="inv-form-quantidade">Quantidade</label>
+          <input type="text" id="inv-form-quantidade" placeholder="Ex: 100" />
+        </div>
+        <div class="form-group">
+          <label for="inv-form-preco" id="inv-label-preco">Preço unitário (R$)</label>
+          <input type="text" id="inv-form-preco" placeholder="0,00" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inv-form-custos">Custos / Taxas (R$)</label>
+        <input type="text" id="inv-form-custos" placeholder="0,00" />
+      </div>
+
+      <div class="inv-summary-row" style="margin: 1.5rem 0 1rem; padding: 1rem; background: var(--bg-hover); border-radius: var(--radius-sm); border: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 600; color: var(--text-secondary);">Valor Total (R$)</span>
+        <span id="inv-form-total" style="font-size: 1.25rem; font-weight: 700; color: var(--brand-glow);">R$ 0,00</span>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn--secondary" id="inv-btn-cancel">Cancelar</button>
+        <button type="submit" class="btn btn--primary" id="inv-btn-save">Adicionar Lançamento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ MODAL: HISTÓRICO DE ATIVO ═════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="inv-historico-overlay" aria-hidden="true">
+  <div class="modal modal--large" role="dialog" aria-modal="true" aria-labelledby="inv-historico-title">
+    <div class="modal-header">
+      <h2 class="modal-title" id="inv-historico-title">Histórico de Lançamentos</h2>
+      <button class="modal-close" id="inv-historico-close" aria-label="Fechar janela">✕</button>
+    </div>
+    
+    <div class="modal-body" style="padding: 1.5rem; max-height: 60vh; overflow-y: auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Operação</th>
+            <th>Quantidade</th>
+            <th>Preço Unitário</th>
+            <th>Custos</th>
+            <th>Valor Total</th>
+            <th class="col-actions">Ações</th>
+          </tr>
+        </thead>
+        <tbody id="inv-historico-tbody">
+          <!-- Dinâmico -->
+        </tbody>
+      </table>
+      <div id="inv-historico-empty" class="empty-state hidden" style="padding: 2rem; text-align: center;">
+        <p>Nenhum lançamento encontrado para este ativo.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: PIX ═════════════════════════════════════════════════════ -->
 <div class="modal-overlay hidden" id="modal-pix-overlay" aria-hidden="true">
   <div class="modal modal-pix" role="dialog" aria-modal="true" aria-labelledby="modal-pix-title">
@@ -527,6 +748,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/charts.js"></script>
 <script src="/js/ai-chat.js"></script>
+<script src="/js/investments.js"></script>
 <script src="/js/app.js"></script>
 </body>
 </html>

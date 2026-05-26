@@ -374,13 +374,30 @@ async function loadAiInsights(targetId = 'ai-insights-dashboard', mes = null, ti
   }
 
   // Gera a representação do estado atual dos lançamentos
-  const currentStateString = (state.lancamentos || [])
-    .map(l => `${l.id}-${l.valor}-${l.descricao}-${l.subcategoria}-${l.dia}`)
-    .join('|');
+  let currentStateString = "";
+  
+  if (targetId === 'ai-insights-investimentos') {
+    // Para investimentos, usa o cache local de _invDashboardData
+    if (typeof _invDashboardData !== 'undefined' && _invDashboardData) {
+      currentStateString = (_invDashboardData.ativosPorTipo ? Object.values(_invDashboardData.ativosPorTipo).flat() : [])
+        .map(a => `${a.id}-${a.quantidade}-${a.precoAtual}`)
+        .join('|');
+    }
+  } else {
+    // Para gastos
+    currentStateString = (state.lancamentos || [])
+      .map(l => `${l.id}-${l.valor}-${l.descricao}-${l.subcategoria}-${l.dia}`)
+      .join('|');
+  }
 
   // Verifica cache
   const now = Date.now();
-  const cacheKey = mes !== null && tipo !== null ? `ai-insights-${state.ano}-${mes}-${tipo}` : `ai-insights-${state.ano}`;
+  let cacheKey;
+  if (targetId === 'ai-insights-investimentos') {
+    cacheKey = `ai-insights-investimentos`;
+  } else {
+    cacheKey = mes !== null && tipo !== null ? `ai-insights-${state.ano}-${mes}-${tipo}` : `ai-insights-${state.ano}`;
+  }
   const cached = localStorage.getItem(cacheKey);
 
   if (cached) {
@@ -439,7 +456,13 @@ async function triggerGerarInsights(targetId, mes, tipo, currentStateString) {
   `;
 
   try {
-    const result = await Api.getAiInsights(state.ano, mes, tipo);
+    let result;
+    if (targetId === 'ai-insights-investimentos') {
+      result = await Api.getAiInsightsInvestimentos();
+    } else {
+      result = await Api.getAiInsights(state.ano, mes, tipo);
+    }
+    
     if (result.error) {
       // Se estourar a cota de rate limit ou der erro 429
       if (result.error.includes("429") || result.error.toLowerCase().includes("quota") || result.error.toLowerCase().includes("rate limit") || result.error.toLowerCase().includes("exceeded")) {
@@ -463,7 +486,13 @@ async function triggerGerarInsights(targetId, mes, tipo, currentStateString) {
 
     // Salva no cache com a checksum dos lançamentos no momento da geração
     const now = Date.now();
-    const cacheKey = mes !== null && tipo !== null ? `ai-insights-${state.ano}-${mes}-${tipo}` : `ai-insights-${state.ano}`;
+    let cacheKey;
+    if (targetId === 'ai-insights-investimentos') {
+      cacheKey = `ai-insights-investimentos`;
+    } else {
+      cacheKey = mes !== null && tipo !== null ? `ai-insights-${state.ano}-${mes}-${tipo}` : `ai-insights-${state.ano}`;
+    }
+    
     const cacheData = {
       insights: result.insights,
       stateString: currentStateString
