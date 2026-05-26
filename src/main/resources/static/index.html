@@ -8,8 +8,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/resize-observer-polyfill@1.5.1/dist/ResizeObserver.global.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/js/ResizeObserver.global.js"></script>
+  <script>
+    // Defensive check to ensure ResizeObserver is always defined in older JavaFX WebView engines
+    if (typeof window.ResizeObserver === 'undefined') {
+      window.ResizeObserver = class ResizeObserver {
+        constructor(callback) { this.callback = callback; }
+        observe(target) {
+          this.listener = () => this.callback([{ target }]);
+          window.addEventListener('resize', this.listener);
+        }
+        unobserve(target) { if (this.listener) window.removeEventListener('resize', this.listener); }
+        disconnect() { if (this.listener) window.removeEventListener('resize', this.listener); }
+      };
+    }
+  </script>
+  <script src="/js/chart.umd.min.js"></script>
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
