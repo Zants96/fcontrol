@@ -64,12 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initDate();
   initNavigation();
   initModal();
+  initInvModal();
   initMenuToggle();
   initExport();
   initBackup();
   initMonthlyDashboard();
   initTheme();
   initAiChat();
+  initBrapiConfig();
   navigateTo('dashboard');
 });
 
@@ -140,6 +142,7 @@ function navigateTo(view) {
     gastos:          'Gastos',
     'gastos-fixos':  'Gastos Fixos',
     assinaturas:     'Assinaturas',
+    investimentos:   'Investimentos',
     'assistente-ia': 'Assistente IA',
     configuracoes:   'Configurações',
   };
@@ -147,18 +150,23 @@ function navigateTo(view) {
 
   $('view-dashboard').classList.add('hidden');
   $('view-tabela').classList.add('hidden');
+  $('view-investimentos')?.classList.add('hidden');
   $('view-assistente-ia')?.classList.add('hidden');
   $('view-configuracoes')?.classList.add('hidden');
 
   if (view === 'dashboard') {
     $('view-dashboard').classList.remove('hidden');
     loadDashboard();
+  } else if (view === 'investimentos') {
+    $('view-investimentos').classList.remove('hidden');
+    loadInvestimentos();
   } else if (view === 'assistente-ia') {
     $('view-assistente-ia').classList.remove('hidden');
     loadAiInsights('ai-insights-chat');
   } else if (view === 'configuracoes') {
     $('view-configuracoes')?.classList.remove('hidden');
     checkAiKeyStatus();
+    checkBrapiStatus();
   } else {
     state.categoria = CATEGORIA_VIEW[view];
     

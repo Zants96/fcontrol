@@ -4,6 +4,8 @@ import br.com.lesnik.mytwocents.dto.AiChatDTO;
 import br.com.lesnik.mytwocents.dto.AiChatDTO.*;
 import br.com.lesnik.mytwocents.dto.DashboardDTO;
 import br.com.lesnik.mytwocents.dto.LancamentoDTO;
+import br.com.lesnik.mytwocents.dto.InvestimentoDashboardDTO;
+import br.com.lesnik.mytwocents.dto.AtivoDTO;
 import br.com.lesnik.mytwocents.model.AiConfig;
 import br.com.lesnik.mytwocents.model.Categoria;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
@@ -29,6 +31,7 @@ public class AiService {
 
     private final AiConfigRepository configRepository;
     private final LancamentoService lancamentoService;
+    private final InvestimentoService investimentoService;
     private final ObjectMapper objectMapper;
 
     private static final String GEMINI_URL_TEMPLATE =
@@ -408,6 +411,113 @@ public class AiService {
             log.error("Erro ao gerar insights mensais por categoria: {}", e.getMessage(), e);
             return InsightResponse.builder()
                     .error("Erro ao gerar insights: " + e.getMessage())
+                    .insights(Collections.emptyList())
+                    .build();
+        }
+    }
+
+    public InsightResponse gerarInsightsInvestimentos() {
+        try {
+            InvestimentoDashboardDTO dashboard = investimentoService.calcularDashboard();
+            
+            StringBuilder ctx = new StringBuilder();
+            ctx.append("ANÁLISE DE PORTFÓLIO DE INVESTIMENTOS — ").append(LocalDate.now()).append("\n\n");
+            
+            ctx.append("RESUMO DA CARTEIRA:\n");
+            ctx.append("- Patrimônio Total: R$ ").append(formatarValor(dashboard.getPatrimonioTotal())).append("\n");
+            ctx.append("- Valor Investido: R$ ").append(formatarValor(dashboard.getValorInvestido())).append("\n");
+            ctx.append("- Lucro/Prejuízo: R$ ").append(formatarValor(dashboard.getLucroTotal()))
+               .append(" (").append(formatarValor(dashboard.getVariacaoPercent())).append("%)\n");
+            ctx.append("- Dividendos Recebidos: R$ ").append(formatarValor(dashboard.getDividendosTotal())).append("\n\n");
+            
+            ctx.append("DISTRIBUIÇÃO POR CLASSE DE ATIVO:\n");
+            if (dashboard.getResumoPorTipo() != null) {
+                dashboard.getResumoPorTipo().forEach((tipo, resumo) -> {
+                    ctx.append("- ").append(tipo.name()).append(": R$ ")
+                       .append(formatarValor(resumo.getValorTotal()))
+                       .append(" (").append(formatarValor(resumo.getPercentCarteira())).append("% da carteira) — ")
+                       .append(resumo.getQuantidadeAtivos()).append(" ativos\n");
+                });
+            }
+            ctx.append("\n");
+
+            ctx.append("POSIÇÕES ATUAIS (ATIVOS NA CARTEIRA):\n");
+            if (dashboard.getAtivosPorTipo() != null) {
+                dashboard.getAtivosPorTipo().forEach((tipo, ativos) -> {
+                    if (!ativos.isEmpty()) {
+                        ctx.append("\n[").append(tipo.name()).append("]:\n");
+                        ativos.stream()
+                              .sorted((a, b) -> b.getValorTotal().compareTo(a.getValorTotal()))
+                              .forEach(a -> {
+                                  ctx.append("- ").append(a.getTicker())
+                                     .append(": Qtd ").append(formatarValor(a.getQuantidade()))
+                                     .append(" | Preço Médio R$").append(formatarValor(a.getPrecoMedio()))
+                                     .append(" | Preço Atual R$").append(formatarValor(a.getPrecoAtual()))
+                                     .append(" | Variação ").append(formatarValor(a.getVariacao())).append("%")
+                                     .append(" | Peso ").append(formatarValor(a.getPercentCarteira())).append("%\n");
+                              });
+                    }
+                });
+            }
+
+            String prompt = """
+                    Você é um assessor de investimentos especializado analisando a carteira do usuário.
+                    Gere de 3 a 5 insights PRÁTICOS, TENDÊNCIAS ou ALERTAS baseados EXCLUSIVAMENTE nos dados abaixo.
+                    
+                    %s
+                    
+                    REGRAS:
+                    1. Cada insight deve ser curto (máximo 2 a 3 frases)
+                    2. Use valores em R$ e porcentagens reais quando possível
+                    3. Seja específico (mencione os Tickers, lucros/prejuízos reais)
+                    4. Se a carteira estiver vazia, sugira o início de investimentos de forma genérica
+                    
+                    FOCOS SUGERIDOS PARA OS INSIGHTS:
+                    - ALERTA: Concentração excessiva em um único ativo (> 30%%), prejuízos não realizados muito altos em um ativo, ou falta de diversificação de classe.
+                    - TENDENCIA: Desempenho geral da carteira comparado ao valor investido.
+                    - POSITIVO: Elogio a um ativo que está puxando a rentabilidade para cima (maior variação positiva).
+                    - DICA: Estratégias de rebalanceamento caso uma classe de ativos esteja muito pequena ou muito grande.
+                    
+                    Retorne APENAS um JSON válido, sem markdown, sem explicação:
+                    {
+                      "insights": [
+                        {
+                          "tipo": "ALERTA",
+                          "mensagem": "Seu ativo PETR4 representa...",
+                          "icone": "🔴"
+                        }
+                      ]
+                    }
+                    """.formatted(ctx.toString());
+
+            String resposta = chamarGemini(prompt, "application/json");
+
+            // Limpa markdown
+            resposta = resposta.trim();
+            if (resposta.startsWith("```json")) resposta = resposta.substring(7);
+            else if (resposta.startsWith("```")) resposta = resposta.substring(3);
+            if (resposta.endsWith("```")) resposta = resposta.substring(0, resposta.length() - 3);
+            resposta = resposta.trim();
+
+            JsonNode root = objectMapper.readTree(resposta);
+            List<Insight> insights = new ArrayList<>();
+            JsonNode insightsNode = root.get("insights");
+            if (insightsNode != null && insightsNode.isArray()) {
+                for (JsonNode node : insightsNode) {
+                    insights.add(Insight.builder()
+                            .tipo(node.has("tipo") ? node.get("tipo").asText() : "DICA")
+                            .mensagem(node.has("mensagem") ? node.get("mensagem").asText() : "")
+                            .icone(node.has("icone") ? node.get("icone").asText() : "💡")
+                            .build());
+                }
+            }
+
+            return InsightResponse.builder().insights(insights).build();
+
+        } catch (Exception e) {
+            log.error("Erro ao gerar insights de investimentos: {}", e.getMessage(), e);
+            return InsightResponse.builder()
+                    .error("Erro ao gerar insights de investimentos: " + e.getMessage())
                     .insights(Collections.emptyList())
                     .build();
         }

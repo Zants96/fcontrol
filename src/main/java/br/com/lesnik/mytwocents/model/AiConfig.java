@@ -36,6 +36,10 @@ public class AiConfig {
     @Builder.Default
     private String modelo = "gemini-2.5-flash";
 
+    /** Token do BrAPI.dev para cotações de investimentos */
+    @Column(length = 512)
+    private String brapiToken;
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 
