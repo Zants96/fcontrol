@@ -25,4 +25,11 @@ public class AtivoDTO {
     private BigDecimal metaPercent;
     private BigDecimal dividendosTotal;
     private boolean ativo;
+    private String logoUrl;
+    private String sector;
+    private String longName;
+    private java.time.LocalDate dataVencimento;
+    private String indexador;
+    private BigDecimal taxa;
+    private BigDecimal rendimentoMensal;
 }

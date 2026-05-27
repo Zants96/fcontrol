@@ -284,6 +284,12 @@ function renderInvAcordeoes(data) {
     const variacao = parseFloat(r.variacao || 0);
     const varClass = variacao >= 0 ? 'inv-variation--up' : 'inv-variation--down';
 
+    const labelSetorSegmento = (tipo === 'FII' || tipo === 'ETF') ? 'Segmento' : 'Setor';
+    const temSetorSegmento = (tipo === 'ACOES' || tipo === 'FII' || tipo === 'ETF');
+    const isRendaFixaTesouro = (tipo === 'RENDA_FIXA' || tipo === 'TESOURO_DIRETO');
+    const isRendaFixa = (tipo === 'RENDA_FIXA');
+    const isTesouroDireto = (tipo === 'TESOURO_DIRETO');
+
     const section = document.createElement('div');
     section.className = 'inv-accordion';
     section.innerHTML = `
@@ -303,8 +309,14 @@ function renderInvAcordeoes(data) {
         <table class="data-table inv-table">
           <thead>
             <tr>
-              <th>Ticker</th><th>Nome</th><th>Qtd</th><th>PM</th><th>Atual</th>
-              <th>Var%</th><th>Saldo</th><th>% Cart.</th><th class="col-actions">Ações</th>
+              <th>Ticker</th>
+              ${isRendaFixa ? '' : '<th>Qtd</th>'}
+              ${(isRendaFixa || isTesouroDireto) ? '' : '<th>PM</th>'}
+              ${isRendaFixa ? '' : '<th>Atual</th>'}
+              <th>Var%</th><th>Saldo</th>
+              ${temSetorSegmento ? `<th>${labelSetorSegmento}</th>` : ''}
+              ${isRendaFixaTesouro ? `<th>Vencimento</th><th>Taxa</th><th>Rend. Mensal</th>` : ''}
+              <th>% Cart.</th><th class="col-actions">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -312,21 +324,28 @@ function renderInvAcordeoes(data) {
               const v = parseFloat(a.variacao || 0);
               const vc = v >= 0 ? 'inv-variation--up' : 'inv-variation--down';
               return `<tr>
-                <td><strong>${escHtml(a.ticker)}</strong></td>
-                <td>${escHtml(a.nome || '-')}</td>
-                <td>${formatQtd(a.quantidade)}</td>
-                <td>${fmtCurrency(parseFloat(a.precoMedio || 0))}</td>
-                <td>${fmtCurrency(parseFloat(a.precoAtual || 0))}</td>
+                <td>
+                  <div class="inv-ticker-container" data-tooltip="${escHtml(a.longName || a.nome || a.ticker)}">
+                    ${a.logoUrl ? `<img src="${a.logoUrl}" class="inv-ticker-logo" alt="${escHtml(a.ticker)}" onerror="this.style.display='none'" />` : ''}
+                    <strong>${escHtml(a.ticker)}</strong>
+                  </div>
+                </td>
+                ${isRendaFixa ? '' : `<td>${formatQtd(a.quantidade)}</td>`}
+                ${(isRendaFixa || isTesouroDireto) ? '' : `<td>${fmtCurrency(parseFloat(a.precoMedio || 0))}</td>`}
+                ${isRendaFixa ? '' : `<td>${fmtCurrency(parseFloat(a.precoAtual || 0))}</td>`}
                 <td class="${vc}">${fmtPercent(v)}</td>
                 <td>${fmtCurrency(parseFloat(a.valorTotal || 0))}</td>
+                ${temSetorSegmento ? `<td>${escHtml(a.sector || '-')}</td>` : ''}
+                ${isRendaFixaTesouro ? `
+                  <td>${a.dataVencimento ? fmtDate(a.dataVencimento) : '-'}</td>
+                  <td>${formatarTaxaIndexador(a.taxa, a.indexador)}</td>
+                  <td style="font-weight: 600; color: var(--brand-glow);">${parseFloat(a.rendimentoMensal || 0) > 0 ? fmtCurrency(parseFloat(a.rendimentoMensal)) + ' /mês' : '-'}</td>
+                ` : ''}
                 <td>${parseFloat(a.percentCarteira || 0).toFixed(2)}%</td>
                 <td class="col-actions">
                   <div class="action-btns">
                     <button class="action-btn action-btn--edit" title="Ver Histórico" onclick="abrirHistoricoAtivo(${a.id}, '${escHtml(a.ticker)}')">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
-                    </button>
-                    <button class="action-btn action-btn--edit" title="Editar Preço" onclick="editarPrecoAtivo(${a.id}, '${escHtml(a.ticker)}', ${a.precoAtual})">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                     </button>
                   </div>
                 </td>
@@ -352,11 +371,73 @@ function renderInvAcordeoes(data) {
   }
 }
 
+function applyDateMask(input) {
+  if (!input) return;
+  input.addEventListener('input', (e) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val.length > 8) val = val.substring(0, 8);
+    if (val.length > 4) {
+      val = val.substring(0, 2) + '/' + val.substring(2, 4) + '/' + val.substring(4);
+    } else if (val.length > 2) {
+      val = val.substring(0, 2) + '/' + val.substring(2);
+    }
+    e.target.value = val;
+  });
+}
+
+function convertDateToIso(dateStr) {
+  if (!dateStr) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  const parts = dateStr.split('/');
+  if (parts.length === 3) {
+    const d = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const y = parseInt(parts[2], 10);
+    
+    if (parts[2].length === 4 && m >= 1 && m <= 12) {
+      const dateObj = new Date(y, m - 1, d);
+      if (dateObj.getFullYear() === y && dateObj.getMonth() === (m - 1) && dateObj.getDate() === d) {
+        const dayStr = parts[0].padStart(2, '0');
+        const monthStr = parts[1].padStart(2, '0');
+        return `${y}-${monthStr}-${dayStr}`;
+      }
+    }
+  }
+  return null;
+}
+
+function formatIsoToBrDate(isoStr) {
+  if (!isoStr) return '';
+  const parts = isoStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return isoStr;
+}
+
+function applyPercentMask(input) {
+  if (!input) return;
+  input.addEventListener('focus', (e) => {
+    let val = e.target.value.replace('%', '').trim();
+    e.target.value = val;
+  });
+  input.addEventListener('blur', (e) => {
+    let val = e.target.value.replace('%', '').trim();
+    if (val !== '') {
+      e.target.value = val + '%';
+    }
+  });
+}
+
 // ─── MODAL ───────────────────────────────────────────────────────────────
 
 function initInvModal() {
   const form = $('inv-form');
   if (!form) return;
+
+  applyDateMask($('inv-form-vencimento'));
+  applyDateMask($('inv-form-data'));
+  applyPercentMask($('inv-form-taxa'));
 
   form.addEventListener('submit', onInvFormSubmit);
   $('inv-modal-close')?.addEventListener('click', closeInvModal);
@@ -388,11 +469,32 @@ function initInvModal() {
   $('inv-form-preco')?.addEventListener('input', formatCurrency);
   $('inv-form-custos')?.addEventListener('input', formatCurrency);
   $('inv-form-quantidade')?.addEventListener('input', calcInvTotal);
+
+  const updateRendaFixaFields = () => {
+    const tipo = $('inv-form-tipo')?.value;
+    const fields = $('inv-form-renda-fixa-fields');
+    if (fields) {
+      if (tipo === 'RENDA_FIXA' || tipo === 'TESOURO_DIRETO') {
+        fields.classList.remove('hidden');
+        $('inv-form-vencimento').required = true;
+        $('inv-form-taxa').required = true;
+      } else {
+        fields.classList.add('hidden');
+        $('inv-form-vencimento').required = false;
+        $('inv-form-taxa').required = false;
+      }
+    }
+  };
+  $('inv-form-tipo')?.addEventListener('change', updateRendaFixaFields);
 }
 
 function openInvModal(tipoAtivo) {
   $('inv-form').reset();
   if (tipoAtivo) $('inv-form-tipo').value = tipoAtivo;
+
+  // Trigger change event to set conditional fields visibility
+  const event = new Event('change');
+  $('inv-form-tipo')?.dispatchEvent(event);
 
   // Default: Compra
   const compraRadio = document.querySelector('input[name="inv-operacao"][value="COMPRA"]');
@@ -400,8 +502,12 @@ function openInvModal(tipoAtivo) {
   $('inv-group-quantidade').style.display = '';
   $('inv-label-preco').textContent = 'Preço unitário (R$)';
 
-  // Data de hoje
-  $('inv-form-data').value = new Date().toISOString().split('T')[0];
+  // Data de hoje (formato brasileiro DD/MM/YYYY)
+  const today = new Date();
+  const todayD = String(today.getDate()).padStart(2, '0');
+  const todayM = String(today.getMonth() + 1).padStart(2, '0');
+  const todayY = today.getFullYear();
+  $('inv-form-data').value = `${todayD}/${todayM}/${todayY}`;
   $('inv-form-total').textContent = 'R$ 0,00';
 
   $('inv-modal-overlay').classList.remove('hidden');
@@ -416,6 +522,9 @@ function closeInvModal() {
 
 function parseInvInput(val) {
   if (!val) return 0;
+  if (typeof val === 'string') {
+    val = val.replace('%', '').trim();
+  }
   if (val.includes(',')) {
     return parseFloat(val.replace(/\./g, '').replace(',', '.'));
   }
@@ -444,13 +553,31 @@ async function onInvFormSubmit(e) {
   const operacao = document.querySelector('input[name="inv-operacao"]:checked')?.value;
   const ticker = $('inv-form-ticker')?.value?.trim().toUpperCase();
   const tipoAtivo = $('inv-form-tipo')?.value;
-  const data = $('inv-form-data')?.value;
+  const dataRaw = $('inv-form-data')?.value;
+  const data = convertDateToIso(dataRaw);
   const quantidade = parseInvInput($('inv-form-quantidade')?.value);
   const preco = parseInvInput($('inv-form-preco')?.value);
   const custos = parseInvInput($('inv-form-custos')?.value);
 
+  const dataVencimentoRaw = $('inv-form-vencimento')?.value || null;
+  const dataVencimento = convertDateToIso(dataVencimentoRaw);
+  const indexador = $('inv-form-indexador')?.value || null;
+  const taxaRaw = $('inv-form-taxa')?.value || null;
+  const taxa = taxaRaw ? parseInvInput(taxaRaw) : null;
+
   if (!ticker) { showToast('Informe o ticker do ativo.', 'error'); return; }
-  if (!data) { showToast('Informe a data da operação.', 'error'); return; }
+  if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+    showToast('Informe uma data de operação válida (DD/MM/YYYY).', 'error');
+    return;
+  }
+  
+  if (tipoAtivo === 'RENDA_FIXA' || tipoAtivo === 'TESOURO_DIRETO') {
+    if (!dataVencimento || !/^\d{4}-\d{2}-\d{2}$/.test(dataVencimento)) {
+      showToast('Informe uma data de vencimento válida (DD/MM/YYYY).', 'error');
+      return;
+    }
+  }
+
   if (preco <= 0) { showToast('Informe um preço válido.', 'error'); return; }
   if (operacao !== 'DIVIDENDO' && quantidade <= 0) {
     showToast('Informe uma quantidade válida.', 'error'); return;
@@ -459,7 +586,8 @@ async function onInvFormSubmit(e) {
   const dto = {
     ticker, tipoAtivo, tipoOperacao: operacao,
     data, quantidade: operacao === 'DIVIDENDO' ? 0 : quantidade,
-    precoUnitario: preco, custos
+    precoUnitario: preco, custos,
+    dataVencimento, indexador, taxa
   };
 
   const btn = $('inv-btn-save');
@@ -608,6 +736,7 @@ function renderizarTabelaHistorico(lancamentos) {
   }
 
   $('inv-historico-empty').classList.add('hidden');
+  window._currentLancamentos = lancamentos;
 
   const getOpBadge = (op) => {
     if (op === 'COMPRA') return `<span class="inv-badge" style="background:#34d39920;color:#34d399;">COMPRA</span>`;
@@ -634,7 +763,7 @@ function renderizarTabelaHistorico(lancamentos) {
       <td><strong>${fmtCurrency(parseFloat(l.valorTotal || 0))}</strong></td>
       <td class="col-actions">
         <div class="action-btns" style="justify-content: flex-start; gap: 0.5rem;">
-          <button class="action-btn action-btn--edit" title="Editar Lançamento" onclick="editarLancamentoInvestimento(${l.id}, ${l.ativoId}, '${escHtml(l.ticker)}', ${l.quantidade || 0}, ${l.precoUnitario || 0}, ${l.custos || 0}, '${l.tipoOperacao}')">
+          <button class="action-btn action-btn--edit" title="Editar Lançamento" onclick="editarLancamentoInvestimento(${l.id})">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
           </button>
           <button class="action-btn action-btn--delete" title="Excluir" onclick="excluirLancamentoInvestimento(${l.id}, ${l.ativoId}, '${escHtml(l.ticker)}')">
@@ -663,11 +792,14 @@ async function excluirLancamentoInvestimento(lancamentoId, ativoId, ticker) {
   }
 }
 
-async function editarLancamentoInvestimento(id, ativoId, ticker, qtd, preco, custos, op) {
+async function editarLancamentoInvestimento(id) {
+  const l = window._currentLancamentos?.find(x => x.id === id);
+  if (!l) return;
+
   // Preenche o modal
-  $('inv-edit-id').value = id;
-  $('inv-edit-ativo-id').value = ativoId;
-  $('inv-edit-op').value = op;
+  $('inv-edit-id').value = l.id;
+  $('inv-edit-ativo-id').value = l.ativoId;
+  $('inv-edit-op').value = l.tipoOperacao;
   
   const formQtd = $('inv-edit-qtd');
   const formPreco = $('inv-edit-preco');
@@ -675,18 +807,39 @@ async function editarLancamentoInvestimento(id, ativoId, ticker, qtd, preco, cus
   const groupQtd = $('inv-edit-group-qtd');
   const labelPreco = $('inv-edit-label-preco');
   
-  if (op === 'DIVIDENDO') {
+  if (l.tipoOperacao === 'DIVIDENDO') {
     groupQtd.style.display = 'none';
     formQtd.value = '';
     labelPreco.textContent = 'Valor do dividendo (R$)';
   } else {
     groupQtd.style.display = '';
-    formQtd.value = formatQtd(qtd);
+    formQtd.value = formatQtd(l.quantidade);
     labelPreco.textContent = 'Preço unitário (R$)';
   }
   
-  formPreco.value = fmtCurrency(preco).replace('R$', '').trim();
-  formCustos.value = fmtCurrency(custos).replace('R$', '').trim();
+  formPreco.value = fmtCurrency(l.precoUnitario || 0).replace('R$', '').trim();
+  formCustos.value = fmtCurrency(l.custos || 0).replace('R$', '').trim();
+
+  // Campos condicionais de Renda Fixa/Tesouro
+  const groupRendaFixa = $('inv-edit-group-renda-fixa');
+  if (groupRendaFixa) {
+    const isRF = (l.tipoAtivo === 'RENDA_FIXA' || l.tipoAtivo === 'TESOURO_DIRETO');
+    if (isRF) {
+      groupRendaFixa.classList.remove('hidden');
+      $('inv-edit-vencimento').value = formatIsoToBrDate(l.dataVencimento);
+      $('inv-edit-indexador').value = l.indexador || 'CDI';
+      $('inv-edit-taxa').value = l.taxa !== null ? l.taxa.toString().replace('.', ',') + '%' : '';
+      $('inv-edit-vencimento').required = true;
+      $('inv-edit-taxa').required = true;
+    } else {
+      groupRendaFixa.classList.add('hidden');
+      $('inv-edit-vencimento').value = '';
+      $('inv-edit-indexador').value = 'CDI';
+      $('inv-edit-taxa').value = '';
+      $('inv-edit-vencimento').required = false;
+      $('inv-edit-taxa').required = false;
+    }
+  }
   
   // Exibe o modal
   $('inv-edit-modal-overlay').classList.remove('hidden');
@@ -726,6 +879,27 @@ function initInvEditModalListeners() {
               <input type="text" id="inv-edit-custos" class="form-input" />
             </div>
 
+            <!-- Campos adicionais de Renda Fixa/Tesouro -->
+            <div id="inv-edit-group-renda-fixa" class="hidden">
+              <div class="form-group">
+                <label for="inv-edit-vencimento">Data de Vencimento</label>
+                <input type="text" id="inv-edit-vencimento" class="form-input" placeholder="DD/MM/YYYY" maxlength="10" />
+              </div>
+              <div class="form-group">
+                <label for="inv-edit-indexador">Indexador</label>
+                <select id="inv-edit-indexador" class="form-input">
+                  <option value="CDI">CDI</option>
+                  <option value="SELIC">SELIC</option>
+                  <option value="IPCA">IPCA</option>
+                  <option value="PRE">PRÉ</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="inv-edit-taxa">Taxa (%)</label>
+                <input type="text" id="inv-edit-taxa" class="form-input" placeholder="Ex: 100 ou 6,2" />
+              </div>
+            </div>
+
             <div class="modal-footer" style="margin-top: 1.5rem;">
               <button type="button" class="btn btn--secondary" id="inv-edit-btn-cancel">Cancelar</button>
               <button type="submit" class="btn btn--primary">Salvar Alterações</button>
@@ -742,6 +916,9 @@ function initInvEditModalListeners() {
 
   if (window._invEditModalBound) return;
   window._invEditModalBound = true;
+
+  applyDateMask($('inv-edit-vencimento'));
+  applyPercentMask($('inv-edit-taxa'));
 
   $('inv-edit-modal-close')?.addEventListener('click', closeInvEditModal);
   $('inv-edit-btn-cancel')?.addEventListener('click', closeInvEditModal);
@@ -778,13 +955,31 @@ function initInvEditModalListeners() {
     
     if (isNaN(novoPreco) || novoPreco < 0) { showToast('Preço inválido.', 'error'); return; }
 
+    const isRF = $('inv-edit-group-renda-fixa') && !$('inv-edit-group-renda-fixa').classList.contains('hidden');
+    const dataVencimentoRaw = isRF ? ($('inv-edit-vencimento')?.value || null) : null;
+    const dataVencimento = convertDateToIso(dataVencimentoRaw);
+    
+    if (isRF) {
+      if (!dataVencimento || !/^\d{4}-\d{2}-\d{2}$/.test(dataVencimento)) {
+        showToast('Informe uma data de vencimento válida (DD/MM/YYYY).', 'error');
+        return;
+      }
+    }
+
+    const indexador = isRF ? ($('inv-edit-indexador')?.value || null) : null;
+    const taxaRaw = isRF ? ($('inv-edit-taxa')?.value || null) : null;
+    const taxa = taxaRaw ? parseInvInput(taxaRaw) : null;
+
     try {
       const valorTotal = op === 'DIVIDENDO' ? (novoPreco + novosCustos) : ((novaQtd * novoPreco) + novosCustos);
       await Api.updateInvestimentoLancamento(id, {
         quantidade: novaQtd,
         precoUnitario: novoPreco,
         custos: novosCustos,
-        valorTotal: valorTotal
+        valorTotal: valorTotal,
+        dataVencimento,
+        indexador,
+        taxa
       });
       
       showToast('Lançamento atualizado!', 'success');
@@ -806,7 +1001,7 @@ async function atualizarCotacoesBrapi() {
   if (!btn) return;
 
   const originalText = btn.innerHTML;
-  btn.innerHTML = '⏳ Atualizando...';
+  btn.innerHTML = 'Atualizando...';
   btn.disabled = true;
 
   try {
@@ -887,4 +1082,32 @@ function downloadInvestimentos(format) {
       link.click();
     })
     .catch(err => showToast('Erro ao exportar ' + format.toUpperCase(), 'error'));
+}
+
+function fmtDate(isoString) {
+  if (!isoString) return '-';
+  const parts = isoString.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return isoString;
+}
+
+function formatarTaxaIndexador(taxa, indexador) {
+  if (!taxa) return '-';
+  if (!indexador) return `${parseFloat(taxa).toFixed(2).replace('.', ',')}% a.a.`;
+  const idx = indexador.toUpperCase().trim();
+  if (idx === 'CDI') {
+    return `${parseFloat(taxa).toFixed(2).replace('.', ',')}% do CDI`;
+  }
+  if (idx === 'SELIC') {
+    return `SELIC + ${parseFloat(taxa).toFixed(2).replace('.', ',')}%`;
+  }
+  if (idx === 'IPCA') {
+    return `IPCA + ${parseFloat(taxa).toFixed(2).replace('.', ',')}%`;
+  }
+  if (idx === 'PRE') {
+    return `${parseFloat(taxa).toFixed(2).replace('.', ',')}% a.a.`;
+  }
+  return `${parseFloat(taxa).toFixed(2).replace('.', ',')}% ${indexador}`;
 }
