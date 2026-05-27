@@ -62,7 +62,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y rpm fakeroot dpkg-sig
+        sudo apt-get install -y rpm fakeroot
 
     - name: Set version in pom.xml
       shell: bash
@@ -123,12 +123,6 @@ jobs:
       env:
         HAS_GPG_SECRET: ${{ secrets.GPG_PRIVATE_KEY != '' }}
       run: |
-        # Sign DEB package
-        if [ "${{ matrix.type }}" == "deb" ]; then
-          echo "Signing DEB package..."
-          dpkg-sig --sign builder release/*.deb
-        fi
-        
         # Sign RPM package
         if [ "${{ matrix.type }}" == "rpm" ]; then
           echo "Signing RPM package..."
