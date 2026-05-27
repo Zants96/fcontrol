@@ -115,42 +115,21 @@ jobs:
       env:
         HAS_GPG_SECRET: ${{ secrets.GPG_PRIVATE_KEY != '' }}
         GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       run: |
         echo "Signing RPM package..."
 
-        # 1. Set up a clean GPG home directory
-        mkdir -p ~/.gnupg
-        chmod 700 ~/.gnupg
+        # 1. Import the private key (no passphrase needed)
+        echo "$GPG_PRIVATE_KEY" | gpg --batch --yes --import
 
-        # 2. Write gpg-agent config BEFORE starting the agent
-        #    (overwrite to avoid duplicates from any previous state)
-        printf "allow-preset-passphrase\nallow-loopback-pinentry\n" > ~/.gnupg/gpg-agent.conf
-
-        # 3. Kill any stale agent — gpg will auto-start a fresh one with the new config
-        gpgconf --kill gpg-agent || true
-
-        # 4. Import the private key using loopback (no TTY needed)
-        echo "$GPG_PRIVATE_KEY" | gpg --batch --yes \
-          --pinentry-mode loopback \
-          --passphrase "$GPG_PASSPHRASE" \
-          --import
-
-        # 5. Get the keygrip and preset the passphrase directly into the agent
-        KEYGRIP=$(gpg --with-keygrip --list-secret-keys "${{ secrets.GPG_KEY_EMAIL }}" \
-          | grep 'Keygrip' | head -1 | awk '{print $3}')
-        echo "Keygrip found: $KEYGRIP"
-        echo "$GPG_PASSPHRASE" | /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP"
-
-        # 6. Create wrapper: pass passphrase directly (rpmsign inherits the env from our step)
-        printf '#!/bin/bash\ngpg --batch --no-tty --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" "$@"\n' > /tmp/gpg-wrapper
+        # 2. Create a simple batch wrapper (no passphrase, no pinentry needed)
+        printf '#!/bin/bash\ngpg --batch --no-tty "$@"\n' > /tmp/gpg-wrapper
         chmod +x /tmp/gpg-wrapper
 
-        # 7. Configure RPM macros to use our wrapper
+        # 3. Configure RPM macros
         printf "%%_signature gpg\n%%_gpg_name %s\n%%__gpg /tmp/gpg-wrapper\n" \
           "${{ secrets.GPG_KEY_EMAIL }}" > ~/.rpmmacros
 
-        # 8. Sign the RPM
+        # 4. Sign the RPM
         rpmsign --addsign release/*.rpm
 
     - name: Upload Artifact
