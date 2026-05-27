@@ -129,6 +129,11 @@ jobs:
         if [ "${{ matrix.type }}" == "rpm" ]; then
           echo "Signing RPM package..."
           
+          # Allow loopback pinentry in gpg-agent (required for GnuPG 2.1+)
+          mkdir -p ~/.gnupg
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpg-connect-agent reloadagent /bye
+          
           # Create a wrapper script to inject GPG batch/headless flags using echo (prevents indent errors)
           echo '#!/bin/bash' > /tmp/gpg-wrapper
           echo 'gpg --batch --no-tty --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" "$@"' >> /tmp/gpg-wrapper
