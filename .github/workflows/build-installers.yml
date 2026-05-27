@@ -33,6 +33,7 @@ jobs:
     if: always() && (needs.version.result == 'success' || (github.event_name == 'workflow_dispatch' && needs.version.result == 'skipped'))
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-2022
@@ -128,6 +129,7 @@ jobs:
           echo "Signing RPM package..."
           echo "%_signature gpg" > ~/.rpmmacros
           echo "%_gpg_name ${{ secrets.GPG_KEY_EMAIL }}" >> ~/.rpmmacros
+          echo "%__gpg $(which gpg) --batch --no-tty --yes" >> ~/.rpmmacros
           rpmsign --addsign release/*.rpm
         fi
 
