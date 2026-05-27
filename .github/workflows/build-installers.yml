@@ -123,6 +123,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest' && env.HAS_GPG_SECRET == 'true'
       env:
         HAS_GPG_SECRET: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       run: |
         # Sign RPM package
         if [ "${{ matrix.type }}" == "rpm" ]; then
@@ -130,7 +131,7 @@ jobs:
           
           # Create a wrapper script to inject GPG batch/headless flags using echo (prevents indent errors)
           echo '#!/bin/bash' > /tmp/gpg-wrapper
-          echo 'gpg --batch --no-tty --yes "$@"' >> /tmp/gpg-wrapper
+          echo 'gpg --batch --no-tty --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" "$@"' >> /tmp/gpg-wrapper
           chmod +x /tmp/gpg-wrapper
           
           # Configure RPM macros pointing to the wrapper
