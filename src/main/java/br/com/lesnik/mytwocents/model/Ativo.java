@@ -55,6 +55,27 @@ public class Ativo {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal dividendosTotal;
 
+    /** URL do logotipo do ativo */
+    @Column(length = 500)
+    private String logoUrl;
+
+    /** Setor do ativo */
+    @Column(length = 100)
+    private String sector;
+
+    /** Nome completo do ativo */
+    @Column(length = 200)
+    private String longName;
+
+    @Column
+    private java.time.LocalDate dataVencimento;
+
+    @Column(length = 50)
+    private String indexador;
+
+    @Column(precision = 15, scale = 4)
+    private BigDecimal taxa;
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 

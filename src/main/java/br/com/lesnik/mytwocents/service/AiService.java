@@ -126,36 +126,69 @@ public class AiService {
                     .collect(Collectors.joining("\n"));
 
             String prompt = """
-                    Você é um parser financeiro especializado. Analise o texto abaixo e extraia TODAS as transações financeiras.
+                    Você é um parser financeiro e de investimentos altamente qualificado. Analise o texto abaixo e extraia TODAS as transações e posições financeiras.
                     
-                    CATEGORIAS VÁLIDAS (use exatamente estes nomes):
-                    - RECEITA: entrada de dinheiro (salário, freelancer, vendas, etc.)
-                    - GASTO: gasto variável do dia-a-dia (alimentação, transporte, compras, etc.)
-                    - GASTO_FIXO: gasto fixo mensal (aluguel, energia, internet, condomínio, etc.)
-                    - ASSINATURA: serviços recorrentes (Netflix, Spotify, Amazon Prime, Disney+, etc.)
+                    O texto pode ser de dois tipos:
+                    1. Transações comuns: faturas de cartão de crédito, boletos, contas ou notas fiscais.
+                    2. Lançamentos de investimentos/proventos: extratos de negociação, comprovantes de dividendos, ou listas de posições atuais de custódia (portfólio).
                     
-                    SUBCATEGORIAS POR CATEGORIA (use exatamente um destes nomes):
+                    PARTE 1: TRANSAÇÕES COMUNS (extrair para a chave "items")
+                    - CATEGORIAS: RECEITA, GASTO, GASTO_FIXO, ASSINATURA.
+                    - SUBCATEGORIAS VÁLIDAS POR CATEGORIA:
                     %s
+                    - Regras: Extraia descrição, categoria, subcategoria, valor e dia.
                     
-                    REGRAS:
-                    1. Classifique cada item na categoria MAIS adequada
-                    2. Para streaming/serviços digitais recorrentes (Netflix, Spotify, etc), use ASSINATURA
-                    3. Para contas mensais fixas (luz, água, internet), use GASTO_FIXO
-                    4. Para compras pontuais (iFood, Uber, farmácia, restaurante), use GASTO
-                    5. Para entradas de dinheiro, use RECEITA
-                    6. Extraia o dia se disponível no texto
-                    7. Se o mês/ano estiver no texto, use-o. Caso contrário, use mes=%d e ano=%d
-                    8. Use a subcategoria mais adequada da lista acima. Se nenhuma servir, use "Outros"
+                    PARTE 2: LANÇAMENTOS DE INVESTIMENTO E CUSTÓDIA (extrair para a chave "investimentos")
+                    - Se o texto contiver posições de carteira, custódia ou ativos atuais (ex: BBAS3 com quantidade e preço médio/compra), trate cada ativo como uma operação de "COMPRA" com a quantidade e o preço médio listados. Isso permitirá a inicialização da carteira.
+                    - Se o texto contiver transações de compra/venda de ativos, extraia a operação correspondente ("COMPRA" ou "VENDA").
+                    - Se o texto contiver proventos recebidos (dividendos, JCP, rendimentos de FII), extraia a operação correspondente ("DIVIDENDO").
+                    - Mapeie "tipoAtivo" rigorosamente para:
+                      * ACAO: ações (ex: BBAS3, PETR4, BBAS3, CXSE3, VULC3, ABCB4, RANI3)
+                      * FII: fundos imobiliários (ex: MXRF11, HGLG11, IFRI11, XPML11, RZTR11)
+                      * RENDA_FIXA: CDB, LCI, LCA
+                      * TESOURO_DIRETO: Tesouro IPCA, Tesouro Selic, Tesouro Prefixado (ex: "Tesouro IPCA+ 2029", "Tesouro Selic 2028")
+                      * ETF: fundos de índice (ex: IVVB11, BOVA11, WRLD11)
+                      * CRIPTO: criptomoedas (ex: BTC, ETH, XRP)
+                    - Mapeie "tipoOperacao" para: COMPRA, VENDA, DIVIDENDO.
+                    - Extraia os campos:
+                      * "ticker": o ticker do ativo (ex: "BBAS3", "CXSE3", "Tesouro IPCA+ 2029"). Preserve o nome ou ticker exato do ativo de Renda Fixa ou Tesouro Direto.
+                      * "quantidade": a quantidade do ativo (use números decimais se necessário, ex: 0.71, 0.08, 100.0).
+                      * "precoUnitario": preço pago ou recebido por unidade (ex: 23.45).
+                      * "custos": custos ou taxas se houver (caso contrário, 0.0).
+                      * "valorTotal": valor total da operação (quantidade * precoUnitario).
+                      * "dia": o dia do mês do lançamento se disponível no texto.
+                      * "dataVencimento": a data de vencimento se disponível no texto (formato DD/MM/YYYY).
+                      * "indexador": indexador se disponível no texto (ex: "IPCA", "SELIC", "CDI", "PRE").
+                      * "taxa": a taxa contratada se disponível no texto (use número decimal, ex: se for "IPCA + 7,70%%", a taxa é 7.70).
+                    
+                    REGRAS DE DATA:
+                    - Extraia o dia se disponível no texto.
+                    - Se o mês/ano estiver no texto, use-o. Caso contrário, use mes=%d e ano=%d.
                     
                     Retorne APENAS um JSON válido, sem markdown, sem explicação, no formato:
                     {
                       "items": [
                         {
-                          "descricao": "Nome do item como aparece no documento",
+                          "descricao": "Uber Trip",
                           "categoria": "GASTO",
-                          "subcategoria": "Alimentação",
-                          "valor": 39.90,
+                          "subcategoria": "Transporte",
+                          "valor": 15.50,
                           "dia": 14
+                        }
+                      ],
+                      "investimentos": [
+                        {
+                          "ticker": "BBAS3",
+                          "tipoAtivo": "ACAO",
+                          "tipoOperacao": "COMPRA",
+                          "quantidade": 100.0,
+                          "precoUnitario": 23.45,
+                          "custos": 0.0,
+                          "valorTotal": 2345.0,
+                          "dia": 14,
+                          "dataVencimento": null,
+                          "indexador": null,
+                          "taxa": null
                         }
                       ],
                       "mes": %d,
@@ -197,10 +230,31 @@ public class AiService {
                 }
             }
 
+            List<ParsedInvestimentoItem> investimentos = new ArrayList<>();
+            JsonNode invsNode = root.get("investimentos");
+            if (invsNode != null && invsNode.isArray()) {
+                for (JsonNode item : invsNode) {
+                    investimentos.add(ParsedInvestimentoItem.builder()
+                            .ticker(item.has("ticker") ? item.get("ticker").asText() : "")
+                            .tipoAtivo(item.has("tipoAtivo") ? item.get("tipoAtivo").asText() : "ACAO")
+                            .tipoOperacao(item.has("tipoOperacao") ? item.get("tipoOperacao").asText() : "COMPRA")
+                            .quantidade(item.has("quantidade") ? new BigDecimal(item.get("quantidade").asText()).setScale(8, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                            .precoUnitario(item.has("precoUnitario") ? new BigDecimal(item.get("precoUnitario").asText()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                            .custos(item.has("custos") && !item.get("custos").isNull() ? new BigDecimal(item.get("custos").asText()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                            .valorTotal(item.has("valorTotal") ? new BigDecimal(item.get("valorTotal").asText()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                            .dia(item.has("dia") && !item.get("dia").isNull() ? item.get("dia").asInt() : null)
+                            .dataVencimento(item.has("dataVencimento") && !item.get("dataVencimento").isNull() ? item.get("dataVencimento").asText() : null)
+                            .indexador(item.has("indexador") && !item.get("indexador").isNull() ? item.get("indexador").asText() : null)
+                            .taxa(item.has("taxa") && !item.get("taxa").isNull() ? new BigDecimal(item.get("taxa").asText()).setScale(2, RoundingMode.HALF_UP) : null)
+                            .build());
+                }
+            }
+
             String resumo = root.has("resumo") ? root.get("resumo").asText() : "Documento processado.";
 
             return ParseResponse.builder()
                     .items(items)
+                    .investimentos(investimentos)
                     .resumo(resumo)
                     .build();
 
@@ -209,6 +263,7 @@ public class AiService {
             return ParseResponse.builder()
                     .error("Erro ao processar documento: " + e.getMessage())
                     .items(Collections.emptyList())
+                    .investimentos(Collections.emptyList())
                     .build();
         }
     }
