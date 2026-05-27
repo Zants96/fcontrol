@@ -142,8 +142,8 @@ jobs:
         echo "Keygrip found: $KEYGRIP"
         echo "$GPG_PASSPHRASE" | /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP"
 
-        # 6. Create a minimal batch GPG wrapper with loopback so it uses the agent cache
-        printf '#!/bin/bash\ngpg --batch --no-tty --pinentry-mode loopback "$@"\n' > /tmp/gpg-wrapper
+        # 6. Create wrapper: pass passphrase directly (rpmsign inherits the env from our step)
+        printf '#!/bin/bash\ngpg --batch --no-tty --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" "$@"\n' > /tmp/gpg-wrapper
         chmod +x /tmp/gpg-wrapper
 
         # 7. Configure RPM macros to use our wrapper
