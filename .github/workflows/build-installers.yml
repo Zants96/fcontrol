@@ -127,9 +127,8 @@ jobs:
         #    (overwrite to avoid duplicates from any previous state)
         printf "allow-preset-passphrase\nallow-loopback-pinentry\n" > ~/.gnupg/gpg-agent.conf
 
-        # 3. Kill any stale agent and start a fresh one with the new config
+        # 3. Kill any stale agent — gpg will auto-start a fresh one with the new config
         gpgconf --kill gpg-agent || true
-        gpg-agent --daemon --homedir ~/.gnupg
 
         # 4. Import the private key using loopback (no TTY needed)
         echo "$GPG_PRIVATE_KEY" | gpg --batch --yes \
