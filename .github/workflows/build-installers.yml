@@ -62,7 +62,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y rpm fakeroot
+        sudo apt-get install -y rpm fakeroot dpkg-sig
 
     - name: Set version in pom.xml
       shell: bash
@@ -108,6 +108,34 @@ jobs:
           --runtime-image target/custom-jre --resource-dir src/main/resources/package/linux --verbose \
           ${{ matrix.os == 'windows-2022' && '--win-shortcut --win-menu --win-dir-chooser' || '' }} \
           ${{ matrix.os == 'ubuntu-latest' && '--linux-shortcut --linux-package-name mytwocents --linux-app-category Office --linux-menu-group Office' || '' }}
+
+    - name: Import GPG Key (Linux)
+      if: matrix.os == 'ubuntu-latest' && env.HAS_GPG_SECRET == 'true'
+      uses: crazy-max/ghaction-import-gpg@v6
+      env:
+        HAS_GPG_SECRET: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+      with:
+        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+        passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
+    - name: Sign Packages (Linux)
+      if: matrix.os == 'ubuntu-latest' && env.HAS_GPG_SECRET == 'true'
+      env:
+        HAS_GPG_SECRET: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+      run: |
+        # Sign DEB package
+        if [ "${{ matrix.type }}" == "deb" ]; then
+          echo "Signing DEB package..."
+          dpkg-sig --sign builder release/*.deb
+        fi
+        
+        # Sign RPM package
+        if [ "${{ matrix.type }}" == "rpm" ]; then
+          echo "Signing RPM package..."
+          echo "%_signature gpg" > ~/.rpmmacros
+          echo "%_gpg_name ${{ secrets.GPG_KEY_EMAIL }}" >> ~/.rpmmacros
+          rpmsign --addsign release/*.rpm
+        fi
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
