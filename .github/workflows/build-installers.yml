@@ -110,53 +110,49 @@ jobs:
           ${{ matrix.os == 'windows-2022' && '--win-shortcut --win-menu --win-dir-chooser' || '' }} \
           ${{ matrix.os == 'ubuntu-latest' && '--linux-shortcut --linux-package-name mytwocents --linux-app-category Office --linux-menu-group Office' || '' }}
 
-    - name: Import GPG Key (Linux)
-      if: matrix.os == 'ubuntu-latest' && env.HAS_GPG_SECRET == 'true'
-      uses: crazy-max/ghaction-import-gpg@v6
+    - name: Sign RPM Package (Linux)
+      if: matrix.os == 'ubuntu-latest' && matrix.type == 'rpm' && env.HAS_GPG_SECRET == 'true'
       env:
         HAS_GPG_SECRET: ${{ secrets.GPG_PRIVATE_KEY != '' }}
-      with:
-        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-        passphrase: ${{ secrets.GPG_PASSPHRASE }}
-
-    - name: Sign Packages (Linux)
-      if: matrix.os == 'ubuntu-latest' && env.HAS_GPG_SECRET == 'true'
-      env:
-        HAS_GPG_SECRET: ${{ secrets.GPG_PRIVATE_KEY != '' }}
+        GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       run: |
-        # Sign RPM package
-        if [ "${{ matrix.type }}" == "rpm" ]; then
-          echo "Signing RPM package..."
-          
-          # Configure gpg-agent to allow preset passphrase and restart it
-          mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-          echo "allow-preset-passphrase" >> ~/.gnupg/gpg-agent.conf
-          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-          gpgconf --kill gpg-agent
-          gpgconf --launch gpg-agent
-          
-          # Get ALL keygrips (primary key is the first one, used for [SC] signing)
-          KEYGRIP=$(gpg --with-keygrip --list-secret-keys "${{ secrets.GPG_KEY_EMAIL }}" \
-            | grep 'Keygrip' | head -1 | awk '{print $3}')
-          echo "Keygrip found: $KEYGRIP"
-          
-          # Cache the passphrase in the agent by keygrip
-          echo "$GPG_PASSPHRASE" | /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP"
-          
-          # Simple wrapper: agent has passphrase cached, no TTY needed
-          echo '#!/bin/bash' > /tmp/gpg-wrapper
-          echo 'gpg --batch --no-tty "$@"' >> /tmp/gpg-wrapper
-          chmod +x /tmp/gpg-wrapper
-          
-          # Configure RPM macros pointing to the wrapper
-          echo "%_signature gpg" > ~/.rpmmacros
-          echo "%_gpg_name ${{ secrets.GPG_KEY_EMAIL }}" >> ~/.rpmmacros
-          echo "%__gpg /tmp/gpg-wrapper" >> ~/.rpmmacros
-          
-          rpmsign --addsign release/*.rpm
-        fi
+        echo "Signing RPM package..."
+
+        # 1. Set up a clean GPG home directory
+        mkdir -p ~/.gnupg
+        chmod 700 ~/.gnupg
+
+        # 2. Write gpg-agent config BEFORE starting the agent
+        #    (overwrite to avoid duplicates from any previous state)
+        printf "allow-preset-passphrase\nallow-loopback-pinentry\n" > ~/.gnupg/gpg-agent.conf
+
+        # 3. Kill any stale agent and start a fresh one with the new config
+        gpgconf --kill gpg-agent || true
+        gpg-agent --daemon --homedir ~/.gnupg
+
+        # 4. Import the private key using loopback (no TTY needed)
+        echo "$GPG_PRIVATE_KEY" | gpg --batch --yes \
+          --pinentry-mode loopback \
+          --passphrase "$GPG_PASSPHRASE" \
+          --import
+
+        # 5. Get the keygrip and preset the passphrase directly into the agent
+        KEYGRIP=$(gpg --with-keygrip --list-secret-keys "${{ secrets.GPG_KEY_EMAIL }}" \
+          | grep 'Keygrip' | head -1 | awk '{print $3}')
+        echo "Keygrip found: $KEYGRIP"
+        echo "$GPG_PASSPHRASE" | /usr/lib/gnupg2/gpg-preset-passphrase --preset "$KEYGRIP"
+
+        # 6. Create a minimal batch GPG wrapper (agent handles auth transparently)
+        printf '#!/bin/bash\ngpg --batch --no-tty "$@"\n' > /tmp/gpg-wrapper
+        chmod +x /tmp/gpg-wrapper
+
+        # 7. Configure RPM macros to use our wrapper
+        printf "%%_signature gpg\n%%_gpg_name %s\n%%__gpg /tmp/gpg-wrapper\n" \
+          "${{ secrets.GPG_KEY_EMAIL }}" > ~/.rpmmacros
+
+        # 8. Sign the RPM
+        rpmsign --addsign release/*.rpm
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
