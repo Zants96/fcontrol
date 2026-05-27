@@ -127,9 +127,19 @@ jobs:
         # Sign RPM package
         if [ "${{ matrix.type }}" == "rpm" ]; then
           echo "Signing RPM package..."
+          
+          # Create a wrapper script to inject GPG batch/headless flags
+          cat << 'EOF' > /tmp/gpg-wrapper
+          #!/bin/bash
+          gpg --batch --no-tty --yes "$@"
+          EOF
+          chmod +x /tmp/gpg-wrapper
+          
+          # Configure RPM macros pointing to the wrapper
           echo "%_signature gpg" > ~/.rpmmacros
           echo "%_gpg_name ${{ secrets.GPG_KEY_EMAIL }}" >> ~/.rpmmacros
-          echo "%__gpg $(which gpg) --batch --no-tty --yes" >> ~/.rpmmacros
+          echo "%__gpg /tmp/gpg-wrapper" >> ~/.rpmmacros
+          
           rpmsign --addsign release/*.rpm
         fi
 
