@@ -134,9 +134,12 @@ jobs:
           echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
           gpg-connect-agent reloadagent /bye
           
+          # Write passphrase to a temp file to avoid environment stripping by rpmsign
+          echo "$GPG_PASSPHRASE" > /tmp/gpg-passphrase
+          
           # Create a wrapper script to inject GPG batch/headless flags using echo (prevents indent errors)
           echo '#!/bin/bash' > /tmp/gpg-wrapper
-          echo 'gpg --batch --no-tty --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" "$@"' >> /tmp/gpg-wrapper
+          echo 'gpg --batch --no-tty --yes --pinentry-mode loopback --passphrase-file /tmp/gpg-passphrase "$@"' >> /tmp/gpg-wrapper
           chmod +x /tmp/gpg-wrapper
           
           # Configure RPM macros pointing to the wrapper
@@ -145,6 +148,9 @@ jobs:
           echo "%__gpg /tmp/gpg-wrapper" >> ~/.rpmmacros
           
           rpmsign --addsign release/*.rpm
+          
+          # Clean up the sensitive passphrase file immediately
+          rm -f /tmp/gpg-passphrase
         fi
 
     - name: Upload Artifact
