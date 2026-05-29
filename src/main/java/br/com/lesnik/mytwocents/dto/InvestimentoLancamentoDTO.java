@@ -23,6 +23,7 @@ public class InvestimentoLancamentoDTO {
     private BigDecimal precoUnitario;
     private BigDecimal custos;
     private BigDecimal valorTotal;
+    private BigDecimal valorLiquido;
     private LocalDate dataVencimento;
     private String indexador;
     private BigDecimal taxa;

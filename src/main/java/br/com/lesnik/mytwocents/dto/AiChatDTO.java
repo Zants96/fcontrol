@@ -67,10 +67,12 @@ public class AiChatDTO {
         private BigDecimal precoUnitario;
         private BigDecimal custos;
         private BigDecimal valorTotal;
+        private BigDecimal valorLiquido;
         private Integer dia;
         private String dataVencimento; // DD/MM/YYYY
         private String indexador;
         private BigDecimal taxa;
+        private String data;           // YYYY-MM-DD
     }
 
     // ─── Insights ────────────────────────────────────────────────────────────

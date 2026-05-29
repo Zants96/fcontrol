@@ -29,6 +29,7 @@ async function loadInvestimentos() {
     renderInvEvolucaoChart(data);
     renderInvDividendosChart(data);
     renderInvAcordeoes(data);
+    renderProvHistoricoCard();
 
     // Binds para Exportação
     const btnCsv = $('btn-inv-export-csv');
@@ -241,7 +242,7 @@ function renderInvDividendosChart(data) {
     data: {
       labels,
       datasets: [{
-        label: 'Dividendos',
+        label: 'Proventos',
         data: dividendos,
         backgroundColor: '#a78bfa',
         borderRadius: 4
@@ -285,7 +286,7 @@ function renderInvAcordeoes(data) {
     const varClass = variacao >= 0 ? 'inv-variation--up' : 'inv-variation--down';
 
     const labelSetorSegmento = (tipo === 'FII' || tipo === 'ETF') ? 'Segmento' : 'Setor';
-    const temSetorSegmento = (tipo === 'ACOES' || tipo === 'FII' || tipo === 'ETF');
+    const temSetorSegmento = (tipo === 'ACAO' || tipo === 'FII' || tipo === 'ETF');
     const isRendaFixaTesouro = (tipo === 'RENDA_FIXA' || tipo === 'TESOURO_DIRETO');
     const isRendaFixa = (tipo === 'RENDA_FIXA');
     const isTesouroDireto = (tipo === 'TESOURO_DIRETO');
@@ -310,10 +311,13 @@ function renderInvAcordeoes(data) {
           <thead>
             <tr>
               <th>Ticker</th>
+              ${isRendaFixa ? '<th>Data Lanç.</th>' : ''}
               ${isRendaFixa ? '' : '<th>Qtd</th>'}
               ${(isRendaFixa || isTesouroDireto) ? '' : '<th>PM</th>'}
               ${isRendaFixa ? '' : '<th>Atual</th>'}
-              <th>Var%</th><th>Saldo</th>
+              <th>Var%</th>
+              ${(tipo === 'ACAO' || tipo === 'FII') ? '<th>D.Y.</th>' : ''}
+              <th>Saldo</th>
               ${temSetorSegmento ? `<th>${labelSetorSegmento}</th>` : ''}
               ${isRendaFixaTesouro ? `<th>Vencimento</th><th>Taxa</th><th>Rend. Mensal</th>` : ''}
               <th>% Cart.</th><th class="col-actions">Ações</th>
@@ -323,6 +327,16 @@ function renderInvAcordeoes(data) {
             ${ativos.map(a => {
               const v = parseFloat(a.variacao || 0);
               const vc = v >= 0 ? 'inv-variation--up' : 'inv-variation--down';
+              let varTooltipAttr = '';
+              const pmVal = parseFloat(a.precoMedio || 0);
+              const qtdVal = parseFloat(a.quantidade || 0);
+              if (pmVal > 0 && qtdVal > 0) {
+                const totalPago = qtdVal * pmVal;
+                const totalAtual = parseFloat(a.valorTotal || 0);
+                const lp = totalAtual - totalPago;
+                varTooltipAttr = `data-lucro="${lp}" data-percent="${v}"`;
+              }
+
               return `<tr>
                 <td>
                   <div class="inv-ticker-container" data-tooltip="${escHtml(a.longName || a.nome || a.ticker)}">
@@ -330,10 +344,12 @@ function renderInvAcordeoes(data) {
                     <strong>${escHtml(a.ticker)}</strong>
                   </div>
                 </td>
+                ${isRendaFixa ? `<td>${a.dataLancamento ? fmtDate(a.dataLancamento) : '-'}</td>` : ''}
                 ${isRendaFixa ? '' : `<td>${formatQtd(a.quantidade)}</td>`}
                 ${(isRendaFixa || isTesouroDireto) ? '' : `<td>${fmtCurrency(parseFloat(a.precoMedio || 0))}</td>`}
                 ${isRendaFixa ? '' : `<td>${fmtCurrency(parseFloat(a.precoAtual || 0))}</td>`}
-                <td class="${vc}">${fmtPercent(v)}</td>
+                <td class="${vc} ${varTooltipAttr ? 'var-cell-clickable' : ''}" ${varTooltipAttr}>${fmtPercent(v)}</td>
+                ${(tipo === 'ACAO' || tipo === 'FII') ? `<td style="font-weight: 500; color: var(--brand-glow);">${a.dy != null && parseFloat(a.dy) > 0 ? parseFloat(a.dy).toFixed(2) + '%' : '-'}</td>` : ''}
                 <td>${fmtCurrency(parseFloat(a.valorTotal || 0))}</td>
                 ${temSetorSegmento ? `<td>${escHtml(a.sector || '-')}</td>` : ''}
                 ${isRendaFixaTesouro ? `
@@ -344,7 +360,7 @@ function renderInvAcordeoes(data) {
                 <td>${parseFloat(a.percentCarteira || 0).toFixed(2)}%</td>
                 <td class="col-actions">
                   <div class="action-btns">
-                    <button class="action-btn action-btn--edit" title="Ver Histórico" onclick="abrirHistoricoAtivo(${a.id}, '${escHtml(a.ticker)}')">
+                    <button class="action-btn action-btn--edit" title="Ver Histórico" onclick="abrirHistoricoAtivo(${a.id}, '${escHtml(a.ticker)}', ${a.precoAtual || 0}, '${tipo}')">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                     </button>
                   </div>
@@ -367,8 +383,10 @@ function renderInvAcordeoes(data) {
         <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div>
         <p>Nenhum investimento cadastrado.<br>Clique em <strong>+ Adicionar Lançamento</strong> para começar.</p>
         <button class="btn btn--primary" onclick="openInvModal()" style="margin-top:1rem;">+ Adicionar Lançamento</button>
-      </div>`;
+      </div>
+    `;
   }
+  initVarCellTooltips();
 }
 
 function applyDateMask(input) {
@@ -450,9 +468,24 @@ function initInvModal() {
   document.querySelectorAll('input[name="inv-operacao"]').forEach(r => {
     r.addEventListener('change', () => {
       const isDividendo = r.value === 'DIVIDENDO';
-      $('inv-group-quantidade').style.display = isDividendo ? 'none' : '';
-      $('inv-label-preco').textContent = isDividendo ? 'Valor recebido (R$)' : 'Preço unitário (R$)';
+      $('inv-group-quantidade').style.display = ''; // Keep always visible
+      const groupLiquido = $('inv-group-liquido');
+      if (groupLiquido) groupLiquido.style.display = isDividendo ? '' : 'none';
+      
+      $('inv-label-preco').textContent = isDividendo ? 'Valor por cota / Bruto (R$)' : 'Preço unitário (R$)';
+      $('inv-form-preco').placeholder = isDividendo ? 'Ex: 0,09 ou 2,74' : '0,00';
+      $('inv-form-quantidade').placeholder = isDividendo ? 'Ex: 29 (opcional)' : 'Ex: 100';
     });
+  });
+
+  // Format liquido field
+  $('inv-form-liquido')?.addEventListener('input', (e) => {
+    let val = e.target.value.replace(/\D/g, '');
+    if (val === '') return;
+    val = (parseInt(val, 10) / 100).toFixed(2);
+    val = val.replace('.', ',');
+    val = val.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+    e.target.value = val;
   });
 
   const formatCurrency = (e) => {
@@ -501,12 +534,16 @@ function openInvModal(tipoAtivo) {
   if (compraRadio) compraRadio.checked = true;
   $('inv-group-quantidade').style.display = '';
   $('inv-label-preco').textContent = 'Preço unitário (R$)';
+  $('inv-form-preco').placeholder = '0,00';
+  $('inv-form-quantidade').placeholder = 'Ex: 100';
+  const groupLiquido = $('inv-group-liquido');
+  if (groupLiquido) groupLiquido.style.display = 'none';
 
-  // Data de hoje (formato brasileiro DD/MM/YYYY)
+  // Data de hoje (formato brasileiro DD/MM/YYYY) com ano do filtro do dashboard
   const today = new Date();
   const todayD = String(today.getDate()).padStart(2, '0');
   const todayM = String(today.getMonth() + 1).padStart(2, '0');
-  const todayY = today.getFullYear();
+  const todayY = state.ano;
   $('inv-form-data').value = `${todayD}/${todayM}/${todayY}`;
   $('inv-form-total').textContent = 'R$ 0,00';
 
@@ -535,12 +572,16 @@ function calcInvTotal() {
   const operacao = document.querySelector('input[name="inv-operacao"]:checked')?.value;
   const preco = parseInvInput($('inv-form-preco')?.value);
   const custos = parseInvInput($('inv-form-custos')?.value);
+  const qtd = parseInvInput($('inv-form-quantidade')?.value);
 
   let total;
   if (operacao === 'DIVIDENDO') {
-    total = preco + custos;
+    if (qtd > 0) {
+      total = (qtd * preco) + custos;
+    } else {
+      total = preco + custos;
+    }
   } else {
-    const qtd = parseInvInput($('inv-form-quantidade')?.value);
     total = (qtd * preco) + custos;
   }
 
@@ -583,10 +624,23 @@ async function onInvFormSubmit(e) {
     showToast('Informe uma quantidade válida.', 'error'); return;
   }
 
+  const liquidoRaw = $('inv-form-liquido')?.value;
+  const valorLiquido = (operacao === 'DIVIDENDO' && liquidoRaw) ? parseInvInput(liquidoRaw) : null;
+
+  let valorTotal = null;
+  if (operacao === 'DIVIDENDO') {
+    if (quantidade > 0) {
+      valorTotal = (quantidade * preco) + custos;
+    } else {
+      valorTotal = preco + custos;
+    }
+  }
+
   const dto = {
     ticker, tipoAtivo, tipoOperacao: operacao,
-    data, quantidade: operacao === 'DIVIDENDO' ? 0 : quantidade,
-    precoUnitario: preco, custos,
+    data, quantidade: operacao === 'DIVIDENDO' && quantidade <= 0 ? 0 : quantidade,
+    precoUnitario: preco, custos, valorLiquido,
+    valorTotal: valorTotal,
     dataVencimento, indexador, taxa
   };
 
@@ -698,12 +752,15 @@ async function editarPrecoAtivo(id, ticker, precoAtual) {
 
 // ─── HISTÓRICO DE ATIVO ──────────────────────────────────────────────────
 
-async function abrirHistoricoAtivo(ativoId, ticker) {
+async function abrirHistoricoAtivo(ativoId, ticker, precoAtual = 0, tipoAtivo = '') {
+  window._currentAtivoPrecoAtual = precoAtual;
+  window._currentAtivoTipo = tipoAtivo;
+
   const modal = $('inv-historico-overlay');
   if (!modal) return;
   
   $('inv-historico-title').textContent = `Histórico: ${ticker}`;
-  $('inv-historico-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
+  $('inv-historico-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
   $('inv-historico-empty').classList.add('hidden');
   
   modal.classList.remove('hidden');
@@ -719,7 +776,8 @@ async function abrirHistoricoAtivo(ativoId, ticker) {
 
   try {
     const lancamentos = await Api.getLancamentosInvestimento(ativoId);
-    renderizarTabelaHistorico(lancamentos);
+    const filtrados = (lancamentos || []).filter(l => l.tipoOperacao !== 'DIVIDENDO');
+    renderizarTabelaHistorico(filtrados);
   } catch (err) {
     $('inv-historico-tbody').innerHTML = '';
     showToast(err.message, 'error');
@@ -754,13 +812,36 @@ function renderizarTabelaHistorico(lancamentos) {
       if (parts.length === 3) dataFormatada = `${parts[2]}/${parts[1]}/${parts[0]}`;
     }
 
+    const liqVal = parseFloat(l.valorLiquido != null ? l.valorLiquido : l.valorTotal || 0);
+    const brutoVal = parseFloat(l.valorTotal || 0);
+    
+    let liqCell = '-';
+    if (l.tipoOperacao === 'COMPRA' && ['ACAO', 'FII', 'ETF', 'CRIPTO'].includes(window._currentAtivoTipo)) {
+      const precoAtual = parseFloat(window._currentAtivoPrecoAtual || 0);
+      if (precoAtual > 0) {
+        const Q = parseFloat(l.quantidade || 0);
+        const precoCompra = parseFloat(l.precoUnitario || 0);
+        const valorPago = Q * precoCompra;
+        const valorAtual = Q * precoAtual;
+        const ganhoPerda = valorAtual - valorPago;
+        const pct = valorPago > 0 ? (ganhoPerda / valorPago) * 100 : 0;
+        
+        const sign = ganhoPerda >= 0 ? '+' : '';
+        const color = ganhoPerda >= 0 ? '#34d399' : '#f87171';
+        liqCell = `<strong style="color:${color};">${fmtCurrency(ganhoPerda)} (${sign}${pct.toFixed(2).replace('.', ',')}%)</strong>`;
+      }
+    } else if (l.tipoOperacao === 'DIVIDENDO') {
+      liqCell = `<strong style="color:var(--brand-glow)">${fmtCurrency(liqVal)}</strong>`;
+    }
+
     tr.innerHTML = `
       <td>${dataFormatada}</td>
       <td>${getOpBadge(l.tipoOperacao)}</td>
       <td>${l.tipoOperacao === 'DIVIDENDO' ? '-' : formatQtd(l.quantidade)}</td>
       <td>${fmtCurrency(parseFloat(l.precoUnitario || 0))}</td>
       <td>${fmtCurrency(parseFloat(l.custos || 0))}</td>
-      <td><strong>${fmtCurrency(parseFloat(l.valorTotal || 0))}</strong></td>
+      <td><strong>${fmtCurrency(brutoVal)}</strong></td>
+      <td>${liqCell}</td>
       <td class="col-actions">
         <div class="action-btns" style="justify-content: flex-start; gap: 0.5rem;">
           <button class="action-btn action-btn--edit" title="Editar Lançamento" onclick="editarLancamentoInvestimento(${l.id})">
@@ -785,7 +866,8 @@ async function excluirLancamentoInvestimento(lancamentoId, ativoId, ticker) {
     
     // Atualiza o histórico e o dashboard por trás
     const lancamentos = await Api.getLancamentosInvestimento(ativoId);
-    renderizarTabelaHistorico(lancamentos);
+    const filtrados = (lancamentos || []).filter(l => l.tipoOperacao !== 'DIVIDENDO');
+    renderizarTabelaHistorico(filtrados);
     loadInvestimentos();
   } catch (err) {
     showToast(err.message, 'error');
@@ -810,15 +892,24 @@ async function editarLancamentoInvestimento(id) {
   if (l.tipoOperacao === 'DIVIDENDO') {
     groupQtd.style.display = 'none';
     formQtd.value = '';
-    labelPreco.textContent = 'Valor do dividendo (R$)';
+    labelPreco.textContent = 'Valor bruto recebido (R$)';
+    const groupLiquido = $('inv-edit-group-liquido');
+    if (groupLiquido) {
+      groupLiquido.style.display = '';
+      const liquidoVal = l.valorLiquido != null ? l.valorLiquido : l.valorTotal;
+      $('inv-edit-liquido').value = fmtCurrency(liquidoVal || 0).replace('R$', '').trim();
+    }
   } else {
     groupQtd.style.display = '';
     formQtd.value = formatQtd(l.quantidade);
     labelPreco.textContent = 'Preço unitário (R$)';
+    const groupLiquido = $('inv-edit-group-liquido');
+    if (groupLiquido) groupLiquido.style.display = 'none';
   }
   
   formPreco.value = fmtCurrency(l.precoUnitario || 0).replace('R$', '').trim();
   formCustos.value = fmtCurrency(l.custos || 0).replace('R$', '').trim();
+  $('inv-edit-data').value = formatIsoToBrDate(l.data);
 
   // Campos condicionais de Renda Fixa/Tesouro
   const groupRendaFixa = $('inv-edit-group-renda-fixa');
@@ -855,7 +946,7 @@ function closeInvEditModal() {
 function initInvEditModalListeners() {
   if (!$('inv-edit-modal-overlay')) {
     const modalHtml = `
-      <div id="inv-edit-modal-overlay" class="modal-overlay hidden" style="z-index: 2000;">
+      <div id="inv-edit-modal-overlay" class="modal-overlay hidden" style="z-index: 9999;">
         <div class="modal inv-modal">
           <div class="modal-header">
             <h2>Editar Lançamento</h2>
@@ -877,6 +968,14 @@ function initInvEditModalListeners() {
             <div class="form-group">
               <label for="inv-edit-custos">Custos / Taxas (R$)</label>
               <input type="text" id="inv-edit-custos" class="form-input" />
+            </div>
+            <div class="form-group" id="inv-edit-group-liquido" style="display:none;">
+              <label for="inv-edit-liquido">Total Líquido (R$)</label>
+              <input type="text" id="inv-edit-liquido" class="form-input" placeholder="0,00" />
+            </div>
+            <div class="form-group">
+              <label for="inv-edit-data">Data</label>
+              <input type="text" id="inv-edit-data" class="form-input" placeholder="DD/MM/YYYY" maxlength="10" required />
             </div>
 
             <!-- Campos adicionais de Renda Fixa/Tesouro -->
@@ -918,6 +1017,7 @@ function initInvEditModalListeners() {
   window._invEditModalBound = true;
 
   applyDateMask($('inv-edit-vencimento'));
+  applyDateMask($('inv-edit-data'));
   applyPercentMask($('inv-edit-taxa'));
 
   $('inv-edit-modal-close')?.addEventListener('click', closeInvEditModal);
@@ -937,6 +1037,7 @@ function initInvEditModalListeners() {
 
   $('inv-edit-preco')?.addEventListener('input', formatCurrency);
   $('inv-edit-custos')?.addEventListener('input', formatCurrency);
+  $('inv-edit-liquido')?.addEventListener('input', formatCurrency);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -955,6 +1056,13 @@ function initInvEditModalListeners() {
     
     if (isNaN(novoPreco) || novoPreco < 0) { showToast('Preço inválido.', 'error'); return; }
 
+    const dataRaw = $('inv-edit-data')?.value;
+    const data = convertDateToIso(dataRaw);
+    if (!data || !/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+      showToast('Informe uma data de operação válida (DD/MM/YYYY).', 'error');
+      return;
+    }
+
     const isRF = $('inv-edit-group-renda-fixa') && !$('inv-edit-group-renda-fixa').classList.contains('hidden');
     const dataVencimentoRaw = isRF ? ($('inv-edit-vencimento')?.value || null) : null;
     const dataVencimento = convertDateToIso(dataVencimentoRaw);
@@ -972,11 +1080,15 @@ function initInvEditModalListeners() {
 
     try {
       const valorTotal = op === 'DIVIDENDO' ? (novoPreco + novosCustos) : ((novaQtd * novoPreco) + novosCustos);
+      const liquidoRaw = op === 'DIVIDENDO' ? $('inv-edit-liquido')?.value : null;
+      const valorLiquido = liquidoRaw ? parseInvInput(liquidoRaw) : null;
       await Api.updateInvestimentoLancamento(id, {
         quantidade: novaQtd,
         precoUnitario: novoPreco,
         custos: novosCustos,
-        valorTotal: valorTotal,
+        valorTotal,
+        valorLiquido,
+        data,
         dataVencimento,
         indexador,
         taxa
@@ -1043,6 +1155,277 @@ function initBrapiConfig() {
       showToast(err.message, 'error');
     }
   });
+}
+
+// ─── HISTÓRICO DE PROVENTOS ──────────────────────────────────────────────
+
+async function renderProvHistoricoCard() {
+  const tbody = $('prov-hist-tbody');
+  const totalEl = $('prov-total-value');
+  if (!tbody) return;
+
+  try {
+    const data = await Api.getProventosHistorico();
+    window._proventosHistoricoData = data;
+
+    const total = parseFloat(data.total || 0);
+    const totalLanc = (data.lancamentos || []).length;
+
+    const countEl = $('prov-count-label');
+    if (countEl) countEl.textContent = `${totalLanc} lançamento(s)`;
+
+    if (totalEl) {
+      totalEl.textContent = fmtCurrency(total);
+      const tooltip = $('prov-tipo-tooltip');
+      if (tooltip && data.porTipo) {
+        tooltip.innerHTML = buildTipoTooltipHtml(data.porTipo, 'Por tipo de ativo');
+        totalEl.addEventListener('mouseenter', () => tooltip.classList.remove('hidden'));
+        totalEl.addEventListener('mouseleave', () => tooltip.classList.add('hidden'));
+      }
+    }
+
+    const rows = data.porAno || [];
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Nenhum provento lançado ainda.</td></tr>';
+      return;
+    }
+
+    const fmtVal = (v) => {
+      const n = parseFloat(v || 0);
+      if (n === 0) return '<span style="color:var(--text-muted);">-</span>';
+      return fmtCurrency(n).replace('R$\u00a0', '').replace('R$ ', '');
+    };
+
+    tbody.innerHTML = '';
+    rows.forEach(row => {
+      const tr = document.createElement('tr');
+      const mesCells = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
+        const val = parseFloat(row['m' + m] || 0);
+        const tipoBreakdown = row['m' + m + 'Tipo'] || {};
+        if (val === 0) return `<td><span style="color:var(--text-muted);">-</span></td>`;
+        const tooltipHtml = buildTipoTooltipHtml(tipoBreakdown, null).replace(/"/g, '&quot;');
+        return `<td><span class="prov-cell-clickable"
+          data-ano="${row.ano}" data-mes="${m}" data-tipo-html="${tooltipHtml}"
+          onclick="abrirModalProventosMes(${row.ano},${m})"
+          style="cursor:pointer;color:var(--brand-glow);font-weight:600;"
+        >${fmtVal(val)}</span></td>`;
+      }).join('');
+      tr.innerHTML = `
+        <td style="font-weight:700;color:var(--text-primary);">${row.ano}</td>
+        ${mesCells}
+        <td style="color:var(--text-secondary);font-style:italic;">${fmtVal(row.media)}</td>
+        <td style="font-weight:700;color:#a78bfa;">${fmtVal(row.total)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    initProvCellTooltips();
+
+  } catch(err) {
+    console.error(err);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--accent-red);padding:1rem;">Erro ao carregar histórico de proventos.</td></tr>';
+  }
+}
+
+function buildTipoTooltipHtml(tipoBreakdown, title) {
+  const tipoLabels = { ACAO: 'Ações', FII: 'FIIs', ETF: 'ETFs', RENDA_FIXA: 'Renda Fixa', TESOURO_DIRETO: 'Tesouro Direto', CRIPTO: 'Cripto' };
+  const tipoColors = { ACAO: '#60a5fa', FII: '#fb923c', ETF: '#a78bfa', RENDA_FIXA: '#34d399', TESOURO_DIRETO: '#10b981', CRIPTO: '#fbbf24' };
+  let html = title ? `<div style="font-size:0.72rem;font-weight:600;color:var(--text-muted);margin-bottom:0.4rem;">${title}</div>` : '';
+  for (const [tipo, val] of Object.entries(tipoBreakdown)) {
+    const cor = tipoColors[tipo] || '#94a3b8';
+    const label = tipoLabels[tipo] || tipo;
+    html += `<div style="display:flex;justify-content:space-between;gap:0.75rem;align-items:center;margin-bottom:0.25rem;">
+      <span style="color:${cor};font-size:0.78rem;">● ${label}</span>
+      <span style="font-weight:600;font-size:0.8rem;">${fmtCurrency(parseFloat(val))}</span>
+    </div>`;
+  }
+  return html;
+}
+
+let _provCellTooltip = null;
+function initProvCellTooltips() {
+  if (!_provCellTooltip) {
+    _provCellTooltip = document.createElement('div');
+    _provCellTooltip.className = 'prov-cell-tooltip hidden';
+    _provCellTooltip.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
+    document.body.appendChild(_provCellTooltip);
+  }
+  document.querySelectorAll('.prov-cell-clickable').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      const html = el.getAttribute('data-tipo-html').replace(/&quot;/g, '"');
+      if (!html.trim()) return;
+      _provCellTooltip.innerHTML = html;
+      _provCellTooltip.classList.remove('hidden');
+      const rect = el.getBoundingClientRect();
+      _provCellTooltip.style.top = (rect.bottom + 6) + 'px';
+      _provCellTooltip.style.left = Math.max(8, rect.left - 80) + 'px';
+    });
+    el.addEventListener('mouseleave', () => _provCellTooltip.classList.add('hidden'));
+  });
+}
+
+let _varCellTooltip = null;
+function initVarCellTooltips() {
+  if (!_varCellTooltip) {
+    _varCellTooltip = document.createElement('div');
+    _varCellTooltip.className = 'prov-cell-tooltip hidden';
+    _varCellTooltip.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
+    document.body.appendChild(_varCellTooltip);
+  }
+  document.querySelectorAll('.var-cell-clickable').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      const lp = parseFloat(el.getAttribute('data-lucro') || 0);
+      const isPositive = lp >= 0;
+      
+      const borderColor = isPositive ? '#34d399' : '#f87171';
+      const textColor = isPositive ? '#34d399' : '#f87171';
+      const sign = isPositive ? '+' : '';
+      
+      _varCellTooltip.style.borderColor = borderColor;
+      _varCellTooltip.style.borderWidth = '1.5px';
+      _varCellTooltip.innerHTML = `
+        <div style="font-size:0.75rem;color:var(--text-secondary);font-weight:500;margin-bottom:0.15rem;">Lucro / Prejuízo</div>
+        <div style="font-size:0.85rem;font-weight:600;color:${textColor};">${sign}${fmtCurrency(lp)}</div>
+      `;
+      _varCellTooltip.classList.remove('hidden');
+      
+      const rect = el.getBoundingClientRect();
+      _varCellTooltip.style.top = (rect.bottom + 6) + 'px';
+      _varCellTooltip.style.left = Math.max(8, rect.left - 40) + 'px';
+    });
+    el.addEventListener('mouseleave', () => {
+      _varCellTooltip.classList.add('hidden');
+      _varCellTooltip.style.borderColor = ''; // reset
+      _varCellTooltip.style.borderWidth = '';
+    });
+  });
+}
+
+function abrirModalProventosMes(ano, mes) {
+  const data = window._proventosHistoricoData;
+  if (!data) return;
+  const nomeMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][mes - 1];
+  const filtrados = (data.lancamentos || []).filter(l => {
+    if (!l.data) return false;
+    const [y, m] = l.data.split('-').map(Number);
+    return y === ano && m === mes;
+  }).slice().reverse();
+  abrirModalProventosComLista(filtrados, `Proventos – ${nomeMes}/${ano}`);
+}
+
+function abrirModalProventos() {
+  const data = window._proventosHistoricoData;
+  if (!data) return;
+  abrirModalProventosComLista((data.lancamentos || []).slice().reverse(), 'Histórico de Proventos');
+}
+
+function abrirModalProventosComLista(lancamentos, titulo) {
+  let overlay = $('prov-modal-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'prov-modal-overlay';
+    overlay.className = 'modal-overlay hidden';
+    overlay.style.zIndex = '2500';
+    overlay.innerHTML = `
+      <div class="modal modal--large" role="dialog" aria-modal="true" style="max-width:980px;">
+        <div class="modal-header">
+          <h2 class="modal-title" id="prov-modal-titulo">Proventos</h2>
+          <button class="modal-close" id="prov-modal-close" aria-label="Fechar">✕</button>
+        </div>
+        <div class="modal-body" style="padding:1.5rem;max-height:70vh;overflow-y:auto;">
+          <table class="data-table">
+            <thead><tr>
+              <th>Data</th><th>Ativo</th><th>Tipo</th>
+              <th>Cotas</th><th>Valor/Cota</th><th>Valor Bruto</th>
+              <th style="color:var(--brand-glow);">Total Líquido</th>
+              <th class="col-actions">Ações</th>
+            </tr></thead>
+            <tbody id="prov-modal-tbody"></tbody>
+          </table>
+          <div id="prov-modal-empty" class="empty-state hidden" style="padding:2rem;text-align:center;"><p>Nenhum provento encontrado.</p></div>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    $('prov-modal-close').addEventListener('click', () => { overlay.classList.add('hidden'); $('main-content').removeAttribute('aria-hidden'); });
+    overlay.addEventListener('click', e => { if (e.target === overlay) $('prov-modal-close').click(); });
+  }
+
+  $('prov-modal-titulo').textContent = titulo;
+  const tbody = $('prov-modal-tbody');
+  const tipoLabels = { ACAO: 'Ações', FII: 'FIIs', ETF: 'ETFs', RENDA_FIXA: 'Renda Fixa', TESOURO_DIRETO: 'Tesouro Direto', CRIPTO: 'Cripto' };
+  tbody.innerHTML = '';
+
+  if (!lancamentos.length) {
+    $('prov-modal-empty').classList.remove('hidden');
+  } else {
+    $('prov-modal-empty').classList.add('hidden');
+    window._currentLancamentos = lancamentos;
+    lancamentos.forEach(l => {
+      const parts = l.data ? l.data.split('-') : [];
+      const dataFmt = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : (l.data || '-');
+      const liqVal = l.valorLiquido != null ? l.valorLiquido : l.valorTotal;
+      const tr = document.createElement('tr');
+      
+      const hasQtd = l.quantidade != null && parseFloat(l.quantidade) > 0;
+      const hasUnit = l.precoUnitario != null && parseFloat(l.precoUnitario) > 0;
+      
+      const qtdText = hasQtd ? parseFloat(l.quantidade).toFixed(4).replace(/\.?0+$/, '') : '-';
+      const unitText = hasUnit ? fmtCurrency(parseFloat(l.precoUnitario)) : '-';
+      
+      tr.innerHTML = `
+        <td>${dataFmt}</td>
+        <td><strong>${escHtml(l.ticker)}</strong></td>
+        <td><span style="font-size:0.75rem;color:var(--text-muted);">${tipoLabels[l.tipoAtivo] || l.tipoAtivo || '-'}</span></td>
+        <td>${qtdText}</td>
+        <td class="cell-valor">${unitText}</td>
+        <td>${fmtCurrency(parseFloat(l.valorTotal || 0))}</td>
+        <td><strong style="color:var(--brand-glow);">${fmtCurrency(parseFloat(liqVal || 0))}</strong></td>
+        <td class="col-actions">
+          <div class="action-btns" style="justify-content:flex-start;gap:0.5rem;">
+            <button class="action-btn action-btn--edit" title="Editar" onclick="editarLancamentoDoModal(${l.id})">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            </button>
+            <button class="action-btn action-btn--delete" title="Excluir" onclick="excluirProventoDoModal(${l.id},'${escHtml(l.ticker)}')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  overlay.classList.remove('hidden');
+  $('main-content').setAttribute('aria-hidden', 'true');
+}
+
+async function editarLancamentoDoModal(id) {
+  // Re-use the existing edit modal
+  await editarLancamentoInvestimento(id);
+  // After edit, refresh proventos modal and card
+  const form = $('inv-edit-form');
+  if (form && !form._proventosHooked) {
+    form._proventosHooked = true;
+    form.addEventListener('submit', async () => {
+      await renderProvHistoricoCard();
+      // Reopen the proventos modal with fresh data
+      const overlay = $('prov-modal-overlay');
+      if (overlay && !overlay.classList.contains('hidden')) {
+        setTimeout(abrirModalProventos, 600);
+      }
+    }, { once: false });
+  }
+}
+
+async function excluirProventoDoModal(lancamentoId, ticker) {
+  if (!confirm(`Excluir este provento de ${ticker}?`)) return;
+  try {
+    await Api.excluirLancamentoInvestimento(lancamentoId);
+    showToast('Provento excluído!', 'success');
+    await renderProvHistoricoCard();
+    abrirModalProventos();
+    loadInvestimentos();
+  } catch (err) {
+    showToast('Erro ao excluir: ' + err.message, 'error');
+  }
 }
 
 // ─── UTILS ───────────────────────────────────────────────────────────────

@@ -32,4 +32,6 @@ public class AtivoDTO {
     private String indexador;
     private BigDecimal taxa;
     private BigDecimal rendimentoMensal;
+    private java.time.LocalDate dataLancamento;
+    private BigDecimal dy;
 }

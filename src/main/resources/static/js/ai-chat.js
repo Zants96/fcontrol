@@ -347,7 +347,7 @@ function renderInvestimentoParsePreview(investimentos) {
   const operacaoLabels = {
     COMPRA: '🔵 Compra',
     VENDA: '🟢 Venda',
-    DIVIDENDO: '💰 Dividendo/Provento',
+    DIVIDENDO: '💰 Provento',
   };
 
   const ativoLabels = {
@@ -440,10 +440,7 @@ async function confirmParsedInvestimentos() {
 
   for (const item of aiState.pendingInvestimentos) {
     try {
-      const ano = state.ano;
-      const mes = String(state.mes).padStart(2, '0');
-      const dia = String(item.dia || new Date().getDate()).padStart(2, '0');
-      const dataIso = `${ano}-${mes}-${dia}`;
+      const dataIso = item.data || `${state.ano}-${String(state.mes).padStart(2, '0')}-${String(item.dia || new Date().getDate()).padStart(2, '0')}`;
 
       await Api.criarLancamentoInvestimento({
         ticker: item.ticker,
@@ -454,6 +451,7 @@ async function confirmParsedInvestimentos() {
         precoUnitario: parseFloat(item.precoUnitario || 0),
         custos: parseFloat(item.custos || 0),
         valorTotal: parseFloat(item.valorTotal || 0),
+        valorLiquido: item.valorLiquido != null ? parseFloat(item.valorLiquido) : null,
         dataVencimento: item.dataVencimento ? converterDataBrParaIso(item.dataVencimento) : null,
         indexador: item.indexador || null,
         taxa: item.taxa != null ? parseFloat(item.taxa) : null
@@ -707,8 +705,10 @@ async function loadAiInsightsTabela() {
     titleEl.textContent = `🤖 Insights de ${labelTipo} — ${mesNome}`;
   }
 
+  if (!state.categoria) return;
   const tipoParam = state.categoria.toLowerCase();
-  await loadAiInsights('ai-insights-tabela', state.mes, tipoParam);
+  const safeMes = Number.isInteger(state.mes) && state.mes >= 1 && state.mes <= 12 ? state.mes : (new Date().getMonth() + 1);
+  await loadAiInsights('ai-insights-tabela', safeMes, tipoParam);
 }
 
 function renderInsights(insights, targetId) {
@@ -752,7 +752,7 @@ async function saveAiApiKey() {
   if (!inputKey || !btn) return;
 
   const key = inputKey.value.trim();
-  const model = inputModel ? inputModel.value.trim() : 'gemini-2.5-flash';
+  const model = inputModel ? inputModel.value.trim() : 'gemini-1.5-flash';
   const provider = selectProvider ? selectProvider.value : 'gemini';
   const apiUrl = (inputUrl && provider !== 'gemini') ? inputUrl.value.trim() : null;
   
@@ -814,8 +814,8 @@ function triggerAiProviderChange(provider, resetValues = true) {
   if (provider === 'gemini') {
     if (urlContainer) urlContainer.style.display = 'none';
     if (inputModel && resetValues) {
-      inputModel.value = 'gemini-2.5-flash';
-      inputModel.placeholder = 'gemini-2.5-flash';
+      inputModel.value = 'gemini-1.5-flash';
+      inputModel.placeholder = 'gemini-1.5-flash';
     }
     if (hintText) {
       hintText.innerHTML = 'Crie sua chave gratuitamente em <a href="https://aistudio.google.com/" target="_blank" style="color: var(--brand-glow);">Google AI Studio</a>. Gratuito, sem cartão.';

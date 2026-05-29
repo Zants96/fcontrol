@@ -34,7 +34,7 @@ public class AiConfig {
     /** Modelo a ser utilizado */
     @Column(nullable = false, length = 100)
     @Builder.Default
-    private String modelo = "gemini-2.5-flash";
+    private String modelo = "gemini-1.5-flash";
 
     /** Token do BrAPI.dev para cotações de investimentos */
     @Column(length = 512)

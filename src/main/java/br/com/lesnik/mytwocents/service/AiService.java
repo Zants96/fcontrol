@@ -87,9 +87,12 @@ public class AiService {
             
             StringBuilder promptBuilder = new StringBuilder();
             promptBuilder.append("Você é o assistente financeiro pessoal do aplicativo MyTwoCents.\n");
-            promptBuilder.append("Analise os dados financeiros do usuário e responda a pergunta dele.\n");
+            promptBuilder.append("Você tem acesso completo aos investimentos atuais do usuário (ações, fundos imobiliários/FIIs, ETFs, Tesouro Direto, Renda Fixa) no contexto fornecido abaixo.\n");
+            promptBuilder.append("Analise os dados financeiros e de investimentos do usuário e responda a pergunta dele.\n");
+            promptBuilder.append("Quando o usuário perguntar por análises de ativos, tickers específicos (ex: ABCB4, WRLD11, RZTR11), ou recomendações de mercado (como o consenso LSEG I/B/E/S de compra, venda ou manutenção com porcentagens de analistas), utilize as informações dos ativos que ele possui no portfólio para responder com precisão.\n");
+            promptBuilder.append("Se ele solicitar a recomendação consensual da LSEG I/B/E/S (compra, venda, manutenção) e porcentagens de analistas para suas ações e ativos de renda variável, monte uma resposta estruturada contendo uma tabela Markdown clara com: Ticker, Recomendação Consensual (Compra/Manter/Venda) e Divisão Percentual de analistas.\n");
             promptBuilder.append("Seja direto, prático, objetivo e use valores em R$ (Real Brasileiro).\n");
-            promptBuilder.append("Use formatação Markdown para melhor legibilidade (negrito, listas, etc.).\n");
+            promptBuilder.append("Use formatação Markdown para melhor legibilidade (negrito, tabelas, listas, etc.).\n");
             promptBuilder.append("Responda sempre em português brasileiro.\n");
             promptBuilder.append("IMPORTANTE: Seja conciso e direto ao ponto. Evite delongas desnecessárias, parágrafos repetitivos ou listagens excessivamente detalhadas para garantir que toda a análise caiba perfeitamente na resposta sem ser cortada.\n\n");
             
@@ -164,8 +167,17 @@ public class AiService {
                     REGRAS DE DATA:
                     - Extraia o dia se disponível no texto.
                     - Se o mês/ano estiver no texto, use-o. Caso contrário, use mes=%d e ano=%d.
+                    - IMPORTANTE PARA PROVENTOS (DIVIDENDO):
+                      * Se houver DUAS datas listadas na entrada do provento (ex: a data "com"/direito e a data de pagamento/recebimento), a data a ser cadastrada no campo "data" DEVE ser a data de pagamento/recebimento (a segunda data, ex: entre '25/03/2025' e '30/12/2026', a data cadastrada deve ser '2026-12-30').
+                      * Se houver APENAS UMA data listada na entrada do provento (ex: '25/03/2025'), use essa única data disponível como a data a ser cadastrada no campo "data" (ex: '2025-03-25').
+                      * Defina sempre o campo "dia" com o dia dessa data escolhida.
                     
-                    Retorne APENAS um JSON válido, sem markdown, sem explicação, no formato:
+                    Retorne APENAS um JSON válido, sem markdown, sem explicação.
+                    IMPORTANTE: Para evitar quebrar a estrutura do JSON, NUNCA inclua aspas duplas não escapadas dentro de qualquer valor de string (como o campo "resumo"). Se for necessário usar aspas internas, use aspas simples (') ou escape-as estritamente como \\".
+                    No campo "valorTotal" dos investimentos/proventos, coloque o valor bruto (total antes do imposto).
+                    No campo "valorLiquido", extraia ou calcule o valor líquido após impostos (se for provento tipo JSCP ou Rend. Trib., geralmente há retenção de 15%%, por exemplo, CMIG4 bruto R$ 2,74 e líquido R$ 2,33). Se não houver imposto (como Dividendos isentos) ou se não for especificado, valorLiquido é igual ao valorTotal.
+                    
+                    Formato esperado do JSON:
                     {
                       "items": [
                         {
@@ -185,10 +197,12 @@ public class AiService {
                           "precoUnitario": 23.45,
                           "custos": 0.0,
                           "valorTotal": 2345.0,
+                          "valorLiquido": 2345.0,
                           "dia": 14,
                           "dataVencimento": null,
                           "indexador": null,
-                          "taxa": null
+                          "taxa": null,
+                          "data": "2026-12-30"
                         }
                       ],
                       "mes": %d,
@@ -212,8 +226,7 @@ public class AiService {
             if (resposta.endsWith("```")) {
                 resposta = resposta.substring(0, resposta.length() - 3);
             }
-            resposta = resposta.trim();
-
+            log.info("Gemini raw JSON response:\n{}", resposta);
             JsonNode root = objectMapper.readTree(resposta);
 
             List<ParsedItem> items = new ArrayList<>();
@@ -246,6 +259,7 @@ public class AiService {
                             .dataVencimento(item.has("dataVencimento") && !item.get("dataVencimento").isNull() ? item.get("dataVencimento").asText() : null)
                             .indexador(item.has("indexador") && !item.get("indexador").isNull() ? item.get("indexador").asText() : null)
                             .taxa(item.has("taxa") && !item.get("taxa").isNull() ? new BigDecimal(item.get("taxa").asText()).setScale(2, RoundingMode.HALF_UP) : null)
+                            .data(item.has("data") && !item.get("data").isNull() ? item.get("data").asText() : null)
                             .build());
                 }
             }
@@ -657,6 +671,40 @@ public class AiService {
                             .append(": R$ ").append(formatarValor(e.getValue())).append("\n"));
         }
 
+        // Carteira de investimentos atual
+        try {
+            InvestimentoDashboardDTO invDashboard = investimentoService.calcularDashboard();
+            ctx.append("\nCARTEIRA DE INVESTIMENTOS ATUAL:\n");
+            ctx.append("- Patrimônio Total em Investimentos: R$ ").append(formatarValor(invDashboard.getPatrimonioTotal())).append("\n");
+            ctx.append("- Lucro/Prejuízo Total em Investimentos: R$ ").append(formatarValor(invDashboard.getLucroTotal()))
+               .append(" (").append(formatarValor(invDashboard.getVariacaoPercent())).append("%)\n");
+            
+            if (invDashboard.getAtivosPorTipo() != null && !invDashboard.getAtivosPorTipo().isEmpty()) {
+                invDashboard.getAtivosPorTipo().forEach((tipo, list) -> {
+                    if (list != null && !list.isEmpty()) {
+                        ctx.append("\nClasse de Ativo: ").append(tipo.name()).append(":\n");
+                        for (AtivoDTO a : list) {
+                            ctx.append("  * Ticker: ").append(a.getTicker());
+                            if (a.getNome() != null && !a.getNome().isBlank()) {
+                                ctx.append(" (").append(a.getNome()).append(")");
+                            }
+                            ctx.append(" | Qtd: ").append(formatarValor(a.getQuantidade()))
+                               .append(" | Preço Médio: R$ ").append(formatarValor(a.getPrecoMedio()))
+                               .append(" | Preço Atual: R$ ").append(formatarValor(a.getPrecoAtual()))
+                               .append(" | Valor Total: R$ ").append(formatarValor(a.getValorTotal()))
+                               .append(" | Variação: ").append(formatarValor(a.getVariacao())).append("%");
+                            if (a.getDataLancamento() != null) {
+                                ctx.append(" | Data de Aquisição: ").append(a.getDataLancamento().toString());
+                            }
+                            ctx.append("\n");
+                        }
+                    }
+                });
+            }
+        } catch (Exception e) {
+            log.error("Erro ao incluir contexto de investimentos na IA: {}", e.getMessage());
+        }
+
         // Data atual para contexto temporal
         ctx.append("\nDATA ATUAL: ").append(LocalDate.now()).append("\n");
 
@@ -703,6 +751,7 @@ public class AiService {
             Map<String, Object> body = new HashMap<>();
             body.put("model", config.getModelo());
             body.put("temperature", 0.5);
+            body.put("max_tokens", 4096);
             body.put("messages", List.of(
                 Map.of("role", "user", "content", prompt)
             ));

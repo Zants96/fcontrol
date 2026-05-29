@@ -102,6 +102,14 @@ public class InvestimentoController {
     }
 
     /**
+     * Histórico completo de proventos com breakdown anual/mensal e por tipo.
+     */
+    @GetMapping("/proventos/historico")
+    public ResponseEntity<Map<String, Object>> proventosHistorico() {
+        return ResponseEntity.ok(service.listarProventosHistorico());
+    }
+
+    /**
      * Remove um lançamento e recalcula o ativo.
      */
     @DeleteMapping("/lancamentos/{id}")
@@ -179,7 +187,7 @@ public class InvestimentoController {
                 .orElseGet(() -> AiConfig.builder()
                         .apiKey("")
                         .provider("gemini")
-                        .modelo("gemini-2.5-flash")
+                        .modelo("gemini-1.5-flash")
                         .build());
         config.setBrapiToken(token);
         aiConfigRepository.save(config);

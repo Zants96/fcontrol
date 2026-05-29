@@ -329,6 +329,9 @@ function initMonthlyDashboard() {
 }
 
 async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
+  if (isNaN(mes) || mes < 1 || mes > 12) {
+    mes = new Date().getMonth() + 1;
+  }
   _dashboardData = data;
   const idx = mes - 1;
 

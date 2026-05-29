@@ -133,8 +133,8 @@ public class CotacaoService {
             return null;
         }
 
-        // Ações, FIIs, ETFs → endpoint padrão de quote
-        String url = BRAPI_QUOTE_URL + ticker + "?token=" + token;
+        // Ações, FIIs, ETFs → endpoint padrão de quote com dados fundamentais
+        String url = BRAPI_QUOTE_URL + ticker + "?token=" + token + "&fundamental=true";
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -198,11 +198,94 @@ public class CotacaoService {
 
             if (price > 0) {
                 BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
+                if (sector == null || sector.isBlank() || sector.equalsIgnoreCase("null")) {
+                    sector = buscarSectorNoList(ticker, token);
+                }
+                sector = traduzirSetor(sector, ticker, tipo);
                 return new CotacaoResult(p, name, logoUrl, sector, longName);
             }
         }
 
         return null;
+    }
+
+    private String buscarSectorNoList(String ticker, String token) {
+        try {
+            String url = "https://brapi.dev/api/quote/list?search=" + ticker + "&token=" + token;
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode stocks = root.path("stocks");
+                if (stocks.isArray() && !stocks.isEmpty()) {
+                    for (JsonNode stock : stocks) {
+                        if (ticker.equalsIgnoreCase(stock.path("stock").asText())) {
+                            if (stock.hasNonNull("sector")) {
+                                return stock.get("sector").asText();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao buscar setor no fallback para {}: {}", ticker, e.getMessage());
+        }
+        return null;
+    }
+
+    private String traduzirSetor(String sector, String ticker, TipoAtivo tipo) {
+        if (ticker != null) {
+            String t = ticker.toUpperCase().trim();
+            if (t.startsWith("RZTR")) return "Agronegócio (Terra)";
+            if (t.startsWith("XPML")) return "Shoppings";
+            if (t.startsWith("IFRI")) return "Infraestrutura";
+            if (t.startsWith("MXRF")) return "Papéis / Recebíveis";
+            if (t.startsWith("HGLG")) return "Galpões Logísticos";
+            if (t.startsWith("KNCR")) return "Papéis / Recebíveis";
+            if (t.startsWith("HGRU")) return "Renda Urbana";
+            if (t.startsWith("VISC")) return "Shoppings";
+            if (t.startsWith("BTLG")) return "Galpões Logísticos";
+            if (t.startsWith("ALZR")) return "Híbrido";
+            if (t.startsWith("PETR")) return "Petróleo / Gás";
+            if (t.startsWith("VALE")) return "Mineração";
+            if (t.startsWith("BBAS") || t.startsWith("ITUB") || t.startsWith("BBDC") || t.startsWith("SANB")) return "Financeiro";
+            if (t.startsWith("TAEE") || t.startsWith("TRPL") || t.startsWith("EGIE") || t.startsWith("CPLE")) return "Utilidade Pública (Energia)";
+        }
+
+        if (sector == null || sector.isBlank() || sector.equalsIgnoreCase("null")) {
+            return "-";
+        }
+
+        // Tradução simples
+        String s = sector.trim();
+        switch (s) {
+            case "Finance": return "Financeiro";
+            case "Energy Minerals": return "Energia (Petróleo/Gás)";
+            case "Utilities": return "Utilidade Pública";
+            case "Retail Trade": return "Comércio Varejista";
+            case "Health Services": return "Saúde";
+            case "Consumer Services": return "Serviços ao Consumidor";
+            case "Consumer Non-Durables": return "Bens de Consumo Não-Duráveis";
+            case "Non-Energy Minerals": return "Mineração / Metalurgia";
+            case "Commercial Services": return "Serviços Comerciais";
+            case "Distribution Services": return "Distribuição";
+            case "Transportation": return "Transporte / Logística";
+            case "Technology Services": return "Tecnologia / TI";
+            case "Process Industries": return "Indústria de Processo";
+            case "Communications": return "Telecomunicações";
+            case "Producer Manufacturing": return "Manufatura de Produção";
+            case "Electronic Technology": return "Tecnologia Eletrônica";
+            case "Industrial Services": return "Serviços Industriais";
+            case "Health Technology": return "Tecnologia de Saúde";
+            case "Consumer Durables": return "Bens de Consumo Duráveis";
+            case "Miscellaneous": return "Diversos";
+            case "Real Estate": return "Imobiliário";
+            default: return s;
+        }
     }
 
     /**

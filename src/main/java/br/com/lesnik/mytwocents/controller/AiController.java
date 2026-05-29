@@ -34,7 +34,7 @@ public class AiController {
             return ResponseEntity.badRequest().build();
         }
         String modelo = request.getModelo() != null && !request.getModelo().isBlank() 
-                ? request.getModelo().trim() : "gemini-2.5-flash";
+                ? request.getModelo().trim() : "gemini-1.5-flash";
         String provider = request.getProvider() != null && !request.getProvider().isBlank()
                 ? request.getProvider().trim() : "gemini";
         String apiUrl = request.getApiUrl() != null && !request.getApiUrl().isBlank()
