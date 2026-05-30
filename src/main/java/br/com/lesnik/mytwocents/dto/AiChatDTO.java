@@ -63,14 +63,17 @@ public class AiChatDTO {
         private String ticker;
         private String tipoAtivo;      // ACAO, FII, RENDA_FIXA, ETF, TESOURO_DIRETO, CRIPTO
         private String tipoOperacao;   // COMPRA, VENDA, DIVIDENDO
+        private String tipoProvento;   // Dividendo, JSCP, Rend. Trib.
         private BigDecimal quantidade;
         private BigDecimal precoUnitario;
         private BigDecimal custos;
         private BigDecimal valorTotal;
+        private BigDecimal valorLiquido;
         private Integer dia;
         private String dataVencimento; // DD/MM/YYYY
         private String indexador;
         private BigDecimal taxa;
+        private String data;           // YYYY-MM-DD
     }
 
     // ─── Insights ────────────────────────────────────────────────────────────
@@ -83,10 +86,12 @@ public class AiChatDTO {
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class Insight {
-        /** Tipos: ALERTA, TENDENCIA, DICA, META, POSITIVO */
+        /** Tipos: ALERTA, TENDENCIA, DICA, META, POSITIVO, ESTRATEGICO, EFICIENCIA */
         private String tipo;
         private String mensagem;
         private String icone;
+        private String impacto;
+        private Integer prioridade;
     }
 
     // ─── Configuração ────────────────────────────────────────────────────────

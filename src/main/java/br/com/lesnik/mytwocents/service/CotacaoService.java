@@ -103,6 +103,10 @@ public class CotacaoService {
                     if (result.longName() != null && !result.longName().isBlank()) {
                         ativo.setLongName(result.longName());
                     }
+                    // Atualiza o dividend yield se a API retornou
+                    if (result.dividendYield() != null) {
+                        ativo.setDividendYield(result.dividendYield());
+                    }
                     ativoRepository.save(ativo);
                     cache.put(ativo.getTicker(), new CachedPrice(result.preco(), Instant.now()));
                     atualizados++;
@@ -116,7 +120,7 @@ public class CotacaoService {
         return atualizados;
     }
 
-    private record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName) {
+    private record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName, BigDecimal dividendYield) {
     }
 
     /**
@@ -133,8 +137,8 @@ public class CotacaoService {
             return null;
         }
 
-        // Ações, FIIs, ETFs → endpoint padrão de quote
-        String url = BRAPI_QUOTE_URL + ticker + "?token=" + token;
+        // Ações, FIIs, ETFs → endpoint padrão de quote com dados fundamentais
+        String url = BRAPI_QUOTE_URL + ticker + "?token=" + token + "&fundamental=true";
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -196,13 +200,105 @@ public class CotacaoService {
                 longName = first.get("shortName").asText();
             }
 
+            BigDecimal dy = BigDecimal.ZERO;
+            if (first.hasNonNull("dividendYield")) {
+                double dyRaw = first.get("dividendYield").asDouble(0.0);
+                dy = BigDecimal.valueOf(dyRaw).multiply(BigDecimal.valueOf(100)).setScale(4, java.math.RoundingMode.HALF_UP);
+            } else if (first.has("defaultKeyStatistics") && first.get("defaultKeyStatistics").hasNonNull("dividendYield")) {
+                double dyRaw = first.get("defaultKeyStatistics").get("dividendYield").asDouble(0.0);
+                dy = BigDecimal.valueOf(dyRaw).multiply(BigDecimal.valueOf(100)).setScale(4, java.math.RoundingMode.HALF_UP);
+            }
+
             if (price > 0) {
                 BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
-                return new CotacaoResult(p, name, logoUrl, sector, longName);
+                if (sector == null || sector.isBlank() || sector.equalsIgnoreCase("null")) {
+                    sector = buscarSectorNoList(ticker, token);
+                }
+                sector = traduzirSetor(sector, ticker, tipo);
+                return new CotacaoResult(p, name, logoUrl, sector, longName, dy);
             }
         }
 
         return null;
+    }
+
+    private String buscarSectorNoList(String ticker, String token) {
+        try {
+            String url = "https://brapi.dev/api/quote/list?search=" + ticker + "&token=" + token;
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(5))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() == 200) {
+                JsonNode root = objectMapper.readTree(response.body());
+                JsonNode stocks = root.path("stocks");
+                if (stocks.isArray() && !stocks.isEmpty()) {
+                    for (JsonNode stock : stocks) {
+                        if (ticker.equalsIgnoreCase(stock.path("stock").asText())) {
+                            if (stock.hasNonNull("sector")) {
+                                return stock.get("sector").asText();
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao buscar setor no fallback para {}: {}", ticker, e.getMessage());
+        }
+        return null;
+    }
+
+    private String traduzirSetor(String sector, String ticker, TipoAtivo tipo) {
+        if (ticker != null) {
+            String t = ticker.toUpperCase().trim();
+            if (t.startsWith("RZTR")) return "Agronegócio (Terra)";
+            if (t.startsWith("XPML")) return "Shoppings";
+            if (t.startsWith("IFRI")) return "Infraestrutura";
+            if (t.startsWith("MXRF")) return "Papéis / Recebíveis";
+            if (t.startsWith("HGLG")) return "Galpões Logísticos";
+            if (t.startsWith("KNCR")) return "Papéis / Recebíveis";
+            if (t.startsWith("HGRU")) return "Renda Urbana";
+            if (t.startsWith("VISC")) return "Shoppings";
+            if (t.startsWith("BTLG")) return "Galpões Logísticos";
+            if (t.startsWith("ALZR")) return "Híbrido";
+            if (t.startsWith("PETR")) return "Petróleo / Gás";
+            if (t.startsWith("VALE")) return "Mineração";
+            if (t.startsWith("BBAS") || t.startsWith("ITUB") || t.startsWith("BBDC") || t.startsWith("SANB")) return "Financeiro";
+            if (t.startsWith("TAEE") || t.startsWith("TRPL") || t.startsWith("EGIE") || t.startsWith("CPLE")) return "Utilidade Pública (Energia)";
+        }
+
+        if (sector == null || sector.isBlank() || sector.equalsIgnoreCase("null")) {
+            return "-";
+        }
+
+        // Tradução simples
+        String s = sector.trim();
+        switch (s) {
+            case "Finance": return "Financeiro";
+            case "Energy Minerals": return "Energia (Petróleo/Gás)";
+            case "Utilities": return "Utilidade Pública";
+            case "Retail Trade": return "Comércio Varejista";
+            case "Health Services": return "Saúde";
+            case "Consumer Services": return "Serviços ao Consumidor";
+            case "Consumer Non-Durables": return "Bens de Consumo Não-Duráveis";
+            case "Non-Energy Minerals": return "Mineração / Metalurgia";
+            case "Commercial Services": return "Serviços Comerciais";
+            case "Distribution Services": return "Distribuição";
+            case "Transportation": return "Transporte / Logística";
+            case "Technology Services": return "Tecnologia / TI";
+            case "Process Industries": return "Indústria de Processo";
+            case "Communications": return "Telecomunicações";
+            case "Producer Manufacturing": return "Manufatura de Produção";
+            case "Electronic Technology": return "Tecnologia Eletrônica";
+            case "Industrial Services": return "Serviços Industriais";
+            case "Health Technology": return "Tecnologia de Saúde";
+            case "Consumer Durables": return "Bens de Consumo Duráveis";
+            case "Miscellaneous": return "Diversos";
+            case "Real Estate": return "Imobiliário";
+            default: return s;
+        }
     }
 
     /**
@@ -235,7 +331,7 @@ public class CotacaoService {
             String longName = name;
             if (price > 0) {
                 BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
-                return new CotacaoResult(p, name, logoUrl, sector, longName);
+                return new CotacaoResult(p, name, logoUrl, sector, longName, BigDecimal.ZERO);
             }
         }
 
@@ -277,7 +373,13 @@ public class CotacaoService {
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
-                JsonNode root = objectMapper.readTree(response.body());
+                String body = response.body().trim();
+                if (!body.startsWith("[") && !body.startsWith("{")) {
+                    log.warn("Resposta da série BCB {} não é um JSON válido. Status: {}, Corpo: {}", 
+                            seriesCode, response.statusCode(), body.length() > 100 ? body.substring(0, 100) : body);
+                    return fallbackValue;
+                }
+                JsonNode root = objectMapper.readTree(body);
                 if (root.isArray() && !root.isEmpty()) {
                     JsonNode first = root.get(0);
                     String valStr = first.path("valor").asText();
@@ -299,11 +401,11 @@ public class CotacaoService {
         }
 
         // Tenta Banco Central do Brasil (BCB) primeiro (100% gratuito e oficial)
-        BigDecimal rate = getRateFromBCB("1178", null);
+        BigDecimal rate = getRateFromBCB("432", null);
         if (rate != null) {
             cachedSelic = rate;
             lastSelicFetch = Instant.now();
-            log.info("Taxa Selic atualizada via Banco Central do Brasil (SGS 1178): {}", cachedSelic);
+            log.info("Taxa Selic atualizada via Banco Central do Brasil (SGS 432): {}", cachedSelic);
             return cachedSelic;
         }
 

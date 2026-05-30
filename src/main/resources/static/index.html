@@ -377,7 +377,7 @@
         <div class="card-sub" id="inv-card-variacao">0,00%</div>
       </div>
       <div class="card card--purple">
-        <div class="card-label">Dividendos Recebidos</div>
+        <div class="card-label">Proventos Recebidos</div>
         <div class="card-value" id="inv-card-dividendos">R$ 0,00</div>
       </div>
     </div>
@@ -405,17 +405,61 @@
       </div>
     </div>
 
-    <!-- Gráfico de Dividendos -->
+    <!-- Gráfico de Proventos -->
     <div class="charts-row" style="margin-top: 1.5rem; grid-template-columns: 1fr;">
       <div class="chart-card">
         <div class="chart-card-header">
-          <h2 class="chart-title">Dividendos Recebidos (12 Meses)</h2>
+          <h2 class="chart-title">Proventos Recebidos (12 Meses)</h2>
         </div>
         <div class="chart-wrapper" style="height: 250px;">
           <canvas id="chart-inv-dividendos"></canvas>
         </div>
       </div>
     </div>
+
+    <!-- Histórico de Proventos (accordion retrátil) -->
+    <div class="inv-accordion" id="prov-historico-accordion" style="margin-top: 1.5rem;">
+      <div class="inv-accordion-header" onclick="this.parentElement.classList.toggle('open')"
+           style="border-left: 3px solid #a78bfa;">
+        <div class="inv-accordion-title">
+          <span class="inv-badge" style="background:#a78bfa20;color:#a78bfa;">Proventos</span>
+          <span class="inv-accordion-count" id="prov-count-label">carregando...</span>
+        </div>
+        <div class="inv-accordion-stats" style="position:relative;">
+          <div style="display:flex;flex-direction:column;align-items:flex-end;position:relative;">
+            <span id="prov-total-value"
+              title="Passe o mouse para ver por tipo"
+              style="font-size:1.2rem;font-weight:700;color:#a78bfa;"
+              onclick="event.stopPropagation()">R$ 0,00</span>
+            <span style="font-size:0.68rem;color:var(--text-muted);">total líquido previsto no ano</span>
+            <!-- Tooltip por tipo -->
+            <div id="prov-tipo-tooltip" class="prov-tipo-tooltip hidden"></div>
+          </div>
+          <svg class="inv-accordion-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+      </div>
+      <div class="inv-accordion-body" style="padding:0;">
+        <div style="overflow-x:auto; padding: 1rem 1rem 0.5rem;">
+          <table class="prov-hist-table" id="prov-hist-table">
+            <thead>
+              <tr>
+                <th style="text-align:left;">Ano</th>
+                <th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th><th>Jun</th>
+                <th>Jul</th><th>Ago</th><th>Set</th><th>Out</th><th>Nov</th><th>Dez</th>
+                <th>Média/Mês</th><th style="color:#a78bfa;">Total</th>
+              </tr>
+            </thead>
+            <tbody id="prov-hist-tbody">
+              <tr><td colspan="15" style="text-align:center;color:var(--text-muted);padding:1.5rem;">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
 
     <!-- Acordeões (Ativos por Tipo) -->
     <div id="inv-acordeoes"></div>
@@ -439,6 +483,7 @@
           <h3>Assistente Financeiro IA</h3>
           <p>Posso analisar seus gastos, gerar insights e até cadastrar lançamentos automaticamente!</p>
           <p class="ai-welcome-hint">💡 <strong>Dica:</strong> Cole uma fatura ou boleto. Envie mensagens pressionando <strong>Ctrl + Enter</strong>.</p>
+          <p class="ai-welcome-hint" style="margin-top: 0.5rem; color: #a78bfa;">⚙️ <strong>Aviso:</strong> Lembre-se de configurar seu provedor e sua API Key para o Assistente IA na aba <strong>Configurações</strong>.</p>
         </div>
       </div>
 
@@ -525,8 +570,8 @@
       </div>
 
       <div class="card">
-        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Integração BrAPI (Cotações)</h2>
-        <p style="color: var(--text-muted); margin-bottom: 1rem;">Configure seu token do BrAPI para atualizar automaticamente cotações de Ações, FIIs e Criptomoedas. <strong>Gratuito (15.000 requisições/mês)</strong>.</p>
+        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Integração BrAPI</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Configure seu token do BrAPI para atualizar automaticamente cotações de Ações e FIIs. <strong>Gratuito (15.000 requisições/mês)</strong>.</p>
         <div id="brapi-key-status" style="margin-bottom: 1rem;"></div>
         
         <div style="display: flex; gap: 0.5rem; align-items: flex-end; margin-bottom: 0.75rem;">
@@ -635,7 +680,7 @@
         </label>
         <label>
           <input type="radio" name="inv-operacao" value="DIVIDENDO">
-          <span>Dividendo</span>
+          <span>Provento</span>
         </label>
       </div>
 
@@ -698,6 +743,20 @@
         <input type="text" id="inv-form-custos" placeholder="0,00" />
       </div>
 
+      <div class="form-group" id="inv-group-liquido">
+        <label for="inv-form-liquido">Total Líquido (R$)</label>
+        <input type="text" id="inv-form-liquido" placeholder="0,00" />
+      </div>
+
+      <div class="form-group" id="inv-group-tipo-provento" style="display:none;">
+        <label for="inv-form-tipo-provento">Tipo de Provento</label>
+        <select id="inv-form-tipo-provento" class="form-input">
+          <option value="Dividendo" selected>Dividendo</option>
+          <option value="JSCP">JSCP</option>
+          <option value="Rend. Trib.">Rend. Trib.</option>
+        </select>
+      </div>
+
       <div class="inv-summary-row" style="margin: 1.5rem 0 1rem; padding: 1rem; background: var(--bg-hover); border-radius: var(--radius-sm); border: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 600; color: var(--text-secondary);">Valor Total (R$)</span>
         <span id="inv-form-total" style="font-size: 1.25rem; font-weight: 700; color: var(--brand-glow);">R$ 0,00</span>
@@ -729,6 +788,7 @@
             <th>Preço Unitário</th>
             <th>Custos</th>
             <th>Valor Total</th>
+            <th>Lucro/Prejuízo</th>
             <th class="col-actions">Ações</th>
           </tr>
         </thead>
@@ -767,10 +827,10 @@
 <!-- ═══ TOAST NOTIFICATION ════════════════════════════════════════════════ -->
 <div class="toast hidden" id="toast" role="alert" aria-live="assertive"></div>
 
-<script src="/js/api.js"></script>
-<script src="/js/charts.js"></script>
-<script src="/js/ai-chat.js"></script>
-<script src="/js/investments.js"></script>
-<script src="/js/app.js"></script>
+<script src="/js/api.js?v=1.1"></script>
+<script src="/js/charts.js?v=1.1"></script>
+<script src="/js/ai-chat.js?v=1.1"></script>
+<script src="/js/investments.js?v=1.1"></script>
+<script src="/js/app.js?v=1.1"></script>
 </body>
 </html>
