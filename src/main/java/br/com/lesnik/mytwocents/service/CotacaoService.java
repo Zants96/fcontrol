@@ -103,6 +103,10 @@ public class CotacaoService {
                     if (result.longName() != null && !result.longName().isBlank()) {
                         ativo.setLongName(result.longName());
                     }
+                    // Atualiza o dividend yield se a API retornou
+                    if (result.dividendYield() != null) {
+                        ativo.setDividendYield(result.dividendYield());
+                    }
                     ativoRepository.save(ativo);
                     cache.put(ativo.getTicker(), new CachedPrice(result.preco(), Instant.now()));
                     atualizados++;
@@ -116,7 +120,7 @@ public class CotacaoService {
         return atualizados;
     }
 
-    private record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName) {
+    private record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName, BigDecimal dividendYield) {
     }
 
     /**
@@ -196,13 +200,22 @@ public class CotacaoService {
                 longName = first.get("shortName").asText();
             }
 
+            BigDecimal dy = BigDecimal.ZERO;
+            if (first.hasNonNull("dividendYield")) {
+                double dyRaw = first.get("dividendYield").asDouble(0.0);
+                dy = BigDecimal.valueOf(dyRaw).multiply(BigDecimal.valueOf(100)).setScale(4, java.math.RoundingMode.HALF_UP);
+            } else if (first.has("defaultKeyStatistics") && first.get("defaultKeyStatistics").hasNonNull("dividendYield")) {
+                double dyRaw = first.get("defaultKeyStatistics").get("dividendYield").asDouble(0.0);
+                dy = BigDecimal.valueOf(dyRaw).multiply(BigDecimal.valueOf(100)).setScale(4, java.math.RoundingMode.HALF_UP);
+            }
+
             if (price > 0) {
                 BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
                 if (sector == null || sector.isBlank() || sector.equalsIgnoreCase("null")) {
                     sector = buscarSectorNoList(ticker, token);
                 }
                 sector = traduzirSetor(sector, ticker, tipo);
-                return new CotacaoResult(p, name, logoUrl, sector, longName);
+                return new CotacaoResult(p, name, logoUrl, sector, longName, dy);
             }
         }
 
@@ -318,7 +331,7 @@ public class CotacaoService {
             String longName = name;
             if (price > 0) {
                 BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
-                return new CotacaoResult(p, name, logoUrl, sector, longName);
+                return new CotacaoResult(p, name, logoUrl, sector, longName, BigDecimal.ZERO);
             }
         }
 
@@ -360,7 +373,13 @@ public class CotacaoService {
                     .build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
-                JsonNode root = objectMapper.readTree(response.body());
+                String body = response.body().trim();
+                if (!body.startsWith("[") && !body.startsWith("{")) {
+                    log.warn("Resposta da série BCB {} não é um JSON válido. Status: {}, Corpo: {}", 
+                            seriesCode, response.statusCode(), body.length() > 100 ? body.substring(0, 100) : body);
+                    return fallbackValue;
+                }
+                JsonNode root = objectMapper.readTree(body);
                 if (root.isArray() && !root.isEmpty()) {
                     JsonNode first = root.get(0);
                     String valStr = first.path("valor").asText();
@@ -382,11 +401,11 @@ public class CotacaoService {
         }
 
         // Tenta Banco Central do Brasil (BCB) primeiro (100% gratuito e oficial)
-        BigDecimal rate = getRateFromBCB("1178", null);
+        BigDecimal rate = getRateFromBCB("432", null);
         if (rate != null) {
             cachedSelic = rate;
             lastSelicFetch = Instant.now();
-            log.info("Taxa Selic atualizada via Banco Central do Brasil (SGS 1178): {}", cachedSelic);
+            log.info("Taxa Selic atualizada via Banco Central do Brasil (SGS 432): {}", cachedSelic);
             return cachedSelic;
         }
 

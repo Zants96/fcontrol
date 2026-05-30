@@ -68,7 +68,17 @@ public class InvestimentoService {
             valorTotal = quantidade.multiply(precoUnit).add(custos);
         }
 
-        BigDecimal valorLiquido = dto.getValorLiquido() != null ? dto.getValorLiquido() : valorTotal;
+        BigDecimal valorLiquido = dto.getValorLiquido();
+        if (dto.getTipoOperacao() == TipoOperacao.DIVIDENDO) {
+            if ("JSCP".equalsIgnoreCase(dto.getTipoProvento())) {
+                if (valorLiquido == null || valorLiquido.compareTo(valorTotal) == 0) {
+                    valorLiquido = valorTotal.multiply(BigDecimal.valueOf(0.85)).setScale(2, RoundingMode.HALF_UP);
+                }
+            }
+        }
+        if (valorLiquido == null) {
+            valorLiquido = valorTotal;
+        }
 
         InvestimentoLancamento lancamento = InvestimentoLancamento.builder()
                 .ativo(ativo)
@@ -82,6 +92,7 @@ public class InvestimentoService {
                 .dataVencimento(dto.getDataVencimento())
                 .indexador(dto.getIndexador())
                 .taxa(dto.getTaxa())
+                .tipoProvento(dto.getTipoProvento())
                 .build();
 
         if (dto.getTipoAtivo() == TipoAtivo.RENDA_FIXA || dto.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO) {
@@ -98,7 +109,8 @@ public class InvestimentoService {
                             dto.getTipoOperacao() == TipoOperacao.COMPRA ? "Compra de Ativo: " : "Venda de Ativo: ") 
                            + ativo.getTicker())
                 .categoria(dto.getTipoOperacao() == TipoOperacao.COMPRA ? Categoria.GASTO : Categoria.RECEITA)
-                .subcategoria("Investimentos")
+                .subcategoria(dto.getTipoOperacao() == TipoOperacao.COMPRA ? "Investimentos" :
+                              dto.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Proventos" : "Resgate de Investimentos")
                 .valor(dto.getTipoOperacao() == TipoOperacao.DIVIDENDO ? valorLiquido : valorTotal)
                 .mes(dto.getData().getMonthValue())
                 .ano(dto.getData().getYear())
@@ -124,21 +136,40 @@ public class InvestimentoService {
         if (dto.getPrecoUnitario() != null) lancamento.setPrecoUnitario(dto.getPrecoUnitario());
         if (dto.getCustos() != null) lancamento.setCustos(dto.getCustos());
         if (dto.getValorTotal() != null) lancamento.setValorTotal(dto.getValorTotal());
-        if (dto.getValorLiquido() != null) {
-            lancamento.setValorLiquido(dto.getValorLiquido());
-        } else if (dto.getValorTotal() != null) {
-            lancamento.setValorLiquido(dto.getValorTotal());
-        }
         if (dto.getData() != null) lancamento.setData(dto.getData());
         if (dto.getDataVencimento() != null) lancamento.setDataVencimento(dto.getDataVencimento());
         if (dto.getIndexador() != null) lancamento.setIndexador(dto.getIndexador());
         if (dto.getTaxa() != null) lancamento.setTaxa(dto.getTaxa());
+        if (dto.getTipoProvento() != null) lancamento.setTipoProvento(dto.getTipoProvento());
+
+        // Processamento do Valor Líquido com tratamento para JSCP
+        if (dto.getValorLiquido() != null) {
+            BigDecimal valorLiquido = dto.getValorLiquido();
+            if (lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO && "JSCP".equalsIgnoreCase(lancamento.getTipoProvento())) {
+                if (valorLiquido.compareTo(lancamento.getValorTotal()) == 0) {
+                    valorLiquido = lancamento.getValorTotal().multiply(BigDecimal.valueOf(0.85)).setScale(2, RoundingMode.HALF_UP);
+                }
+            }
+            lancamento.setValorLiquido(valorLiquido);
+        } else if (dto.getValorTotal() != null) {
+            if (lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO && "JSCP".equalsIgnoreCase(lancamento.getTipoProvento())) {
+                lancamento.setValorLiquido(dto.getValorTotal().multiply(BigDecimal.valueOf(0.85)).setScale(2, RoundingMode.HALF_UP));
+            } else {
+                lancamento.setValorLiquido(dto.getValorTotal());
+            }
+        }
 
         lancamentoRepository.save(lancamento);
 
         // Sincroniza o lançamento financeiro
         if (lancamento.getLancamentoFinanceiroId() != null) {
             financeiroRepository.findById(lancamento.getLancamentoFinanceiroId()).ifPresent(fin -> {
+                fin.setDescricao((lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Dividendo: " : 
+                                  lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? "Compra de Ativo: " : "Venda de Ativo: ") 
+                                 + lancamento.getAtivo().getTicker());
+                fin.setCategoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? Categoria.GASTO : Categoria.RECEITA);
+                fin.setSubcategoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? "Investimentos" :
+                                    lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Proventos" : "Resgate de Investimentos");
                 fin.setValor(lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? lancamento.getValorLiquido() : lancamento.getValorTotal());
                 fin.setMes(lancamento.getData().getMonthValue());
                 fin.setAno(lancamento.getData().getYear());
@@ -152,7 +183,8 @@ public class InvestimentoService {
                                 lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? "Compra de Ativo: " : "Venda de Ativo: ") 
                                + lancamento.getAtivo().getTicker())
                     .categoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? Categoria.GASTO : Categoria.RECEITA)
-                    .subcategoria("Investimentos")
+                    .subcategoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? "Investimentos" :
+                                  lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Proventos" : "Resgate de Investimentos")
                     .valor(lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? lancamento.getValorLiquido() : lancamento.getValorTotal())
                     .mes(lancamento.getData().getMonthValue())
                     .ano(lancamento.getData().getYear())
@@ -385,10 +417,12 @@ public class InvestimentoService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal valorInvestido = BigDecimal.ZERO;
-        // Calcula dividendos recebidos apenas até o mês atual (exclui proventos futuros)
+        // Calcula dividendos recebidos do ano até o mês atual
         java.time.LocalDate hoje = java.time.LocalDate.now();
         BigDecimal dividendosTotal = lancamentoRepository.findAllByOrderByDataDesc().stream()
-                .filter(l -> l.getTipoOperacao() == TipoOperacao.DIVIDENDO && !l.getData().isAfter(hoje))
+                .filter(l -> l.getTipoOperacao() == TipoOperacao.DIVIDENDO 
+                        && l.getData().getYear() == hoje.getYear() 
+                        && !l.getData().isAfter(hoje))
                 .map(l -> l.getValorLiquido() != null ? l.getValorLiquido() : l.getValorTotal())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -775,7 +809,9 @@ public class InvestimentoService {
         }
 
         BigDecimal dy = BigDecimal.ZERO;
-        if ((a.getTipoAtivo() == TipoAtivo.ACAO || a.getTipoAtivo() == TipoAtivo.FII)
+        if (a.getDividendYield() != null && a.getDividendYield().compareTo(BigDecimal.ZERO) > 0) {
+            dy = a.getDividendYield();
+        } else if ((a.getTipoAtivo() == TipoAtivo.ACAO || a.getTipoAtivo() == TipoAtivo.FII)
                 && a.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
                 && a.getQuantidade().compareTo(BigDecimal.ZERO) > 0) {
             java.time.LocalDate hoje = java.time.LocalDate.now();
@@ -837,6 +873,7 @@ public class InvestimentoService {
                 .dataVencimento(l.getDataVencimento())
                 .indexador(l.getIndexador())
                 .taxa(l.getTaxa())
+                .tipoProvento(l.getTipoProvento())
                 .build();
     }
 

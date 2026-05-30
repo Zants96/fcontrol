@@ -12,6 +12,16 @@ const aiState = {
 
 const INSIGHTS_CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 horas
 
+function safeParseFloat(val) {
+  if (val == null) return 0;
+  if (typeof val === 'number') return val;
+  const s = String(val).replace(/[^0-9,.-]/g, '').trim();
+  if (s.includes(',')) {
+    return parseFloat(s.replace(/\./g, '').replace(',', '.'));
+  }
+  return parseFloat(s);
+}
+
 const SUGESTOES_RAPIDAS = [
   { label: '📊 Analise meus gastos', msg: 'Analise meus gastos deste ano e me dê recomendações.' },
   { label: '💰 Como economizar?', msg: 'O que posso fazer para economizar mais baseado nos meus dados?' },
@@ -447,14 +457,15 @@ async function confirmParsedInvestimentos() {
         tipoAtivo: item.tipoAtivo || 'ACAO',
         tipoOperacao: item.tipoOperacao || 'COMPRA',
         data: dataIso,
-        quantidade: parseFloat(item.quantidade || 0),
-        precoUnitario: parseFloat(item.precoUnitario || 0),
-        custos: parseFloat(item.custos || 0),
-        valorTotal: parseFloat(item.valorTotal || 0),
-        valorLiquido: item.valorLiquido != null ? parseFloat(item.valorLiquido) : null,
+        quantidade: safeParseFloat(item.quantidade),
+        precoUnitario: safeParseFloat(item.precoUnitario),
+        custos: safeParseFloat(item.custos),
+        valorTotal: safeParseFloat(item.valorTotal),
+        valorLiquido: item.valorLiquido != null ? safeParseFloat(item.valorLiquido) : null,
         dataVencimento: item.dataVencimento ? converterDataBrParaIso(item.dataVencimento) : null,
         indexador: item.indexador || null,
-        taxa: item.taxa != null ? parseFloat(item.taxa) : null
+        taxa: item.taxa != null ? safeParseFloat(item.taxa) : null,
+        tipoProvento: item.tipoProvento || null
       });
       success++;
     } catch (e) {
@@ -562,7 +573,7 @@ async function loadAiInsights(targetId = 'ai-insights-dashboard', mes = null, ti
   } else {
     cacheKey = mes !== null && tipo !== null ? `ai-insights-${state.ano}-${mes}-${tipo}` : `ai-insights-${state.ano}`;
   }
-  const cached = localStorage.getItem(cacheKey);
+  const cached = sessionStorage.getItem(cacheKey);
 
   if (cached) {
     try {
@@ -576,7 +587,7 @@ async function loadAiInsights(targetId = 'ai-insights-dashboard', mes = null, ti
         }
       } else {
         // Para insights gerais do Dashboard principal: revalida por expiração de tempo (4h)
-        const cachedTime = parseInt(localStorage.getItem(cacheKey + '-time') || '0');
+        const cachedTime = parseInt(sessionStorage.getItem(cacheKey + '-time') || '0');
         if ((now - cachedTime) < INSIGHTS_CACHE_DURATION) {
           renderInsights(cachedObj.insights || cachedObj, targetId);
           return;
@@ -661,8 +672,8 @@ async function triggerGerarInsights(targetId, mes, tipo, currentStateString) {
       insights: result.insights,
       stateString: currentStateString
     };
-    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-    localStorage.setItem(cacheKey + '-time', String(now));
+    sessionStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    sessionStorage.setItem(cacheKey + '-time', String(now));
 
     renderInsights(result.insights, targetId);
   } catch (err) {
@@ -724,19 +735,27 @@ function renderInsights(insights, targetId) {
     DICA: 'ai-insight--dica',
     META: 'ai-insight--meta',
     POSITIVO: 'ai-insight--positivo',
+    ESTRATEGICO: 'ai-insight--estrategico',
+    EFICIENCIA: 'ai-insight--eficiencia',
   };
 
   container.innerHTML = `
     <div class="ai-insights-grid">
-      ${insights.map((insight, i) => `
-        <div class="ai-insight-card ${tipoClasses[insight.tipo] || ''}" style="animation-delay: ${i * 0.1}s" id="insight-${i}">
-          <div class="ai-insight-icon">${insight.icone || '💡'}</div>
-          <div class="ai-insight-content">
-            <div class="ai-insight-tipo">${insight.tipo}</div>
-            <div class="ai-insight-msg">${escHtml(insight.mensagem)}</div>
+      ${insights.map((insight, i) => {
+        const badgeImpacto = insight.impacto ? `<span class="ai-insight-impacto ai-insight-impacto--${insight.impacto.toLowerCase()}">${insight.impacto}</span>` : '';
+        return `
+          <div class="ai-insight-card ${tipoClasses[insight.tipo] || ''}" style="animation-delay: ${i * 0.1}s" id="insight-${i}">
+            <div class="ai-insight-icon">${insight.icone || '💡'}</div>
+            <div class="ai-insight-content">
+              <div class="ai-insight-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                <div class="ai-insight-tipo">${insight.tipo}</div>
+                ${badgeImpacto}
+              </div>
+              <div class="ai-insight-msg">${escHtml(insight.mensagem)}</div>
+            </div>
           </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
   `;
 }
@@ -752,7 +771,7 @@ async function saveAiApiKey() {
   if (!inputKey || !btn) return;
 
   const key = inputKey.value.trim();
-  const model = inputModel ? inputModel.value.trim() : 'gemini-1.5-flash';
+  const model = inputModel ? inputModel.value.trim() : 'gemini-2.5-flash';
   const provider = selectProvider ? selectProvider.value : 'gemini';
   const apiUrl = (inputUrl && provider !== 'gemini') ? inputUrl.value.trim() : null;
   
@@ -768,8 +787,8 @@ async function saveAiApiKey() {
     await Api.saveAiConfig(key, model, provider, apiUrl);
     showToast('Configuração salva com sucesso! Os insights serão gerados automaticamente.', 'success');
     // Limpa cache de insights para forçar regeneração
-    localStorage.removeItem(`ai-insights-${state.ano}`);
-    localStorage.removeItem(`ai-insights-${state.ano}-time`);
+    sessionStorage.removeItem(`ai-insights-${state.ano}`);
+    sessionStorage.removeItem(`ai-insights-${state.ano}-time`);
     // Atualiza status visual
     updateAiKeyStatus(true, model);
   } catch (err) {
@@ -814,8 +833,8 @@ function triggerAiProviderChange(provider, resetValues = true) {
   if (provider === 'gemini') {
     if (urlContainer) urlContainer.style.display = 'none';
     if (inputModel && resetValues) {
-      inputModel.value = 'gemini-1.5-flash';
-      inputModel.placeholder = 'gemini-1.5-flash';
+      inputModel.value = 'gemini-2.5-flash';
+      inputModel.placeholder = 'gemini-2.5-flash';
     }
     if (hintText) {
       hintText.innerHTML = 'Crie sua chave gratuitamente em <a href="https://aistudio.google.com/" target="_blank" style="color: var(--brand-glow);">Google AI Studio</a>. Gratuito, sem cartão.';

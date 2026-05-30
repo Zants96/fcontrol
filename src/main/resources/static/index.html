@@ -418,20 +418,19 @@
     </div>
 
     <!-- Histórico de Proventos (accordion retrátil) -->
-    <div class="inv-accordion open" id="prov-historico-accordion" style="margin-top: 1.5rem;">
+    <div class="inv-accordion" id="prov-historico-accordion" style="margin-top: 1.5rem;">
       <div class="inv-accordion-header" onclick="this.parentElement.classList.toggle('open')"
            style="border-left: 3px solid #a78bfa;">
         <div class="inv-accordion-title">
-          <span class="inv-badge" style="background:#a78bfa20;color:#a78bfa;">📈 Proventos</span>
+          <span class="inv-badge" style="background:#a78bfa20;color:#a78bfa;">Proventos</span>
           <span class="inv-accordion-count" id="prov-count-label">carregando...</span>
         </div>
         <div class="inv-accordion-stats" style="position:relative;">
           <div style="display:flex;flex-direction:column;align-items:flex-end;position:relative;">
             <span id="prov-total-value"
-              class="prov-total-clickable"
-              title="Passe o mouse para ver por tipo · Clique para ver todos os lançamentos"
-              style="font-size:1.2rem;font-weight:700;color:#a78bfa;cursor:pointer;"
-              onclick="event.stopPropagation();abrirModalProventos()">R$ 0,00</span>
+              title="Passe o mouse para ver por tipo"
+              style="font-size:1.2rem;font-weight:700;color:#a78bfa;"
+              onclick="event.stopPropagation()">R$ 0,00</span>
             <span style="font-size:0.68rem;color:var(--text-muted);">total líquido previsto no ano</span>
             <!-- Tooltip por tipo -->
             <div id="prov-tipo-tooltip" class="prov-tipo-tooltip hidden"></div>
@@ -484,6 +483,7 @@
           <h3>Assistente Financeiro IA</h3>
           <p>Posso analisar seus gastos, gerar insights e até cadastrar lançamentos automaticamente!</p>
           <p class="ai-welcome-hint">💡 <strong>Dica:</strong> Cole uma fatura ou boleto. Envie mensagens pressionando <strong>Ctrl + Enter</strong>.</p>
+          <p class="ai-welcome-hint" style="margin-top: 0.5rem; color: #a78bfa;">⚙️ <strong>Aviso:</strong> Lembre-se de configurar seu provedor e sua API Key para o Assistente IA na aba <strong>Configurações</strong>.</p>
         </div>
       </div>
 
@@ -550,7 +550,7 @@
           </div>
           <div>
             <label for="input-ai-modelo" style="display: block; font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.25rem;">Modelo de IA</label>
-            <input type="text" id="input-ai-modelo" placeholder="gemini-1.5-flash" value="gemini-1.5-flash" style="width:100%; padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-primary); font-size: 0.85rem;">
+            <input type="text" id="input-ai-modelo" placeholder="gemini-2.5-flash" value="gemini-2.5-flash" style="width:100%; padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-primary); font-size: 0.85rem;">
           </div>
         </div>
 
@@ -570,8 +570,8 @@
       </div>
 
       <div class="card">
-        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Integração BrAPI (Cotações)</h2>
-        <p style="color: var(--text-muted); margin-bottom: 1rem;">Configure seu token do BrAPI para atualizar automaticamente cotações de Ações, FIIs e Criptomoedas. <strong>Gratuito (15.000 requisições/mês)</strong>.</p>
+        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Integração BrAPI</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Configure seu token do BrAPI para atualizar automaticamente cotações de Ações e FIIs. <strong>Gratuito (15.000 requisições/mês)</strong>.</p>
         <div id="brapi-key-status" style="margin-bottom: 1rem;"></div>
         
         <div style="display: flex; gap: 0.5rem; align-items: flex-end; margin-bottom: 0.75rem;">
@@ -746,6 +746,15 @@
       <div class="form-group" id="inv-group-liquido">
         <label for="inv-form-liquido">Total Líquido (R$)</label>
         <input type="text" id="inv-form-liquido" placeholder="0,00" />
+      </div>
+
+      <div class="form-group" id="inv-group-tipo-provento" style="display:none;">
+        <label for="inv-form-tipo-provento">Tipo de Provento</label>
+        <select id="inv-form-tipo-provento" class="form-input">
+          <option value="Dividendo" selected>Dividendo</option>
+          <option value="JSCP">JSCP</option>
+          <option value="Rend. Trib.">Rend. Trib.</option>
+        </select>
       </div>
 
       <div class="inv-summary-row" style="margin: 1.5rem 0 1rem; padding: 1rem; background: var(--bg-hover); border-radius: var(--radius-sm); border: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center;">

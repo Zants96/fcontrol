@@ -61,6 +61,9 @@ public class InvestimentoLancamento {
     @Column(length = 50)
     private String indexador;
 
+    @Column(name = "tipo_provento", length = 30)
+    private String tipoProvento;
+
     @Column(precision = 15, scale = 4)
     private BigDecimal taxa;
 

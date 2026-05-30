@@ -1345,6 +1345,8 @@ select option { background: var(--bg-elevated); }
 .ai-cat-badge--compra { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 .ai-cat-badge--venda { background: rgba(16, 185, 129, 0.15); color: var(--brand-glow); }
 .ai-cat-badge--dividendo { background: rgba(234, 179, 8, 0.15); color: #facc15; }
+.ai-cat-badge--jscp { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+.ai-cat-badge--rendtrib { background: rgba(45, 212, 191, 0.15); color: #2dd4bf; }
 
 .ai-parse-actions {
   display: flex;
@@ -1424,6 +1426,31 @@ select option { background: var(--bg-elevated); }
 .ai-insight--dica .ai-insight-tipo { color: var(--brand-glow); }
 .ai-insight--meta .ai-insight-tipo { color: var(--accent-purple); }
 .ai-insight--positivo .ai-insight-tipo { color: #22c55e; }
+.ai-insight--estrategico { border-left: 3px solid #eab308; }
+.ai-insight--eficiencia { border-left: 3px solid #06b6d4; }
+
+.ai-insight--estrategico .ai-insight-tipo { color: #eab308; }
+.ai-insight--eficiencia .ai-insight-tipo { color: #06b6d4; }
+
+.ai-insight-impacto {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.ai-insight-impacto--alto {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--accent-red);
+}
+.ai-insight-impacto--medio {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+.ai-insight-impacto--baixo {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-blue);
+}
 
 /* ─── Insight Loading & Setup ──────────────────────────────────────────── */
 .ai-insights-loading {

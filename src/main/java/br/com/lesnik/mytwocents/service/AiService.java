@@ -34,13 +34,96 @@ public class AiService {
     private final InvestimentoService investimentoService;
     private final ObjectMapper objectMapper;
 
-    private static final String GEMINI_URL_TEMPLATE =
-            "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+    private static final String GEMINI_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
+
+    // Definição da Persona para reuso
+    private static final String PERSONA = """
+            Você é um consultor financeiro sênior com 30 anos de experiência, especializado em gestão de patrimônio e otimização de renda.
+            Sua comunicação é assertiva, técnica, pragmática e direta. Você não dá conselhos genéricos; você analisa o impacto de longo prazo de cada decisão financeira.
+            """;
+
+    // Estrutura Base do JSON para garantir consistência
+    private static final String JSON_STRUCTURE = """
+            Retorne APENAS um JSON válido seguindo estritamente este formato. Não use markdown.
+            {
+              "insights": [
+                {
+                  "tipo": "ALERTA" | "TENDENCIA" | "DICA" | "META" | "POSITIVO" | "ESTRATEGICO" | "EFICIENCIA",
+                  "mensagem": "Texto curto (max 2 frases), focado e de alto valor.",
+                  "icone": "🔴" | "📈" | "💡" | "🎯" | "🏆" | "⚖️" | "⚡",
+                  "impacto": "ALTO" | "MEDIO" | "BAIXO",
+                  "prioridade": 1 (máxima) a 5 (mínima)
+                }
+              ]
+            }
+            """;
+
+    // ─── MÉTODO CENTRALIZADO DE INSIGHTS (Refatorado) ────────────────────────
+
+    public InsightResponse gerarInsightsCustom(String contextoAba, String dados, String foco) {
+        String prompt = """
+                %s
+
+                CONTEXTO: %s
+                DADOS PARA ANÁLISE:
+                %s
+
+                DIRETRIZES DE OURO:
+                1. PRIORIZAÇÃO: Ordene os insights pelo impacto financeiro.
+                2. CUSTO DE OPORTUNIDADE: Sempre relacione gastos atuais com perda de potencial de juros compostos.
+                3. ESPECIFICIDADE: Cite Tickers e valores (R$) reais.
+                4. QUANTIDADE: Gere rigorosamente no mínimo 6 insights (seis ou mais itens no array de retorno).
+                5. FOCO COMPLEMENTAR: %s
+
+                %s
+                """.formatted(PERSONA, contextoAba, dados, foco, JSON_STRUCTURE);
+
+        try {
+            String resposta = chamarGemini(prompt, "application/json");
+            resposta = limparMarkdown(resposta);
+
+            JsonNode root = objectMapper.readTree(resposta);
+            List<Insight> insights = new ArrayList<>();
+            JsonNode insightsNode = root.get("insights");
+
+            if (insightsNode != null && insightsNode.isArray()) {
+                for (JsonNode node : insightsNode) {
+                    insights.add(Insight.builder()
+                            .tipo(node.has("tipo") ? node.get("tipo").asText() : "DICA")
+                            .mensagem(node.has("mensagem") ? node.get("mensagem").asText() : "")
+                            .icone(node.has("icone") ? node.get("icone").asText() : "💡")
+                            .impacto(node.has("impacto") ? node.get("impacto").asText() : "MEDIO")
+                            .prioridade(node.has("prioridade") ? node.get("prioridade").asInt() : 3)
+                            .build());
+                }
+            }
+            // Ordena pela prioridade (1 máxima, 5 mínima)
+            insights.sort(Comparator.comparingInt(i -> i.getPrioridade() != null ? i.getPrioridade() : 5));
+            return InsightResponse.builder().insights(insights).build();
+        } catch (Exception e) {
+            log.error("Erro ao gerar insights via Consultor Elite: {}", e.getMessage());
+            return InsightResponse.builder()
+                    .error("Erro ao gerar insights: " + e.getMessage())
+                    .insights(Collections.emptyList())
+                    .build();
+        }
+    }
+
+    private String limparMarkdown(String resposta) {
+        resposta = resposta.trim();
+        if (resposta.startsWith("```json"))
+            resposta = resposta.substring(7);
+        else if (resposta.startsWith("```"))
+            resposta = resposta.substring(3);
+        if (resposta.endsWith("```"))
+            resposta = resposta.substring(0, resposta.length() - 3);
+        return resposta.trim();
+    }
 
     // Subcategorias válidas para referência no prompt
     private static final Map<String, List<String>> SUBCATEGORIAS = Map.of(
             "RECEITA", List.of("13º Salário", "Férias", "Freelancer", "Outras Receitas",
-                    "Participação nos Lucros", "Resgate de Investimentos", "Restituição de IR", "Salário", "Vendas"),
+                    "Participação nos Lucros", "Proventos", "Resgate de Investimentos", "Restituição de IR", "Salário", "Vendas"),
             "GASTO", List.of("Água", "Alimentação", "Aluguel", "Cartão de Crédito", "Consultas",
                     "Educação", "Empréstimo", "Investimentos", "Lanches", "Lazer", "Manutenção/Reparos",
                     "Medicamentos", "Outros", "Pets", "Presentes / Doações", "Prestações",
@@ -48,19 +131,27 @@ public class AiService {
             "GASTO_FIXO", List.of("Água", "Aluguel", "Condomínio", "Energia/Luz", "Impostos",
                     "Internet", "Investimentos", "Outros", "Prestação", "Seguro", "Seguro Residencial", "Telefonia"),
             "ASSINATURA", List.of("Educação/Cursos", "Jogos/Consoles", "Leitura/Notícias", "Outros",
-                    "Serviços de Assinatura", "Serviços Digitais/Cloud", "Streaming de Áudio", "Streaming de Vídeo")
-    );
+                    "Serviços de Assinatura", "Serviços Digitais/Cloud", "Streaming de Áudio", "Streaming de Vídeo"));
 
     // ─── CONFIGURAÇÃO ────────────────────────────────────────────────────────
 
     public StatusResponse getStatus() {
         return configRepository.findFirstByOrderByIdDesc()
-                .map(config -> StatusResponse.builder()
-                        .configured(true)
-                        .provider(config.getProvider())
-                        .apiUrl(config.getApiUrl())
-                        .modelo(config.getModelo())
-                        .build())
+                .map(config -> {
+                    String modelo = config.getModelo();
+                    if (modelo == null || "gemini-3.1-flash-lite".equalsIgnoreCase(modelo)
+                            || "gemini-1.5-flash".equalsIgnoreCase(modelo)) {
+                        modelo = "gemini-2.5-flash";
+                        config.setModelo(modelo);
+                        configRepository.save(config);
+                    }
+                    return StatusResponse.builder()
+                            .configured(true)
+                            .provider(config.getProvider())
+                            .apiUrl(config.getApiUrl())
+                            .modelo(modelo)
+                            .build();
+                })
                 .orElse(StatusResponse.builder().configured(false).build());
     }
 
@@ -84,20 +175,29 @@ public class AiService {
     public ChatResponse chat(String message, List<AiChatDTO.ChatMessage> historico, int ano) {
         try {
             String contexto = montarContextoFinanceiro(ano);
-            
+
             StringBuilder promptBuilder = new StringBuilder();
-            promptBuilder.append("Você é o assistente financeiro pessoal do aplicativo MyTwoCents.\n");
-            promptBuilder.append("Você tem acesso completo aos investimentos atuais do usuário (ações, fundos imobiliários/FIIs, ETFs, Tesouro Direto, Renda Fixa) no contexto fornecido abaixo.\n");
-            promptBuilder.append("Analise os dados financeiros e de investimentos do usuário e responda a pergunta dele.\n");
-            promptBuilder.append("Quando o usuário perguntar por análises de ativos, tickers específicos (ex: ABCB4, WRLD11, RZTR11), ou recomendações de mercado (como o consenso LSEG I/B/E/S de compra, venda ou manutenção com porcentagens de analistas), utilize as informações dos ativos que ele possui no portfólio para responder com precisão.\n");
-            promptBuilder.append("Se ele solicitar a recomendação consensual da LSEG I/B/E/S (compra, venda, manutenção) e porcentagens de analistas para suas ações e ativos de renda variável, monte uma resposta estruturada contendo uma tabela Markdown clara com: Ticker, Recomendação Consensual (Compra/Manter/Venda) e Divisão Percentual de analistas.\n");
+            promptBuilder.append(
+                    "Você é um consultor financeiro sênior com 30 anos de experiência, especializado em gestão de patrimônio e otimização de renda, atuando como o assistente financeiro pessoal do aplicativo MyTwoCents.\n");
+            promptBuilder.append(
+                    "Sua comunicação é assertiva, técnica, pragmática e direta. Você não dá conselhos genéricos; você analisa o impacto de longo prazo de cada decisão financeira.\n");
+            promptBuilder.append(
+                    "Você tem acesso completo aos investimentos atuais do usuário (ações, fundos imobiliários/FIIs, ETFs, Tesouro Direto, Renda Fixa) no contexto fornecido abaixo.\n");
+            promptBuilder
+                    .append("Analise os dados financeiros e de investimentos do usuário e responda a pergunta dele.\n");
+            promptBuilder.append(
+                    "Quando o usuário perguntar por análises de ativos, tickers específicos (ex: ABCB4, WRLD11, RZTR11), ou recomendações de mercado (como o consenso LSEG I/B/E/S de compra, venda ou manutenção com porcentagens de analistas), utilize as informações dos ativos que ele possui no portfólio para responder com precisão.\n");
+            promptBuilder.append(
+                    "Se ele solicitar a recomendação consensual da LSEG I/B/E/S (compra, venda, manutenção) e porcentagens de analistas para suas ações e ativos de renda variável, monte uma resposta estruturada contendo uma tabela Markdown clara com: Ticker, Recomendação Consensual (Compra/Manter/Venda) e Divisão Percentual de analistas.\n");
             promptBuilder.append("Seja direto, prático, objetivo e use valores em R$ (Real Brasileiro).\n");
-            promptBuilder.append("Use formatação Markdown para melhor legibilidade (negrito, tabelas, listas, etc.).\n");
+            promptBuilder
+                    .append("Use formatação Markdown para melhor legibilidade (negrito, tabelas, listas, etc.).\n");
             promptBuilder.append("Responda sempre em português brasileiro.\n");
-            promptBuilder.append("IMPORTANTE: Seja conciso e direto ao ponto. Evite delongas desnecessárias, parágrafos repetitivos ou listagens excessivamente detalhadas para garantir que toda a análise caiba perfeitamente na resposta sem ser cortada.\n\n");
-            
+            promptBuilder.append(
+                    "IMPORTANTE: Seja conciso e direto ao ponto. Evite delongas desnecessárias, parágrafos repetitivos ou listagens excessivamente detalhadas para garantir que toda a análise caiba perfeitamente na resposta sem ser cortada.\n\n");
+
             promptBuilder.append(contexto).append("\n");
-            
+
             if (historico != null && !historico.isEmpty()) {
                 promptBuilder.append("HISTÓRICO DA CONVERSA ANTERIOR:\n");
                 for (AiChatDTO.ChatMessage msg : historico) {
@@ -106,7 +206,7 @@ public class AiService {
                 }
                 promptBuilder.append("\n");
             }
-            
+
             promptBuilder.append("PERGUNTA ATUAL DO USUÁRIO:\n");
             promptBuilder.append(message).append("\n");
 
@@ -130,17 +230,17 @@ public class AiService {
 
             String prompt = """
                     Você é um parser financeiro e de investimentos altamente qualificado. Analise o texto abaixo e extraia TODAS as transações e posições financeiras.
-                    
+
                     O texto pode ser de dois tipos:
                     1. Transações comuns: faturas de cartão de crédito, boletos, contas ou notas fiscais.
                     2. Lançamentos de investimentos/proventos: extratos de negociação, comprovantes de dividendos, ou listas de posições atuais de custódia (portfólio).
-                    
+
                     PARTE 1: TRANSAÇÕES COMUNS (extrair para a chave "items")
                     - CATEGORIAS: RECEITA, GASTO, GASTO_FIXO, ASSINATURA.
                     - SUBCATEGORIAS VÁLIDAS POR CATEGORIA:
                     %s
                     - Regras: Extraia descrição, categoria, subcategoria, valor e dia.
-                    
+
                     PARTE 2: LANÇAMENTOS DE INVESTIMENTO E CUSTÓDIA (extrair para a chave "investimentos")
                     - Se o texto contiver posições de carteira, custódia ou ativos atuais (ex: BBAS3 com quantidade e preço médio/compra), trate cada ativo como uma operação de "COMPRA" com a quantidade e o preço médio listados. Isso permitirá a inicialização da carteira.
                     - Se o texto contiver transações de compra/venda de ativos, extraia a operação correspondente ("COMPRA" ou "VENDA").
@@ -155,15 +255,17 @@ public class AiService {
                     - Mapeie "tipoOperacao" para: COMPRA, VENDA, DIVIDENDO.
                     - Extraia os campos:
                       * "ticker": o ticker do ativo (ex: "BBAS3", "CXSE3", "Tesouro IPCA+ 2029"). Preserve o nome ou ticker exato do ativo de Renda Fixa ou Tesouro Direto.
-                      * "quantidade": a quantidade do ativo (use números decimais se necessário, ex: 0.71, 0.08, 100.0).
-                      * "precoUnitario": preço pago ou recebido por unidade (ex: 23.45).
+                      * "quantidade": a quantidade do ativo (use números decimais se necessário, ex: 29.0, 100.0). Para proventos, representa a quantidade de cotas.
+                      * "precoUnitario": preço pago ou recebido por unidade/cota (ex: 0.09).
                       * "custos": custos ou taxas se houver (caso contrário, 0.0).
-                      * "valorTotal": valor total da operação (quantidade * precoUnitario).
+                      * "valorTotal": valor total bruto da operação/provento (ex: 2.74).
+                      * "valorLiquido": valor total líquido do provento após impostos (ex: 2.33).
+                      * "tipoProvento": se for provento (tipoOperacao = DIVIDENDO), extraia o tipo exato: "Dividendo", "JSCP" ou "Rend. Trib.".
                       * "dia": o dia do mês do lançamento se disponível no texto.
                       * "dataVencimento": a data de vencimento se disponível no texto (formato DD/MM/YYYY).
                       * "indexador": indexador se disponível no texto (ex: "IPCA", "SELIC", "CDI", "PRE").
                       * "taxa": a taxa contratada se disponível no texto (use número decimal, ex: se for "IPCA + 7,70%%", a taxa é 7.70).
-                    
+
                     REGRAS DE DATA:
                     - Extraia o dia se disponível no texto.
                     - Se o mês/ano estiver no texto, use-o. Caso contrário, use mes=%d e ano=%d.
@@ -171,12 +273,16 @@ public class AiService {
                       * Se houver DUAS datas listadas na entrada do provento (ex: a data "com"/direito e a data de pagamento/recebimento), a data a ser cadastrada no campo "data" DEVE ser a data de pagamento/recebimento (a segunda data, ex: entre '25/03/2025' e '30/12/2026', a data cadastrada deve ser '2026-12-30').
                       * Se houver APENAS UMA data listada na entrada do provento (ex: '25/03/2025'), use essa única data disponível como a data a ser cadastrada no campo "data" (ex: '2025-03-25').
                       * Defina sempre o campo "dia" com o dia dessa data escolhida.
-                    
+                      * MAPEAMENTO DE VALORES DE PROVENTOS:
+                        - O valor pago por cada cota (ex: "R$ 0,09") deve ser o "precoUnitario".
+                        - O total de cotas (ex: "29,00") deve ser a "quantidade".
+                        - O valor total bruto (ex: "R$ 2,74") deve ser o "valorTotal".
+                        - O valor total líquido (ex: "R$ 2,33") deve ser o "valorLiquido".
+                        - Nunca use o valor unitário como o valor total. Garanta que o "valorTotal" represente o total bruto e o "valorLiquido" o total líquido.
+
                     Retorne APENAS um JSON válido, sem markdown, sem explicação.
                     IMPORTANTE: Para evitar quebrar a estrutura do JSON, NUNCA inclua aspas duplas não escapadas dentro de qualquer valor de string (como o campo "resumo"). Se for necessário usar aspas internas, use aspas simples (') ou escape-as estritamente como \\".
-                    No campo "valorTotal" dos investimentos/proventos, coloque o valor bruto (total antes do imposto).
-                    No campo "valorLiquido", extraia ou calcule o valor líquido após impostos (se for provento tipo JSCP ou Rend. Trib., geralmente há retenção de 15%%, por exemplo, CMIG4 bruto R$ 2,74 e líquido R$ 2,33). Se não houver imposto (como Dividendos isentos) ou se não for especificado, valorLiquido é igual ao valorTotal.
-                    
+
                     Formato esperado do JSON:
                     {
                       "items": [
@@ -193,6 +299,7 @@ public class AiService {
                           "ticker": "BBAS3",
                           "tipoAtivo": "ACAO",
                           "tipoOperacao": "COMPRA",
+                          "tipoProvento": null,
                           "quantidade": 100.0,
                           "precoUnitario": 23.45,
                           "custos": 0.0,
@@ -209,10 +316,11 @@ public class AiService {
                       "ano": %d,
                       "resumo": "Breve resumo do que foi encontrado"
                     }
-                    
+
                     TEXTO PARA ANALISAR:
                     %s
-                    """.formatted(subcategoriasJson, mes, ano, mes, ano, texto);
+                    """
+                    .formatted(subcategoriasJson, mes, ano, mes, ano, texto);
 
             String resposta = chamarGemini(prompt, "application/json");
 
@@ -237,7 +345,9 @@ public class AiService {
                             .descricao(item.has("descricao") ? item.get("descricao").asText() : "")
                             .categoria(item.has("categoria") ? item.get("categoria").asText() : "GASTO")
                             .subcategoria(item.has("subcategoria") ? item.get("subcategoria").asText() : "Outros")
-                            .valor(item.has("valor") ? new BigDecimal(item.get("valor").asText()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                            .valor(item.has("valor")
+                                    ? new BigDecimal(item.get("valor").asText()).setScale(2, RoundingMode.HALF_UP)
+                                    : BigDecimal.ZERO)
                             .dia(item.has("dia") && !item.get("dia").isNull() ? item.get("dia").asInt() : null)
                             .build());
                 }
@@ -251,15 +361,38 @@ public class AiService {
                             .ticker(item.has("ticker") ? item.get("ticker").asText() : "")
                             .tipoAtivo(item.has("tipoAtivo") ? item.get("tipoAtivo").asText() : "ACAO")
                             .tipoOperacao(item.has("tipoOperacao") ? item.get("tipoOperacao").asText() : "COMPRA")
-                            .quantidade(item.has("quantidade") ? new BigDecimal(item.get("quantidade").asText()).setScale(8, RoundingMode.HALF_UP) : BigDecimal.ZERO)
-                            .precoUnitario(item.has("precoUnitario") ? new BigDecimal(item.get("precoUnitario").asText()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
-                            .custos(item.has("custos") && !item.get("custos").isNull() ? new BigDecimal(item.get("custos").asText()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
-                            .valorTotal(item.has("valorTotal") ? new BigDecimal(item.get("valorTotal").asText()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
+                            .quantidade(item.has("quantidade")
+                                    ? new BigDecimal(item.get("quantidade").asText()).setScale(8, RoundingMode.HALF_UP)
+                                    : BigDecimal.ZERO)
+                            .precoUnitario(
+                                    item.has("precoUnitario")
+                                            ? new BigDecimal(item.get("precoUnitario").asText()).setScale(2,
+                                                    RoundingMode.HALF_UP)
+                                            : BigDecimal.ZERO)
+                            .custos(item.has("custos") && !item.get("custos").isNull()
+                                    ? new BigDecimal(item.get("custos").asText()).setScale(2, RoundingMode.HALF_UP)
+                                    : BigDecimal.ZERO)
+                            .valorTotal(item.has("valorTotal")
+                                    ? new BigDecimal(item.get("valorTotal").asText()).setScale(2, RoundingMode.HALF_UP)
+                                    : BigDecimal.ZERO)
+                            .valorLiquido(item.has("valorLiquido") && !item.get("valorLiquido").isNull()
+                                    ? new BigDecimal(item.get("valorLiquido").asText()).setScale(2,
+                                            RoundingMode.HALF_UP)
+                                    : null)
                             .dia(item.has("dia") && !item.get("dia").isNull() ? item.get("dia").asInt() : null)
-                            .dataVencimento(item.has("dataVencimento") && !item.get("dataVencimento").isNull() ? item.get("dataVencimento").asText() : null)
-                            .indexador(item.has("indexador") && !item.get("indexador").isNull() ? item.get("indexador").asText() : null)
-                            .taxa(item.has("taxa") && !item.get("taxa").isNull() ? new BigDecimal(item.get("taxa").asText()).setScale(2, RoundingMode.HALF_UP) : null)
+                            .dataVencimento(item.has("dataVencimento") && !item.get("dataVencimento").isNull()
+                                    ? item.get("dataVencimento").asText()
+                                    : null)
+                            .indexador(item.has("indexador") && !item.get("indexador").isNull()
+                                    ? item.get("indexador").asText()
+                                    : null)
+                            .taxa(item.has("taxa") && !item.get("taxa").isNull()
+                                    ? new BigDecimal(item.get("taxa").asText()).setScale(2, RoundingMode.HALF_UP)
+                                    : null)
                             .data(item.has("data") && !item.get("data").isNull() ? item.get("data").asText() : null)
+                            .tipoProvento(item.has("tipoProvento") && !item.get("tipoProvento").isNull()
+                                    ? item.get("tipoProvento").asText()
+                                    : null)
                             .build());
                 }
             }
@@ -291,70 +424,17 @@ public class AiService {
     public InsightResponse gerarInsights(int ano, Integer mes, String tipo) {
         if (mes == null || mes <= 0 || tipo == null || tipo.isBlank()) {
             try {
-            String contexto = montarContextoFinanceiro(ano);
-            String prompt = """
-                    Você é um consultor financeiro pessoal analisando os dados do usuário.
-                    Gere de 3 a 5 insights PRÁTICOS e ACIONÁVEIS baseados nos dados abaixo.
-                    
-                    %s
-                    
-                    REGRAS:
-                    1. Cada insight deve ser curto (máximo 2 frases)
-                    2. Use valores em R$ quando possível
-                    3. Seja específico (mencione categorias e valores reais)
-                    4. Inclua pelo menos 1 insight positivo se houver algo bom nos dados
-                    5. Foque no mês atual e tendências recentes
-                    
-                    TIPOS DE INSIGHT:
-                    - ALERTA: algo preocupante que precisa de atenção (gastos altos, saldo negativo)
-                    - TENDENCIA: padrões de aumento ou diminuição
-                    - DICA: sugestão prática de economia
-                    - META: projeção ou objetivo sugerido
-                    - POSITIVO: elogio ou reconhecimento de boa prática
-                    
-                    Retorne APENAS um JSON válido, sem markdown, sem explicação:
-                    {
-                      "insights": [
-                        {
-                          "tipo": "ALERTA",
-                          "mensagem": "Seus gastos com Alimentação...",
-                          "icone": "🔴"
-                        }
-                      ]
-                    }
-                    """.formatted(contexto);
-
-            String resposta = chamarGemini(prompt, "application/json");
-
-            // Limpa markdown
-            resposta = resposta.trim();
-            if (resposta.startsWith("```json")) resposta = resposta.substring(7);
-            else if (resposta.startsWith("```")) resposta = resposta.substring(3);
-            if (resposta.endsWith("```")) resposta = resposta.substring(0, resposta.length() - 3);
-            resposta = resposta.trim();
-
-            JsonNode root = objectMapper.readTree(resposta);
-            List<Insight> insights = new ArrayList<>();
-            JsonNode insightsNode = root.get("insights");
-            if (insightsNode != null && insightsNode.isArray()) {
-                for (JsonNode node : insightsNode) {
-                    insights.add(Insight.builder()
-                            .tipo(node.has("tipo") ? node.get("tipo").asText() : "DICA")
-                            .mensagem(node.has("mensagem") ? node.get("mensagem").asText() : "")
-                            .icone(node.has("icone") ? node.get("icone").asText() : "💡")
-                            .build());
-                }
+                String contexto = montarContextoFinanceiro(ano);
+                return gerarInsightsCustom("Dashboard Anual - Finanças Gerais Pessoais",
+                        contexto,
+                        "Foque na eficiência do aporte mensal e saúde do fluxo de caixa.");
+            } catch (Exception e) {
+                log.error("Erro ao gerar insights gerais: {}", e.getMessage(), e);
+                return InsightResponse.builder()
+                        .error("Erro ao gerar insights: " + e.getMessage())
+                        .insights(Collections.emptyList())
+                        .build();
             }
-
-            return InsightResponse.builder().insights(insights).build();
-
-        } catch (Exception e) {
-            log.error("Erro ao gerar insights: {}", e.getMessage(), e);
-            return InsightResponse.builder()
-                    .error("Erro ao gerar insights: " + e.getMessage())
-                    .insights(Collections.emptyList())
-                    .build();
-        }
         }
 
         try {
@@ -376,16 +456,16 @@ public class AiService {
                     .filter(l -> l.getMes() == mes && l.getCategoria() == finalCat)
                     .toList();
 
-            String[] mesesNomes = {"Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-                    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"};
+            String[] mesesNomes = { "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro" };
             String mesNome = (mes >= 1 && mes <= 12) ? mesesNomes[mes - 1] : String.valueOf(mes);
-            String labelCategoria = finalCat == Categoria.RECEITA ? "Receitas" :
-                                    finalCat == Categoria.GASTO_FIXO ? "Gastos Fixos" :
-                                    finalCat == Categoria.ASSINATURA ? "Assinaturas" : "Gastos Variáveis";
+            String labelCategoria = finalCat == Categoria.RECEITA ? "Receitas"
+                    : finalCat == Categoria.GASTO_FIXO ? "Gastos Fixos"
+                            : finalCat == Categoria.ASSINATURA ? "Assinaturas" : "Gastos Variáveis";
 
             StringBuilder ctx = new StringBuilder();
             ctx.append("ANÁLISE DE ").append(labelCategoria.toUpperCase())
-               .append(" — ").append(mesNome.toUpperCase()).append(" DE ").append(ano).append("\n\n");
+                    .append(" — ").append(mesNome.toUpperCase()).append(" DE ").append(ano).append("\n\n");
 
             if (lancamentos.isEmpty()) {
                 return InsightResponse.builder()
@@ -404,8 +484,7 @@ public class AiService {
             Map<String, BigDecimal> porSubcat = lancamentos.stream()
                     .collect(Collectors.groupingBy(
                             LancamentoDTO::getSubcategoria,
-                            Collectors.reducing(BigDecimal.ZERO, LancamentoDTO::getValor, BigDecimal::add)
-                    ));
+                            Collectors.reducing(BigDecimal.ZERO, LancamentoDTO::getValor, BigDecimal::add)));
 
             porSubcat.entrySet().stream()
                     .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
@@ -417,64 +496,24 @@ public class AiService {
                     .sorted((a, b) -> b.getValor().compareTo(a.getValor()))
                     .limit(20)
                     .forEach(l -> ctx.append("- Dia ").append(l.getDia() != null ? l.getDia() : "-")
-                            .append(": ").append(l.getDescricao() != null && !l.getDescricao().isBlank() ? l.getDescricao() : l.getSubcategoria())
+                            .append(": ")
+                            .append(l.getDescricao() != null && !l.getDescricao().isBlank() ? l.getDescricao()
+                                    : l.getSubcategoria())
                             .append(" (").append(l.getSubcategoria()).append(") — R$ ")
                             .append(formatarValor(l.getValor())).append("\n"));
 
-            String prompt = """
-                    Você é um consultor financeiro pessoal analisando especificamente a categoria %s do usuário para o mês de %s de %s.
-                    Gere de 2 a 3 insights PRÁTICOS, ACIONÁVEIS, TENDÊNCIAS ou ELOGIOS baseados EXCLUSIVAMENTE nos dados abaixo.
-                    
-                    %s
-                    
-                    REGRAS:
-                    1. Cada insight deve ser curto (máximo 2 frases)
-                    2. Use valores em R$ reais quando possível
-                    3. Seja específico (mencione os valores reais e lançamentos que estão nos dados)
-                    4. Se não houver lançamentos, sugira metas ou dê uma dica geral de boas práticas para essa categoria
-                    
-                    TIPOS DE INSIGHT:
-                    - ALERTA: gastos excessivos ou desnecessários identificados
-                    - TENDENCIA: evolução ou padrão observado
-                    - DICA: sugestão prática de economia focada nessa categoria
-                    - META: projeção realista para o próximo mês
-                    - POSITIVO: reconhecimento caso os gastos estejam controlados ou haja economia
-                    
-                    Retorne APENAS um JSON válido, sem markdown, sem explicação:
-                    {
-                      "insights": [
-                        {
-                          "tipo": "ALERTA",
-                          "mensagem": "Seus gastos com...",
-                          "icone": "🔴"
-                        }
-                      ]
-                    }
-                    """.formatted(labelCategoria, mesNome, ano, ctx.toString());
-
-            String resposta = chamarGemini(prompt, "application/json");
-
-            // Limpa markdown
-            resposta = resposta.trim();
-            if (resposta.startsWith("```json")) resposta = resposta.substring(7);
-            else if (resposta.startsWith("```")) resposta = resposta.substring(3);
-            if (resposta.endsWith("```")) resposta = resposta.substring(0, resposta.length() - 3);
-            resposta = resposta.trim();
-
-            JsonNode root = objectMapper.readTree(resposta);
-            List<Insight> insights = new ArrayList<>();
-            JsonNode insightsNode = root.get("insights");
-            if (insightsNode != null && insightsNode.isArray()) {
-                for (JsonNode node : insightsNode) {
-                    insights.add(Insight.builder()
-                            .tipo(node.has("tipo") ? node.get("tipo").asText() : "DICA")
-                            .mensagem(node.has("mensagem") ? node.get("mensagem").asText() : "")
-                            .icone(node.has("icone") ? node.get("icone").asText() : "💡")
-                            .build());
-                }
+            String foco = "";
+            if (finalCat == Categoria.ASSINATURA) {
+                foco = "Identifique assinaturas subutilizadas e calcule o desperdício anual em potencial de investimento.";
+            } else if (finalCat == Categoria.RECEITA) {
+                foco = "Foque na maximização do fluxo de entrada, diversificação de receitas e estratégias de aumento de renda.";
+            } else {
+                foco = "Foque na redução de desperdícios, otimização e controle rigoroso de despesas.";
             }
 
-            return InsightResponse.builder().insights(insights).build();
+            return gerarInsightsCustom("Gestão de " + labelCategoria + " — " + mesNome + "/" + ano,
+                    ctx.toString(),
+                    foco);
 
         } catch (Exception e) {
             log.error("Erro ao gerar insights mensais por categoria: {}", e.getMessage(), e);
@@ -488,24 +527,25 @@ public class AiService {
     public InsightResponse gerarInsightsInvestimentos() {
         try {
             InvestimentoDashboardDTO dashboard = investimentoService.calcularDashboard();
-            
+
             StringBuilder ctx = new StringBuilder();
             ctx.append("ANÁLISE DE PORTFÓLIO DE INVESTIMENTOS — ").append(LocalDate.now()).append("\n\n");
-            
+
             ctx.append("RESUMO DA CARTEIRA:\n");
             ctx.append("- Patrimônio Total: R$ ").append(formatarValor(dashboard.getPatrimonioTotal())).append("\n");
             ctx.append("- Valor Investido: R$ ").append(formatarValor(dashboard.getValorInvestido())).append("\n");
             ctx.append("- Lucro/Prejuízo: R$ ").append(formatarValor(dashboard.getLucroTotal()))
-               .append(" (").append(formatarValor(dashboard.getVariacaoPercent())).append("%)\n");
-            ctx.append("- Dividendos Recebidos: R$ ").append(formatarValor(dashboard.getDividendosTotal())).append("\n\n");
-            
+                    .append(" (").append(formatarValor(dashboard.getVariacaoPercent())).append("%)\n");
+            ctx.append("- Dividendos Recebidos: R$ ").append(formatarValor(dashboard.getDividendosTotal()))
+                    .append("\n\n");
+
             ctx.append("DISTRIBUIÇÃO POR CLASSE DE ATIVO:\n");
             if (dashboard.getResumoPorTipo() != null) {
                 dashboard.getResumoPorTipo().forEach((tipo, resumo) -> {
                     ctx.append("- ").append(tipo.name()).append(": R$ ")
-                       .append(formatarValor(resumo.getValorTotal()))
-                       .append(" (").append(formatarValor(resumo.getPercentCarteira())).append("% da carteira) — ")
-                       .append(resumo.getQuantidadeAtivos()).append(" ativos\n");
+                            .append(formatarValor(resumo.getValorTotal()))
+                            .append(" (").append(formatarValor(resumo.getPercentCarteira())).append("% da carteira) — ")
+                            .append(resumo.getQuantidadeAtivos()).append(" ativos\n");
                 });
             }
             ctx.append("\n");
@@ -516,73 +556,23 @@ public class AiService {
                     if (!ativos.isEmpty()) {
                         ctx.append("\n[").append(tipo.name()).append("]:\n");
                         ativos.stream()
-                              .sorted((a, b) -> b.getValorTotal().compareTo(a.getValorTotal()))
-                              .forEach(a -> {
-                                  ctx.append("- ").append(a.getTicker())
-                                     .append(": Qtd ").append(formatarValor(a.getQuantidade()))
-                                     .append(" | Preço Médio R$").append(formatarValor(a.getPrecoMedio()))
-                                     .append(" | Preço Atual R$").append(formatarValor(a.getPrecoAtual()))
-                                     .append(" | Variação ").append(formatarValor(a.getVariacao())).append("%")
-                                     .append(" | Peso ").append(formatarValor(a.getPercentCarteira())).append("%\n");
-                              });
+                                .sorted((a, b) -> b.getValorTotal().compareTo(a.getValorTotal()))
+                                .forEach(a -> {
+                                    ctx.append("- ").append(a.getTicker())
+                                            .append(": Qtd ").append(formatarValor(a.getQuantidade()))
+                                            .append(" | Preço Médio R$").append(formatarValor(a.getPrecoMedio()))
+                                            .append(" | Preço Atual R$").append(formatarValor(a.getPrecoAtual()))
+                                            .append(" | Variação ").append(formatarValor(a.getVariacao())).append("%")
+                                            .append(" | Peso ").append(formatarValor(a.getPercentCarteira()))
+                                            .append("%\n");
+                                });
                     }
                 });
             }
 
-            String prompt = """
-                    Você é um assessor de investimentos especializado analisando a carteira do usuário.
-                    Gere de 3 a 5 insights PRÁTICOS, TENDÊNCIAS ou ALERTAS baseados EXCLUSIVAMENTE nos dados abaixo.
-                    
-                    %s
-                    
-                    REGRAS:
-                    1. Cada insight deve ser curto (máximo 2 a 3 frases)
-                    2. Use valores em R$ e porcentagens reais quando possível
-                    3. Seja específico (mencione os Tickers, lucros/prejuízos reais)
-                    4. Se a carteira estiver vazia, sugira o início de investimentos de forma genérica
-                    
-                    FOCOS SUGERIDOS PARA OS INSIGHTS:
-                    - ALERTA: Concentração excessiva em um único ativo (> 30%%), prejuízos não realizados muito altos em um ativo, ou falta de diversificação de classe.
-                    - TENDENCIA: Desempenho geral da carteira comparado ao valor investido.
-                    - POSITIVO: Elogio a um ativo que está puxando a rentabilidade para cima (maior variação positiva).
-                    - DICA: Estratégias de rebalanceamento caso uma classe de ativos esteja muito pequena ou muito grande.
-                    
-                    Retorne APENAS um JSON válido, sem markdown, sem explicação:
-                    {
-                      "insights": [
-                        {
-                          "tipo": "ALERTA",
-                          "mensagem": "Seu ativo PETR4 representa...",
-                          "icone": "🔴"
-                        }
-                      ]
-                    }
-                    """.formatted(ctx.toString());
-
-            String resposta = chamarGemini(prompt, "application/json");
-
-            // Limpa markdown
-            resposta = resposta.trim();
-            if (resposta.startsWith("```json")) resposta = resposta.substring(7);
-            else if (resposta.startsWith("```")) resposta = resposta.substring(3);
-            if (resposta.endsWith("```")) resposta = resposta.substring(0, resposta.length() - 3);
-            resposta = resposta.trim();
-
-            JsonNode root = objectMapper.readTree(resposta);
-            List<Insight> insights = new ArrayList<>();
-            JsonNode insightsNode = root.get("insights");
-            if (insightsNode != null && insightsNode.isArray()) {
-                for (JsonNode node : insightsNode) {
-                    insights.add(Insight.builder()
-                            .tipo(node.has("tipo") ? node.get("tipo").asText() : "DICA")
-                            .mensagem(node.has("mensagem") ? node.get("mensagem").asText() : "")
-                            .icone(node.has("icone") ? node.get("icone").asText() : "💡")
-                            .build());
-                }
-            }
-
-            return InsightResponse.builder().insights(insights).build();
-
+            return gerarInsightsCustom("Carteira de Investimentos",
+                    ctx.toString(),
+                    "Foque em rebalanceamento, diversificação e custo de oportunidade.");
         } catch (Exception e) {
             log.error("Erro ao gerar insights de investimentos: {}", e.getMessage(), e);
             return InsightResponse.builder()
@@ -608,13 +598,14 @@ public class AiService {
         // Totais anuais
         ctx.append("RESUMO ANUAL:\n");
         ctx.append("- Receitas anuais: R$ ").append(formatarValor(dashboard.getTotalReceitas())).append("\n");
-        ctx.append("- Gastos anuais (fixos + variáveis): R$ ").append(formatarValor(dashboard.getTotalGastos())).append("\n");
+        ctx.append("- Gastos anuais (fixos + variáveis): R$ ").append(formatarValor(dashboard.getTotalGastos()))
+                .append("\n");
         ctx.append("- Assinaturas anuais: R$ ").append(formatarValor(dashboard.getTotalAssinaturas())).append("\n");
         ctx.append("- Saldo anual: R$ ").append(formatarValor(dashboard.getSaldoAnual())).append("\n\n");
 
         // Dados mensais
-        String[] meses = {"Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"};
+        String[] meses = { "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro" };
 
         ctx.append("RECEITAS/GASTOS/SALDO POR MÊS:\n");
         for (int i = 0; i < 12; i++) {
@@ -630,7 +621,8 @@ public class AiService {
                 ctx.append(" | Gastos R$").append(formatarValor(gasto));
                 ctx.append(" | Assinaturas R$").append(formatarValor(assinatura));
                 ctx.append(" | Saldo R$").append(formatarValor(saldo));
-                if (i + 1 == mesAtual) ctx.append(" ← MÊS ATUAL");
+                if (i + 1 == mesAtual)
+                    ctx.append(" ← MÊS ATUAL");
                 ctx.append("\n");
             }
         }
@@ -642,17 +634,16 @@ public class AiService {
             List<LancamentoDTO> gastosDoMes = lancamentos.stream()
                     .filter(l -> l.getMes() == mesIdx && l.getCategoria() != Categoria.RECEITA)
                     .toList();
-            
+
             if (!gastosDoMes.isEmpty()) {
                 ctx.append("- ").append(meses[i]).append(":\n");
-                
+
                 // Agrupa por subcategoria somando os valores
                 Map<String, BigDecimal> subcatValores = gastosDoMes.stream()
                         .collect(Collectors.groupingBy(
                                 LancamentoDTO::getSubcategoria,
-                                Collectors.reducing(BigDecimal.ZERO, LancamentoDTO::getValor, BigDecimal::add)
-                        ));
-                
+                                Collectors.reducing(BigDecimal.ZERO, LancamentoDTO::getValor, BigDecimal::add)));
+
                 // Mostra ordenado decrescente
                 subcatValores.entrySet().stream()
                         .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
@@ -675,10 +666,12 @@ public class AiService {
         try {
             InvestimentoDashboardDTO invDashboard = investimentoService.calcularDashboard();
             ctx.append("\nCARTEIRA DE INVESTIMENTOS ATUAL:\n");
-            ctx.append("- Patrimônio Total em Investimentos: R$ ").append(formatarValor(invDashboard.getPatrimonioTotal())).append("\n");
-            ctx.append("- Lucro/Prejuízo Total em Investimentos: R$ ").append(formatarValor(invDashboard.getLucroTotal()))
-               .append(" (").append(formatarValor(invDashboard.getVariacaoPercent())).append("%)\n");
-            
+            ctx.append("- Patrimônio Total em Investimentos: R$ ")
+                    .append(formatarValor(invDashboard.getPatrimonioTotal())).append("\n");
+            ctx.append("- Lucro/Prejuízo Total em Investimentos: R$ ")
+                    .append(formatarValor(invDashboard.getLucroTotal()))
+                    .append(" (").append(formatarValor(invDashboard.getVariacaoPercent())).append("%)\n");
+
             if (invDashboard.getAtivosPorTipo() != null && !invDashboard.getAtivosPorTipo().isEmpty()) {
                 invDashboard.getAtivosPorTipo().forEach((tipo, list) -> {
                     if (list != null && !list.isEmpty()) {
@@ -689,10 +682,10 @@ public class AiService {
                                 ctx.append(" (").append(a.getNome()).append(")");
                             }
                             ctx.append(" | Qtd: ").append(formatarValor(a.getQuantidade()))
-                               .append(" | Preço Médio: R$ ").append(formatarValor(a.getPrecoMedio()))
-                               .append(" | Preço Atual: R$ ").append(formatarValor(a.getPrecoAtual()))
-                               .append(" | Valor Total: R$ ").append(formatarValor(a.getValorTotal()))
-                               .append(" | Variação: ").append(formatarValor(a.getVariacao())).append("%");
+                                    .append(" | Preço Médio: R$ ").append(formatarValor(a.getPrecoMedio()))
+                                    .append(" | Preço Atual: R$ ").append(formatarValor(a.getPrecoAtual()))
+                                    .append(" | Valor Total: R$ ").append(formatarValor(a.getValorTotal()))
+                                    .append(" | Variação: ").append(formatarValor(a.getVariacao())).append("%");
                             if (a.getDataLancamento() != null) {
                                 ctx.append(" | Data de Aquisição: ").append(a.getDataLancamento().toString());
                             }
@@ -717,13 +710,15 @@ public class AiService {
 
     private String chamarGemini(String prompt, String responseMimeType) {
         AiConfig config = configRepository.findFirstByOrderByIdDesc()
-                .orElseThrow(() -> new RuntimeException("API Key de IA não configurada. Vá em Configurações para adicionar."));
+                .orElseThrow(() -> new RuntimeException(
+                        "API Key de IA não configurada. Vá em Configurações para adicionar."));
 
         String provider = config.getProvider();
         String apiUrl = config.getApiUrl();
-        
-        boolean isGemini = (provider == null || "gemini".equalsIgnoreCase(provider)) && (apiUrl == null || apiUrl.isBlank());
-        
+
+        boolean isGemini = (provider == null || "gemini".equalsIgnoreCase(provider))
+                && (apiUrl == null || apiUrl.isBlank());
+
         if (!isGemini) {
             // Chamada compatível com OpenAI (DeepSeek, Groq, Grok/xAI, OpenAI)
             String targetUrl = apiUrl;
@@ -746,16 +741,15 @@ public class AiService {
                     }
                 }
             }
-            
+
             // Corpo da requisição compatível com OpenAI
             Map<String, Object> body = new HashMap<>();
             body.put("model", config.getModelo());
             body.put("temperature", 0.5);
             body.put("max_tokens", 4096);
             body.put("messages", List.of(
-                Map.of("role", "user", "content", prompt)
-            ));
-            
+                    Map.of("role", "user", "content", prompt)));
+
             if (responseMimeType != null && "application/json".equalsIgnoreCase(responseMimeType)) {
                 body.put("response_format", Map.of("type", "json_object"));
             }
@@ -763,6 +757,9 @@ public class AiService {
             RestTemplate restTemplate = new RestTemplate();
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Accept", "application/json");
+            headers.set("User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
             headers.set("Authorization", "Bearer " + config.getApiKey());
 
             HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
@@ -772,7 +769,7 @@ public class AiService {
                 if (response.getBody() == null) {
                     throw new RuntimeException("Resposta vazia da API de IA.");
                 }
-                
+
                 // Extração padrão OpenAI: choices[0].message.content
                 JsonNode choices = response.getBody().get("choices");
                 if (choices != null && choices.isArray() && choices.size() > 0) {
@@ -800,10 +797,8 @@ public class AiService {
         // Monta o body no formato esperado pelo Gemini
         Map<String, Object> body = Map.of(
                 "contents", List.of(
-                        Map.of("parts", List.of(Map.of("text", prompt)))
-                ),
-                "generationConfig", generationConfig
-        );
+                        Map.of("parts", List.of(Map.of("text", prompt)))),
+                "generationConfig", generationConfig);
 
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
@@ -847,13 +842,14 @@ public class AiService {
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             String msg = e.getResponseBodyAsString();
             log.error("Erro HTTP do Gemini: {} - {}", e.getStatusCode(), msg);
-            
+
             try {
                 JsonNode root = objectMapper.readTree(msg);
                 if (root.has("error") && root.get("error").has("message")) {
                     String apiErrorMessage = root.get("error").get("message").asText();
                     if (apiErrorMessage.contains("monthly spending cap")) {
-                        throw new RuntimeException("A chave de API atingiu o limite de gastos mensal (spending cap) configurado no Google AI Studio. Acesse https://aistudio.google.com/ e configure um limite de gastos adequado.");
+                        throw new RuntimeException(
+                                "A chave de API atingiu o limite de gastos mensal (spending cap) configurado no Google AI Studio. Acesse https://aistudio.google.com/ e configure um limite de gastos adequado.");
                     }
                     throw new RuntimeException(apiErrorMessage);
                 }
@@ -873,7 +869,8 @@ public class AiService {
     }
 
     private String formatarValor(BigDecimal valor) {
-        if (valor == null) return "0,00";
+        if (valor == null)
+            return "0,00";
         return valor.setScale(2, RoundingMode.HALF_UP).toString().replace(".", ",");
     }
 }

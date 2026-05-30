@@ -27,4 +27,5 @@ public class InvestimentoLancamentoDTO {
     private LocalDate dataVencimento;
     private String indexador;
     private BigDecimal taxa;
+    private String tipoProvento;
 }

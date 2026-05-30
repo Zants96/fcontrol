@@ -6,7 +6,7 @@
 const SUBCATEGORIAS = {
   RECEITA: [
     '13º Salário', 'Férias', 'Freelancer', 'Outras Receitas', 'Participação nos Lucros', 
-    'Resgate de Investimentos', 'Restituição de IR', 'Salário', 'Vendas'
+    'Proventos', 'Resgate de Investimentos', 'Restituição de IR', 'Salário', 'Vendas'
   ],
   GASTO: [
     'Água', 'Alimentação', 'Aluguel', 'Cartão de Crédito', 'Consultas', 

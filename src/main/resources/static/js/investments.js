@@ -260,9 +260,36 @@ function renderInvDividendosChart(data) {
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() } },
-        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() } }
+        y: { 
+          beginAtZero: true, 
+          grace: '10%',
+          grid: { color: 'rgba(255,255,255,0.05)' }, 
+          ticks: { color: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim() } 
+        }
       }
-    }
+    },
+    plugins: [{
+      id: 'barLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        ctx.save();
+        chart.data.datasets.forEach((dataset, i) => {
+          const meta = chart.getDatasetMeta(i);
+          meta.data.forEach((bar, index) => {
+            const val = dataset.data[index];
+            if (val > 0) {
+              const valText = fmtCurrency(val);
+              ctx.fillStyle = '#94a3b8';
+              ctx.font = '500 11px Inter, sans-serif';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'bottom';
+              ctx.fillText(valText, bar.x, bar.y - 5);
+            }
+          });
+        });
+        ctx.restore();
+      }
+    }]
   });
 }
 
@@ -472,6 +499,9 @@ function initInvModal() {
       const groupLiquido = $('inv-group-liquido');
       if (groupLiquido) groupLiquido.style.display = isDividendo ? '' : 'none';
       
+      const groupTipoProvento = $('inv-group-tipo-provento');
+      if (groupTipoProvento) groupTipoProvento.style.display = isDividendo ? '' : 'none';
+      
       $('inv-label-preco').textContent = isDividendo ? 'Valor por cota / Bruto (R$)' : 'Preço unitário (R$)';
       $('inv-form-preco').placeholder = isDividendo ? 'Ex: 0,09 ou 2,74' : '0,00';
       $('inv-form-quantidade').placeholder = isDividendo ? 'Ex: 29 (opcional)' : 'Ex: 100';
@@ -480,6 +510,7 @@ function initInvModal() {
 
   // Format liquido field
   $('inv-form-liquido')?.addEventListener('input', (e) => {
+    e.target._autoCalculated = false;
     let val = e.target.value.replace(/\D/g, '');
     if (val === '') return;
     val = (parseInt(val, 10) / 100).toFixed(2);
@@ -487,6 +518,8 @@ function initInvModal() {
     val = val.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
     e.target.value = val;
   });
+
+  $('inv-form-tipo-provento')?.addEventListener('change', calcInvTotal);
 
   const formatCurrency = (e) => {
     let val = e.target.value.replace(/\D/g, ''); // só números
@@ -538,6 +571,11 @@ function openInvModal(tipoAtivo) {
   $('inv-form-quantidade').placeholder = 'Ex: 100';
   const groupLiquido = $('inv-group-liquido');
   if (groupLiquido) groupLiquido.style.display = 'none';
+  const groupTipoProvento = $('inv-group-tipo-provento');
+  if (groupTipoProvento) {
+    groupTipoProvento.style.display = 'none';
+    $('inv-form-tipo-provento').value = 'Dividendo';
+  }
 
   // Data de hoje (formato brasileiro DD/MM/YYYY) com ano do filtro do dashboard
   const today = new Date();
@@ -586,6 +624,17 @@ function calcInvTotal() {
   }
 
   $('inv-form-total').textContent = fmtCurrency(total);
+
+  // Auto-calculate liquido for JSCP
+  if (operacao === 'DIVIDENDO') {
+    const tipoProv = $('inv-form-tipo-provento')?.value;
+    const liqInput = $('inv-form-liquido');
+    if (liqInput && tipoProv === 'JSCP' && (!liqInput.value || liqInput._autoCalculated)) {
+      const liqVal = total * 0.85;
+      liqInput.value = fmtCurrency(liqVal).replace('R$', '').trim();
+      liqInput._autoCalculated = true;
+    }
+  }
 }
 
 async function onInvFormSubmit(e) {
@@ -626,6 +675,7 @@ async function onInvFormSubmit(e) {
 
   const liquidoRaw = $('inv-form-liquido')?.value;
   const valorLiquido = (operacao === 'DIVIDENDO' && liquidoRaw) ? parseInvInput(liquidoRaw) : null;
+  const tipoProvento = (operacao === 'DIVIDENDO') ? $('inv-form-tipo-provento')?.value || 'Dividendo' : null;
 
   let valorTotal = null;
   if (operacao === 'DIVIDENDO') {
@@ -641,7 +691,7 @@ async function onInvFormSubmit(e) {
     data, quantidade: operacao === 'DIVIDENDO' && quantidade <= 0 ? 0 : quantidade,
     precoUnitario: preco, custos, valorLiquido,
     valorTotal: valorTotal,
-    dataVencimento, indexador, taxa
+    dataVencimento, indexador, taxa, tipoProvento
   };
 
   const btn = $('inv-btn-save');
@@ -890,14 +940,23 @@ async function editarLancamentoInvestimento(id) {
   const labelPreco = $('inv-edit-label-preco');
   
   if (l.tipoOperacao === 'DIVIDENDO') {
-    groupQtd.style.display = 'none';
-    formQtd.value = '';
-    labelPreco.textContent = 'Valor bruto recebido (R$)';
+    groupQtd.style.display = ''; // Keep always visible!
+    formQtd.value = l.quantidade != null && parseFloat(l.quantidade) > 0 ? formatQtd(l.quantidade) : '';
+    labelPreco.textContent = 'Valor por cota / Bruto (R$)';
     const groupLiquido = $('inv-edit-group-liquido');
     if (groupLiquido) {
       groupLiquido.style.display = '';
       const liquidoVal = l.valorLiquido != null ? l.valorLiquido : l.valorTotal;
       $('inv-edit-liquido').value = fmtCurrency(liquidoVal || 0).replace('R$', '').trim();
+      // Se for JSCP e o usuário não tiver alterado manualmente, marcamos como autocalculado
+      if (l.tipoProvento === 'JSCP') {
+        $('inv-edit-liquido')._autoCalculated = true;
+      }
+    }
+    const groupTipoProvento = $('inv-edit-group-tipo-provento');
+    if (groupTipoProvento) {
+      groupTipoProvento.style.display = '';
+      $('inv-edit-tipo-provento').value = l.tipoProvento || 'Dividendo';
     }
   } else {
     groupQtd.style.display = '';
@@ -905,6 +964,8 @@ async function editarLancamentoInvestimento(id) {
     labelPreco.textContent = 'Preço unitário (R$)';
     const groupLiquido = $('inv-edit-group-liquido');
     if (groupLiquido) groupLiquido.style.display = 'none';
+    const groupTipoProvento = $('inv-edit-group-tipo-provento');
+    if (groupTipoProvento) groupTipoProvento.style.display = 'none';
   }
   
   formPreco.value = fmtCurrency(l.precoUnitario || 0).replace('R$', '').trim();
@@ -973,6 +1034,14 @@ function initInvEditModalListeners() {
               <label for="inv-edit-liquido">Total Líquido (R$)</label>
               <input type="text" id="inv-edit-liquido" class="form-input" placeholder="0,00" />
             </div>
+            <div class="form-group" id="inv-edit-group-tipo-provento" style="display:none;">
+              <label for="inv-edit-tipo-provento">Tipo de Provento</label>
+              <select id="inv-edit-tipo-provento" class="form-input">
+                <option value="Dividendo" selected>Dividendo</option>
+                <option value="JSCP">JSCP</option>
+                <option value="Rend. Trib.">Rend. Trib.</option>
+              </select>
+            </div>
             <div class="form-group">
               <label for="inv-edit-data">Data</label>
               <input type="text" id="inv-edit-data" class="form-input" placeholder="DD/MM/YYYY" maxlength="10" required />
@@ -1026,6 +1095,24 @@ function initInvEditModalListeners() {
     if (e.target === $('inv-edit-modal-overlay')) closeInvEditModal();
   });
 
+  const calcEditTotal = () => {
+    const op = $('inv-edit-op').value;
+    if (op !== 'DIVIDENDO') return;
+    const preco = parseInvInput($('inv-edit-preco')?.value);
+    const custos = parseInvInput($('inv-edit-custos')?.value);
+    const qtd = parseInvInput($('inv-edit-qtd')?.value);
+    const tipoProv = $('inv-edit-tipo-provento')?.value;
+    
+    const total = (qtd > 0) ? (qtd * preco) + custos : preco + custos;
+    
+    const liqInput = $('inv-edit-liquido');
+    if (liqInput && tipoProv === 'JSCP' && (!liqInput.value || liqInput._autoCalculated)) {
+      const liqVal = total * 0.85;
+      liqInput.value = fmtCurrency(liqVal).replace('R$', '').trim();
+      liqInput._autoCalculated = true;
+    }
+  };
+
   const formatCurrency = (e) => {
     let val = e.target.value.replace(/\D/g, ''); 
     if (val === '') return;
@@ -1035,9 +1122,20 @@ function initInvEditModalListeners() {
     e.target.value = val;
   };
 
-  $('inv-edit-preco')?.addEventListener('input', formatCurrency);
-  $('inv-edit-custos')?.addEventListener('input', formatCurrency);
-  $('inv-edit-liquido')?.addEventListener('input', formatCurrency);
+  $('inv-edit-preco')?.addEventListener('input', (e) => {
+    formatCurrency(e);
+    calcEditTotal();
+  });
+  $('inv-edit-custos')?.addEventListener('input', (e) => {
+    formatCurrency(e);
+    calcEditTotal();
+  });
+  $('inv-edit-liquido')?.addEventListener('input', (e) => {
+    formatCurrency(e);
+    e.target._autoCalculated = false;
+  });
+  $('inv-edit-qtd')?.addEventListener('input', calcEditTotal);
+  $('inv-edit-tipo-provento')?.addEventListener('change', calcEditTotal);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1046,9 +1144,13 @@ function initInvEditModalListeners() {
     const op = $('inv-edit-op').value;
     
     let novaQtd = 0;
+    const qtdRaw = $('inv-edit-qtd').value;
     if (op !== 'DIVIDENDO') {
-      novaQtd = parseInvInput($('inv-edit-qtd').value);
+      novaQtd = parseInvInput(qtdRaw);
       if (isNaN(novaQtd) || novaQtd < 0) { showToast('Quantidade inválida.', 'error'); return; }
+    } else {
+      novaQtd = qtdRaw ? parseInvInput(qtdRaw) : 0;
+      if (isNaN(novaQtd) || novaQtd < 0) novaQtd = 0;
     }
 
     const novoPreco = parseInvInput($('inv-edit-preco').value);
@@ -1079,9 +1181,10 @@ function initInvEditModalListeners() {
     const taxa = taxaRaw ? parseInvInput(taxaRaw) : null;
 
     try {
-      const valorTotal = op === 'DIVIDENDO' ? (novoPreco + novosCustos) : ((novaQtd * novoPreco) + novosCustos);
+      const valorTotal = (op === 'DIVIDENDO' && novaQtd <= 0) ? (novoPreco + novosCustos) : ((novaQtd * novoPreco) + novosCustos);
       const liquidoRaw = op === 'DIVIDENDO' ? $('inv-edit-liquido')?.value : null;
       const valorLiquido = liquidoRaw ? parseInvInput(liquidoRaw) : null;
+      const tipoProvento = op === 'DIVIDENDO' ? $('inv-edit-tipo-provento')?.value || 'Dividendo' : null;
       await Api.updateInvestimentoLancamento(id, {
         quantidade: novaQtd,
         precoUnitario: novoPreco,
@@ -1091,7 +1194,8 @@ function initInvEditModalListeners() {
         data,
         dataVencimento,
         indexador,
-        taxa
+        taxa,
+        tipoProvento
       });
       
       showToast('Lançamento atualizado!', 'success');
@@ -1197,7 +1301,9 @@ async function renderProvHistoricoCard() {
     };
 
     tbody.innerHTML = '';
+    let somaTotalGeral = 0;
     rows.forEach(row => {
+      somaTotalGeral += parseFloat(row.total || 0);
       const tr = document.createElement('tr');
       const mesCells = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
         const val = parseFloat(row['m' + m] || 0);
@@ -1218,6 +1324,16 @@ async function renderProvHistoricoCard() {
       `;
       tbody.appendChild(tr);
     });
+
+    // Linha com o Total Histórico somando o valor da coluna Total de cada ano
+    const trTotalGeral = document.createElement('tr');
+    trTotalGeral.style.borderTop = '2px solid var(--border)';
+    trTotalGeral.style.background = 'rgba(167, 139, 250, 0.05)';
+    trTotalGeral.innerHTML = `
+      <td colspan="14" style="font-weight:700;color:var(--text-primary);text-align:right;padding-right:1.5rem;">Total Histórico</td>
+      <td style="font-weight:800;color:#a78bfa;font-size:1.05rem;">${fmtVal(somaTotalGeral)}</td>
+    `;
+    tbody.appendChild(trTotalGeral);
 
     initProvCellTooltips();
 
@@ -1335,7 +1451,7 @@ function abrirModalProventosComLista(lancamentos, titulo) {
         <div class="modal-body" style="padding:1.5rem;max-height:70vh;overflow-y:auto;">
           <table class="data-table">
             <thead><tr>
-              <th>Data</th><th>Ativo</th><th>Tipo</th>
+              <th>Data</th><th>Ativo</th><th>Tipo Ativo</th><th>Tipo Pag.</th>
               <th>Cotas</th><th>Valor/Cota</th><th>Valor Bruto</th>
               <th style="color:var(--brand-glow);">Total Líquido</th>
               <th class="col-actions">Ações</th>
@@ -1376,6 +1492,7 @@ function abrirModalProventosComLista(lancamentos, titulo) {
         <td>${dataFmt}</td>
         <td><strong>${escHtml(l.ticker)}</strong></td>
         <td><span style="font-size:0.75rem;color:var(--text-muted);">${tipoLabels[l.tipoAtivo] || l.tipoAtivo || '-'}</span></td>
+        <td><span class="ai-cat-badge ai-cat-badge--${(l.tipoProvento || 'Dividendo').toLowerCase().replace('.', '').replace(' ', '')}" style="font-size:0.75rem;font-weight:600;padding:2px 6px;border-radius:4px;">${l.tipoProvento || 'Dividendo'}</span></td>
         <td>${qtdText}</td>
         <td class="cell-valor">${unitText}</td>
         <td>${fmtCurrency(parseFloat(l.valorTotal || 0))}</td>
