@@ -97,7 +97,7 @@ const Api = {
    */
   async getAiInsights(ano, mes = null, tipo = null) {
     let url = `${API_BASE}/ai/insights?ano=${ano}`;
-    if (mes !== null) url += `&mes=${mes}`;
+    if (mes !== null && Number.isInteger(mes) && mes >= 1 && mes <= 12) url += `&mes=${mes}`;
     if (tipo !== null) url += `&tipo=${tipo}`;
     
     const res = await fetch(url);
@@ -167,6 +167,12 @@ const Api = {
     if (ativoId) url += `?ativoId=${ativoId}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Erro ao buscar lançamentos');
+    return res.json();
+  },
+
+  async getProventosHistorico() {
+    const res = await fetch(`${API_BASE}/investimentos/proventos/historico`);
+    if (!res.ok) throw new Error('Erro ao buscar histórico de proventos');
     return res.json();
   },
 

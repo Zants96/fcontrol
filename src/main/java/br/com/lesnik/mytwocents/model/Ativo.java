@@ -76,6 +76,10 @@ public class Ativo {
     @Column(precision = 15, scale = 4)
     private BigDecimal taxa;
 
+    /** Dividend Yield obtido da API (em %) */
+    @Column(precision = 15, scale = 4)
+    private BigDecimal dividendYield;
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 

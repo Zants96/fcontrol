@@ -1345,6 +1345,8 @@ select option { background: var(--bg-elevated); }
 .ai-cat-badge--compra { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 .ai-cat-badge--venda { background: rgba(16, 185, 129, 0.15); color: var(--brand-glow); }
 .ai-cat-badge--dividendo { background: rgba(234, 179, 8, 0.15); color: #facc15; }
+.ai-cat-badge--jscp { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+.ai-cat-badge--rendtrib { background: rgba(45, 212, 191, 0.15); color: #2dd4bf; }
 
 .ai-parse-actions {
   display: flex;
@@ -1424,6 +1426,31 @@ select option { background: var(--bg-elevated); }
 .ai-insight--dica .ai-insight-tipo { color: var(--brand-glow); }
 .ai-insight--meta .ai-insight-tipo { color: var(--accent-purple); }
 .ai-insight--positivo .ai-insight-tipo { color: #22c55e; }
+.ai-insight--estrategico { border-left: 3px solid #eab308; }
+.ai-insight--eficiencia { border-left: 3px solid #06b6d4; }
+
+.ai-insight--estrategico .ai-insight-tipo { color: #eab308; }
+.ai-insight--eficiencia .ai-insight-tipo { color: #06b6d4; }
+
+.ai-insight-impacto {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.ai-insight-impacto--alto {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--accent-red);
+}
+.ai-insight-impacto--medio {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+.ai-insight-impacto--baixo {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-blue);
+}
 
 /* ─── Insight Loading & Setup ──────────────────────────────────────────── */
 .ai-insights-loading {
@@ -1554,16 +1581,19 @@ select option { background: var(--bg-elevated); }
   content: attr(data-tooltip);
   position: absolute;
   bottom: 130%;
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
+  left: 0;
+  transform: translateY(4px);
   background: var(--bg-surface);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  padding: 0.5rem 0.8rem;
+  padding: 0.6rem 0.9rem;
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
   font-weight: 600;
-  white-space: nowrap;
+  white-space: normal;
+  max-width: 300px;
+  width: max-content;
+  line-height: 1.4;
   box-shadow: var(--shadow-md), var(--shadow-glow);
   opacity: 0;
   pointer-events: none;
@@ -1575,8 +1605,8 @@ select option { background: var(--bg-elevated); }
   content: '';
   position: absolute;
   bottom: 110%;
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
+  left: 15px;
+  transform: translateY(4px);
   border-width: 6px;
   border-style: solid;
   border-color: var(--border) transparent transparent transparent;
@@ -1589,7 +1619,7 @@ select option { background: var(--bg-elevated); }
 .inv-ticker-container[data-tooltip]:hover::after,
 .inv-ticker-container[data-tooltip]:hover::before {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 .inv-ticker-logo {
   width: 22px;
@@ -1635,4 +1665,74 @@ select option { background: var(--bg-elevated); }
 .inv-radio-toggle input:checked + span {
   background: var(--brand-glow);
   color: #000;
+}
+
+/* ─── HISTÓRICO DE PROVENTOS ─────────────────────────────────────────────── */
+.prov-hist-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.prov-hist-table th {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.6rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.prov-hist-table th:first-child { text-align: left; }
+.prov-hist-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.prov-hist-table td:first-child { text-align: left; }
+.prov-hist-table tbody tr:hover td {
+  background: var(--bg-hover);
+}
+
+.prov-total-clickable:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+.prov-tipo-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  width: max-content;
+  max-width: 240px;
+  min-width: 140px;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
+.prov-cell-tooltip {
+  position: fixed;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  width: max-content;
+  max-width: 260px;
+  min-width: 150px;
+  z-index: 9999;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  font-family: inherit;
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
