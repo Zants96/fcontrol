@@ -6,7 +6,7 @@
 const SUBCATEGORIAS = {
   RECEITA: [
     '13º Salário', 'Férias', 'Freelancer', 'Outras Receitas', 'Participação nos Lucros', 
-    'Resgate de Investimentos', 'Restituição de IR', 'Salário', 'Vendas'
+    'Proventos', 'Resgate de Investimentos', 'Restituição de IR', 'Salário', 'Vendas'
   ],
   GASTO: [
     'Água', 'Alimentação', 'Aluguel', 'Cartão de Crédito', 'Consultas', 
@@ -204,7 +204,8 @@ function refreshView() {
 function buildExportUrl(format, isFullReport) {
   const mes = isFullReport ? 0 : state.mes;
   const view = isFullReport ? 'dashboard' : state.view;
-  return `/api/lancamentos/export/${format}?ano=${state.ano}&mes=${mes}&view=${view}`;
+  const safeMes = Number.isInteger(mes) && mes > 0 && mes <= 12 ? mes : null;
+  return `/api/lancamentos/export/${format}?ano=${state.ano}&` + (safeMes !== null ? `mes=${safeMes}&` : '') + `view=${view}`;
 }
 
 function buildFileName(format, isFullReport) {
@@ -292,7 +293,8 @@ async function loadDashboard() {
     
     // Dashboard Mensal
     const mesSel = document.getElementById('select-dash-mes');
-    const mesSelecionado = mesSel ? parseInt(mesSel.value) : (new Date().getMonth() + 1);
+    const parsedMes = mesSel ? parseInt(mesSel.value) : NaN;
+    const mesSelecionado = !isNaN(parsedMes) ? parsedMes : (new Date().getMonth() + 1);
     renderMonthlyDashboard(data, mesSelecionado);
 
     // Insights da IA (com cache de 4h)
@@ -339,9 +341,13 @@ function buildMonthTabs() {
 
   container.querySelectorAll('.month-tab').forEach(tab => {
     tab.addEventListener('click', () => {
-      state.mes = parseInt(tab.dataset.mes);
+      const parsed = parseInt(tab.dataset.mes);
+      const valid = Number.isInteger(parsed) && parsed >= 1 && parsed <= 12;
+      state.mes = valid ? parsed : (new Date().getMonth() + 1);
+      // update active class correctly
       container.querySelectorAll('.month-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
+      const activeTab = container.querySelector(`.month-tab[data-mes='${state.mes}']`);
+      if (activeTab) activeTab.classList.add('active');
       loadTabela();
     });
   });
@@ -524,6 +530,7 @@ function initModal() {
 
 function openCreateModal() {
   state.editingId = null;
+  state.editingAno = null;
   $('modal-title').textContent = 'Novo Lançamento';
   $('btn-save').textContent = 'Salvar';
   $('lancamento-form').reset();
@@ -547,6 +554,7 @@ function openEditModal(id) {
   if (!item) return;
 
   state.editingId = id;
+  state.editingAno = item.ano;
   $('modal-title').textContent = 'Editar Lançamento';
   $('btn-save').textContent = 'Atualizar';
   $('form-id').value = id;
@@ -609,12 +617,13 @@ async function onFormSubmit(e) {
     return;
   }
 
+  const ano = state.editingId ? (state.editingAno || state.ano) : state.ano;
   const dto = {
     subcategoria,
     descricao:  $('form-descricao').value.trim() || subcategoria,
     valor:      valor,
     mes:        parseInt($('form-mes').value),
-    ano:        state.ano,
+    ano:        ano,
     dia:        dia,
     categoria:  $('form-categoria').value,
     parcelas:   parseInt($('form-parcelas').value || 1),

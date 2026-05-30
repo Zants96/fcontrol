@@ -48,6 +48,10 @@ public class InvestimentoLancamento {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal valorTotal;
 
+    /** Valor líquido recebido (para proventos) após impostos */
+    @Column(name = "valor_liquido", precision = 15, scale = 2)
+    private BigDecimal valorLiquido;
+
     @Column
     private Long lancamentoFinanceiroId;
 
@@ -56,6 +60,9 @@ public class InvestimentoLancamento {
 
     @Column(length = 50)
     private String indexador;
+
+    @Column(name = "tipo_provento", length = 30)
+    private String tipoProvento;
 
     @Column(precision = 15, scale = 4)
     private BigDecimal taxa;
@@ -67,5 +74,6 @@ public class InvestimentoLancamento {
     public void prePersist() {
         this.criadoEm = LocalDateTime.now();
         if (this.custos == null) this.custos = BigDecimal.ZERO;
+        if (this.valorLiquido == null) this.valorLiquido = this.valorTotal;
     }
 }

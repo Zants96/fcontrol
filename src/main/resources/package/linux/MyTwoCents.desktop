@@ -2,7 +2,7 @@
 Name=MyTwoCents
 Comment=Controle Financeiro Pessoal
 Exec=/opt/mytwocents/bin/MyTwoCents
-Icon=MyTwoCents
+Icon=mytwocents
 Terminal=false
 Type=Application
 Categories=Office;Finance;
