@@ -74,9 +74,9 @@ public class AiService {
             2. ESPECIALISTA EM INVESTIMENTOS (Assessoria de Carteira): Focado em alocação estratégica, análise fundamentalista sólida, compounding e risco sistêmico.
 
             DIRETRIZES DE COMPORTAMENTO POR CONTEXTO:
-            - Se a aba/contexto for de controle de gastos/receitas/assinaturas/cartões (Finança Pessoal Caseira): Limite-se estritamente à Assessoria Doméstica. Dê dicas de otimização de gastos, eficiência, caça a desperdícios e planos. NÃO cite tickers de ações/FIIs ou juros compostos complexos. Apenas recomende reverter a economia para aportes gerais.
-            - Se a aba/contexto for de investimentos/renda variável: Limite-se estritamente à Assessoria de Carteira. Faça análises profundas, cite tickers reais, ROIC, preço-teto e balanceamento.
-            - Se for a página principal/geral ('HOME'): Você atua como o Consultor Completo, fazendo a ponte direta entre o excedente gerado (orçamento) e o reinvestimento tático (carteira).
+            - Se a aba/contexto for a página principal/geral ('HOME' ou 'Dashboard Anual - Finanças Gerais Pessoais'): Limite-se estritamente à Assessoria Doméstica. Você deve retornar análises APENAS sobre a gestão financeira geral, gastos, receitas, fluxo de caixa e desperdícios. É expressamente proibido citar tickers de ações, FIIs, renda fixa ou realizar qualquer análise sobre a carteira de investimentos.
+            - Se a aba/contexto for de controle de gastos/receitas/assinaturas/cartões (Finança Pessoal Caseira): Limite-se estritamente à Assessoria Doméstica. Dê dicas de otimização de gastos, eficiência, caça a desperdícios e planos. NÃO cite tickers de ações/FIIs ou juros compostos complexos.
+            - Se a aba/contexto for de investimentos/renda variável ou 'Carteira de Investimentos': Limite-se estritamente à Assessoria de Carteira. Faça análises profundas, cite tickers reais, ROIC, preço-teto e balanceamento. As análises de investimentos ocorrem APENAS aqui.
 
             Sua comunicação é assertiva, técnica, pragmática e direta, mas altamente encorajadora e motivadora: reconheça atitudes positivas (constância de aportes, redução de desperdícios), elogie a disciplina e comemore pequenas vitórias.
 
@@ -221,31 +221,6 @@ public class AiService {
 
     public ChatResponse chat(String message, List<AiChatDTO.ChatMessage> historico, int ano) {
         try {
-            String contexto = montarContextoFinanceiro(ano);
-
-            StringBuilder promptBuilder = new StringBuilder();
-            promptBuilder.append("--- PERSONA E OBJETIVOS ---\n");
-            promptBuilder.append(
-                    "Você é o consultor financeiro sênior do MyTwoCents, com 30 anos de mercado. Sua missão é a gestão holística: eficiência orçamentária (corte de desperdícios) + gestão estratégica de portfólio (Value Investing).\n");
-            promptBuilder.append(
-                    "Sua voz é técnica e assertiva, mas humanizada e empática: reconheça vitórias, promova a disciplina e defenda o 'Equilíbrio de Vida'. Se o usuário for austero demais, force-o a alocar uma verba de lazer/bem-estar para sustentar a jornada de longo prazo.\n\n");
-
-            promptBuilder.append("--- REGRAS DE EXECUÇÃO ---\n");
-            promptBuilder.append(
-                    "1. PRIORIZAÇÃO: Identifique e ataque primeiro o maior ralo de dinheiro (desperdício) ou a maior ineficiência na carteira de investimentos.\n");
-            promptBuilder.append(
-                    "2. ANÁLISE DE ATIVOS: Ao citar consenso de mercado (LSEG/Refinitiv/Bloomberg), use tabelas Markdown. Se não houver consenso sólido, declare a ausência de dados publicamente.\n");
-            promptBuilder.append(
-                    "3. FILOSOFIA: Siga estritamente " + FILOSOFIA_INVESTIMENTOS + ". Rejeite especulação pura.\n");
-            promptBuilder.append(
-                    "4. FORMATO: Respostas em português brasileiro. Use Markdown para legibilidade. Seja conciso.\n\n");
-
-            promptBuilder.append("--- LÓGICA DE RACIOCÍNIO ---\n");
-            promptBuilder.append(
-                    "Antes de responder, verifique: 1) Qual a tendência atual do saldo? 2) O usuário atingiu o aporte meta? 3) Existe algum gasto vampiro? 4) O portfólio está alinhado à filosofia?\n");
-            promptBuilder.append(
-                    "Responda sempre com a estrutura: [Resumo/Status] -> [Análise/Diagnóstico] -> [Tabela de Ativos, se solicitado] -> [Recomendação/Plano de Ação] -> [Elogio/Motivação Final].\n\n");
-
             // Direcionamento dinâmico de contexto com base na pergunta do usuário
             String msgLower = message.toLowerCase();
             boolean isInvestimentos = msgLower.contains("ações") || msgLower.contains("fii")
@@ -261,6 +236,31 @@ public class AiService {
                     || msgLower.contains("mercado") || msgLower.contains("saldo") || msgLower.contains("receita")
                     || msgLower.contains("lazer") || msgLower.contains("economia") || msgLower.contains("poupar");
 
+            String contexto = montarContextoFinanceiro(ano, isInvestimentos);
+
+            StringBuilder promptBuilder = new StringBuilder();
+            promptBuilder.append("--- PERSONA E OBJETIVOS ---\n");
+            promptBuilder.append(
+                    "Você é o consultor financeiro sênior do MyTwoCents, com 30 anos de mercado. Sua missão é a gestão holística: eficiência orçamentária (corte de desperdícios) + gestão estratégica de portfólio (Value Investing).\n");
+            promptBuilder.append(
+                    "Sua voz é técnica e assertiva, mas humanizada e empática: reconheça vitórias, promova a disciplina e defenda o 'Equilíbrio de Vida'. Se o usuário for austero demais, force-o a alocar uma verba de lazer/bem-estar para sustentar a jornada de longo prazo.\n\n");
+
+            promptBuilder.append("--- REGRAS DE EXECUÇÃO ---\n");
+            promptBuilder.append(
+                    "1. PRIORIZAÇÃO: Identifique e ataque primeiro o maior ralo de dinheiro (desperdício) ou a maior ineficiência na carteira de investimentos (se aplicável).\n");
+            promptBuilder.append(
+                    "2. ANÁLISE DE ATIVOS: Ao citar consenso de mercado (LSEG/Refinitiv/Bloomberg), use tabelas Markdown. Se não houver consenso sólido, declare a ausência de dados publicamente.\n");
+            promptBuilder.append(
+                    "3. FILOSOFIA: Siga estritamente " + FILOSOFIA_INVESTIMENTOS + ". Rejeite especulação pura.\n");
+            promptBuilder.append(
+                    "4. FORMATO: Respostas em português brasileiro. Use Markdown para legibilidade. Seja conciso.\n\n");
+
+            promptBuilder.append("--- LÓGICA DE RACIOCÍNIO ---\n");
+            promptBuilder.append(
+                    "Antes de responder, verifique: 1) Qual a tendência atual do saldo? 2) O usuário atingiu o aporte meta? 3) Existe algum gasto vampiro? 4) O portfólio está alinhado à filosofia?\n");
+            promptBuilder.append(
+                    "Responda sempre com a estrutura: [Resumo/Status] -> [Análise/Diagnóstico] -> [Tabela de Ativos, se solicitado] -> [Recomendação/Plano de Ação] -> [Elogio/Motivação Final].\n\n");
+
             promptBuilder.append("--- ORIENTAÇÃO DE CONTEXTO ---\n");
             if (isInvestimentos && !isOrcamento) {
                 promptBuilder.append(
@@ -270,7 +270,7 @@ public class AiService {
                         "Atenção: A pergunta é sobre ASSESSORIA DOMÉSTICA (Orçamento). Mantenha o foco em eficiência de fluxo de caixa, economia prática e equilíbrio de vida.\n\n");
             } else {
                 promptBuilder.append(
-                        "Atenção: A pergunta é MISTA ou GERAL. Faça uma análise holística cruzando o orçamento pessoal doméstico com a nossa Filosofia de Investimentos.\n\n");
+                        "Atenção: A pergunta é MISTA ou GERAL. Foque nas finanças pessoais domésticas e orçamento geral. Não realize análises sobre investimentos ou carteira a menos que expressamente provocado sobre investimentos.\n\n");
             }
 
             promptBuilder.append(contexto).append("\n");
@@ -501,10 +501,10 @@ public class AiService {
     public InsightResponse gerarInsights(int ano, Integer mes, String tipo) {
         if (mes == null || mes <= 0 || tipo == null || tipo.isBlank()) {
             try {
-                String contexto = montarContextoFinanceiro(ano);
+                String contexto = montarContextoFinanceiro(ano, false);
                 return gerarInsightsCustom("Dashboard Anual - Finanças Gerais Pessoais",
                         contexto,
-                        "Foque na eficiência do aporte mensal e saúde do fluxo de caixa.");
+                        "Foque na eficiência do fluxo de caixa e gestão geral de gastos e receitas. É expressamente proibido abordar ou analisar investimentos, ativos ou rebalanceamento de carteira.");
             } catch (Exception e) {
                 log.error("Erro ao gerar insights gerais: {}", e.getMessage(), e);
                 return InsightResponse.builder()
@@ -664,7 +664,7 @@ public class AiService {
     /**
      * Monta o contexto financeiro do usuário para envio ao LLM.
      */
-    private String montarContextoFinanceiro(int ano) {
+    private String montarContextoFinanceiro(int ano, boolean incluirInvestimentos) {
         DashboardDTO dashboard = lancamentoService.calcularDashboard(ano);
         List<LancamentoDTO> lancamentos = lancamentoService.listarPorAno(ano);
         int mesAtual = LocalDate.now().getMonthValue();
@@ -740,39 +740,41 @@ public class AiService {
         }
 
         // Carteira de investimentos atual
-        try {
-            InvestimentoDashboardDTO invDashboard = investimentoService.calcularDashboard();
-            ctx.append("\nCARTEIRA DE INVESTIMENTOS ATUAL:\n");
-            ctx.append("- Patrimônio Total em Investimentos: R$ ")
-                    .append(formatarValor(invDashboard.getPatrimonioTotal())).append("\n");
-            ctx.append("- Lucro/Prejuízo Total em Investimentos: R$ ")
-                    .append(formatarValor(invDashboard.getLucroTotal()))
-                    .append(" (").append(formatarValor(invDashboard.getVariacaoPercent())).append("%)\n");
+        if (incluirInvestimentos) {
+            try {
+                InvestimentoDashboardDTO invDashboard = investimentoService.calcularDashboard();
+                ctx.append("\nCARTEIRA DE INVESTIMENTOS ATUAL:\n");
+                ctx.append("- Patrimônio Total em Investimentos: R$ ")
+                        .append(formatarValor(invDashboard.getPatrimonioTotal())).append("\n");
+                ctx.append("- Lucro/Prejuízo Total em Investimentos: R$ ")
+                        .append(formatarValor(invDashboard.getLucroTotal()))
+                        .append(" (").append(formatarValor(invDashboard.getVariacaoPercent())).append("%)\n");
 
-            if (invDashboard.getAtivosPorTipo() != null && !invDashboard.getAtivosPorTipo().isEmpty()) {
-                invDashboard.getAtivosPorTipo().forEach((tipo, list) -> {
-                    if (list != null && !list.isEmpty()) {
-                        ctx.append("\nClasse de Ativo: ").append(tipo.name()).append(":\n");
-                        for (AtivoDTO a : list) {
-                            ctx.append("  * Ticker: ").append(a.getTicker());
-                            if (a.getNome() != null && !a.getNome().isBlank()) {
-                                ctx.append(" (").append(a.getNome()).append(")");
+                if (invDashboard.getAtivosPorTipo() != null && !invDashboard.getAtivosPorTipo().isEmpty()) {
+                    invDashboard.getAtivosPorTipo().forEach((tipo, list) -> {
+                        if (list != null && !list.isEmpty()) {
+                            ctx.append("\nClasse de Ativo: ").append(tipo.name()).append(":\n");
+                            for (AtivoDTO a : list) {
+                                ctx.append("  * Ticker: ").append(a.getTicker());
+                                if (a.getNome() != null && !a.getNome().isBlank()) {
+                                    ctx.append(" (").append(a.getNome()).append(")");
+                                }
+                                ctx.append(" | Qtd: ").append(formatarValor(a.getQuantidade()))
+                                        .append(" | Preço Médio: R$ ").append(formatarValor(a.getPrecoMedio()))
+                                        .append(" | Preço Atual: R$ ").append(formatarValor(a.getPrecoAtual()))
+                                        .append(" | Valor Total: R$ ").append(formatarValor(a.getValorTotal()))
+                                        .append(" | Variação: ").append(formatarValor(a.getVariacao())).append("%");
+                                if (a.getDataLancamento() != null) {
+                                    ctx.append(" | Data de Aquisição: ").append(a.getDataLancamento().toString());
+                                }
+                                ctx.append("\n");
                             }
-                            ctx.append(" | Qtd: ").append(formatarValor(a.getQuantidade()))
-                                    .append(" | Preço Médio: R$ ").append(formatarValor(a.getPrecoMedio()))
-                                    .append(" | Preço Atual: R$ ").append(formatarValor(a.getPrecoAtual()))
-                                    .append(" | Valor Total: R$ ").append(formatarValor(a.getValorTotal()))
-                                    .append(" | Variação: ").append(formatarValor(a.getVariacao())).append("%");
-                            if (a.getDataLancamento() != null) {
-                                ctx.append(" | Data de Aquisição: ").append(a.getDataLancamento().toString());
-                            }
-                            ctx.append("\n");
                         }
-                    }
-                });
+                    });
+                }
+            } catch (Exception e) {
+                log.error("Erro ao incluir contexto de investimentos na IA: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.error("Erro ao incluir contexto de investimentos na IA: {}", e.getMessage());
         }
 
         // Data atual para contexto temporal
