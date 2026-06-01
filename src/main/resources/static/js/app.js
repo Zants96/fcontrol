@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initAiChat();
   initBrapiConfig();
+  initCoingeckoConfig();
   navigateTo('dashboard');
 });
 
@@ -167,6 +168,7 @@ function navigateTo(view) {
     $('view-configuracoes')?.classList.remove('hidden');
     checkAiKeyStatus();
     checkBrapiStatus();
+    checkCoingeckoStatus();
   } else {
     state.categoria = CATEGORIA_VIEW[view];
     

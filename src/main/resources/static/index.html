@@ -583,6 +583,21 @@
         </div>
         <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.75rem;">Crie sua conta gratuitamente em <a href="https://brapi.dev/" target="_blank" style="color: var(--brand-glow);">brapi.dev</a> para gerar o token.</p>
       </div>
+
+      <div class="card">
+        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Integração CoinGecko</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Configure sua API Key do CoinGecko para atualizar cotações de Criptomoedas. <strong>Opcional (se vazio, usa chave demo padrão)</strong>.</p>
+        <div id="coingecko-key-status" style="margin-bottom: 1rem;"></div>
+        
+        <div style="display: flex; gap: 0.5rem; align-items: flex-end; margin-bottom: 0.75rem;">
+          <div style="flex: 1;">
+            <label for="input-coingecko-key" style="display: block; font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.25rem;">API Key CoinGecko</label>
+            <input type="password" id="input-coingecko-key" placeholder="Cole sua chave aqui..." style="width:100%; padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-primary); font-size: 0.85rem;">
+          </div>
+          <button class="btn btn--primary" id="btn-save-coingecko-key" style="white-space: nowrap; height: 40px; min-height: 40px; margin-bottom: 0px;">Salvar</button>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.75rem;">Deixe vazio para usar a chave pública de demonstração padrão do CoinGecko.</p>
+      </div>
     </div>
   </section>
 

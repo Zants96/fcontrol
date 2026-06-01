@@ -1261,6 +1261,33 @@ function initBrapiConfig() {
   });
 }
 
+async function checkCoingeckoStatus() {
+  try {
+    const status = await Api.getCoingeckoStatus();
+    const el = $('coingecko-key-status');
+    if (el) {
+      el.innerHTML = status.configurado
+        ? '<span style="color:var(--brand-glow);">✅ Chave CoinGecko configurada</span>'
+        : '<span style="color:var(--text-muted);">ℹ️ Usando chave de demonstração padrão</span>';
+    }
+  } catch (e) { /* silently fail */ }
+}
+
+function initCoingeckoConfig() {
+  $('btn-save-coingecko-key')?.addEventListener('click', async () => {
+    const key = $('input-coingecko-key')?.value?.trim();
+    if (!key) { showToast('Cole a chave de API do CoinGecko.', 'error'); return; }
+    try {
+      await Api.saveCoingeckoKey(key);
+      showToast('Chave CoinGecko salva!', 'success');
+      $('input-coingecko-key').value = '';
+      checkCoingeckoStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+}
+
 // ─── HISTÓRICO DE PROVENTOS ──────────────────────────────────────────────
 
 async function renderProvHistoricoCard() {
