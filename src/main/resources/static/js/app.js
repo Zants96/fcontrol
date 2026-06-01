@@ -9,14 +9,14 @@ const SUBCATEGORIAS = {
     'Proventos', 'Resgate de Investimentos', 'Restituição de IR', 'Salário', 'Vendas'
   ],
   GASTO: [
-    'Água', 'Alimentação', 'Aluguel', 'Cartão de Crédito', 'Consultas', 
-    'Educação', 'Empréstimo', 'Investimentos', 'Lanches', 'Lazer', 'Manutenção/Reparos', 
+    'Água', 'Alimentação', 'Aluguel', 'Cartão de Crédito', 'Casa & Decoração', 'Consultas', 
+    'Delivery / Apps', 'Educação', 'Eletrônicos', 'Empréstimo', 'Investimentos', 'Lanches', 'Lazer', 'Manutenção/Reparos', 
     'Medicamentos', 'Outros', 'Pets', 'Presentes / Doações', 'Prestações', 
     'Restaurante', 'Saúde & Beleza', 'Taxas/Impostos', 'Transporte', 'Vestuário', 'Viagens'
   ],
   GASTO_FIXO: [
     'Água', 'Aluguel', 'Condomínio', 'Energia/Luz', 'Impostos', 
-    'Internet', 'Investimentos', 'Outros', 'Prestação', 'Seguro', 'Seguro Residencial', 
+    'Internet', 'Investimentos', 'Outros', 'Plano de Saúde', 'Plano Odontológico', 'Prestação', 'Seguro', 'Seguro Residencial', 
     'Telefonia'
   ],
   ASSINATURA: [
