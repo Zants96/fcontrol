@@ -1445,6 +1445,7 @@ function initVarCellTooltips() {
 }
 
 function abrirModalProventosMes(ano, mes) {
+  window._activeProventosFilter = { type: 'mes', ano, mes };
   const data = window._proventosHistoricoData;
   if (!data) return;
   const nomeMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][mes - 1];
@@ -1457,6 +1458,7 @@ function abrirModalProventosMes(ano, mes) {
 }
 
 function abrirModalProventos() {
+  window._activeProventosFilter = { type: 'todos' };
   const data = window._proventosHistoricoData;
   if (!data) return;
   abrirModalProventosComLista((data.lancamentos || []).slice().reverse(), 'Histórico de Proventos');
@@ -1553,7 +1555,13 @@ async function editarLancamentoDoModal(id) {
       // Reopen the proventos modal with fresh data
       const overlay = $('prov-modal-overlay');
       if (overlay && !overlay.classList.contains('hidden')) {
-        setTimeout(abrirModalProventos, 600);
+        setTimeout(() => {
+          if (window._activeProventosFilter && window._activeProventosFilter.type === 'mes') {
+             abrirModalProventosMes(window._activeProventosFilter.ano, window._activeProventosFilter.mes);
+          } else {
+             abrirModalProventos();
+          }
+        }, 600);
       }
     }, { once: false });
   }
@@ -1565,7 +1573,11 @@ async function excluirProventoDoModal(lancamentoId, ticker) {
     await Api.excluirLancamentoInvestimento(lancamentoId);
     showToast('Provento excluído!', 'success');
     await renderProvHistoricoCard();
-    abrirModalProventos();
+    if (window._activeProventosFilter && window._activeProventosFilter.type === 'mes') {
+       abrirModalProventosMes(window._activeProventosFilter.ano, window._activeProventosFilter.mes);
+    } else {
+       abrirModalProventos();
+    }
     loadInvestimentos();
   } catch (err) {
     showToast('Erro ao excluir: ' + err.message, 'error');

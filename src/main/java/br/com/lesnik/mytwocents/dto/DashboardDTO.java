@@ -24,7 +24,10 @@ public class DashboardDTO {
     /** Total anual de assinaturas */
     private BigDecimal totalAssinaturas;
 
-    /** Saldo anual = receitas - gastos - assinaturas */
+    /** Total anual de aportes (Investimentos - Resgate de Investimentos) */
+    private BigDecimal totalAportes;
+
+    /** Saldo anual = receitas - gastos - assinaturas - aportes */
     private BigDecimal saldoAnual;
 
     /** Totais de receitas por mês [1..12] */
@@ -35,6 +38,9 @@ public class DashboardDTO {
 
     /** Totais de assinaturas por mês [1..12] */
     private List<BigDecimal> assinaturasPorMes;
+
+    /** Totais de aportes por mês [1..12] */
+    private List<BigDecimal> aportesPorMes;
 
     /** Saldo mensal [1..12] */
     private List<BigDecimal> saldoPorMes;

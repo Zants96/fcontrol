@@ -28,6 +28,17 @@ public class DataInitializer implements CommandLineRunner {
             log.info("Limpeza: {} registro(s) com valor zero removido(s).", removed);
         }
 
+        // Migração de dados legados para a nova categoria TRANSFERENCIA
+        int migratedInvestimentos = repository.migrateInvestimentosToTransferencia();
+        if (migratedInvestimentos > 0) {
+            log.info("Migração: {} lançamento(s) de Investimentos atualizados para TRANSFERENCIA.", migratedInvestimentos);
+        }
+
+        int migratedResgates = repository.migrateResgatesToReceita();
+        if (migratedResgates > 0) {
+            log.info("Migração: {} lançamento(s) de Resgate de Investimentos atualizados para RECEITA.", migratedResgates);
+        }
+
         log.info("Banco de dados pronto. Total de lançamentos: {}", repository.count());
     }
 }

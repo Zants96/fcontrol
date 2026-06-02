@@ -135,7 +135,7 @@ public class ExportService {
             Color bgColor = (rowIdx % 2 == 0) ? colorOdd : colorEven;
 
             if (incluirMes) addRowCell(table, MESES[l.getMes() - 1], fontRow, bgColor, Element.ALIGN_LEFT);
-            addRowCell(table, formatarCategoria(l.getCategoria()), fontRow, bgColor, Element.ALIGN_LEFT);
+            addRowCell(table, formatarCategoria(l), fontRow, bgColor, Element.ALIGN_LEFT);
             addRowCell(table, l.getDia() != null ? String.format("%02d", l.getDia()) : "-", fontRow, bgColor, Element.ALIGN_LEFT);
             addRowCell(table, l.getSubcategoria(), fontRow, bgColor, Element.ALIGN_LEFT);
             addRowCell(table, l.getDescricao(), fontRow, bgColor, Element.ALIGN_LEFT);
@@ -143,9 +143,10 @@ public class ExportService {
             String valorFormatado = brFormat.format(l.getValor());
             addRowCell(table, valorFormatado, fontRow, bgColor, Element.ALIGN_RIGHT);
 
-            if (l.getCategoria().name().equals("RECEITA")) {
+            if (l.getCategoria() == Categoria.RECEITA) {
                 totalReceitas = totalReceitas.add(l.getValor());
-            } else {
+            } else if (l.getCategoria() != Categoria.TRANSFERENCIA || 
+                       (l.getCategoria() == Categoria.TRANSFERENCIA && !"Outras Transferências".equals(l.getSubcategoria()))) {
                 totalGastos = totalGastos.add(l.getValor());
             }
             rowIdx++;
@@ -183,7 +184,15 @@ public class ExportService {
             case GASTO -> "Gasto";
             case GASTO_FIXO -> "Gasto Fixo";
             case ASSINATURA -> "Assinatura";
+            case TRANSFERENCIA -> "Aporte";
         };
+    }
+
+    private String formatarCategoria(LancamentoDTO l) {
+        if (l.getCategoria() == Categoria.TRANSFERENCIA) {
+            return "Aporte";
+        }
+        return formatarCategoria(l.getCategoria());
     }
 
     private List<LancamentoDTO> buscarLancamentos(Integer ano, Integer mes, Categoria categoria) {
