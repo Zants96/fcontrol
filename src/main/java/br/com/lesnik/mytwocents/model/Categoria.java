@@ -4,5 +4,7 @@ public enum Categoria {
     RECEITA,
     GASTO,
     GASTO_FIXO,
-    ASSINATURA
+    ASSINATURA,
+    TRANSFERENCIA
 }
+

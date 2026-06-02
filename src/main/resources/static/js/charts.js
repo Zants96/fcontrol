@@ -24,6 +24,7 @@ let chartBar   = null;
 let chartDonut = null;
 let chartLine  = null;
 let chartDonutMonthly = null;
+let chartDonutAportes = null;
 
 const chartDefaults = {
   responsive: true,
@@ -107,6 +108,15 @@ function renderBarChart(data) {
           data: totalGastos,
           backgroundColor: 'rgba(248, 113, 113, 0.6)',
           borderColor: '#f87171',
+          borderWidth: 1,
+          borderRadius: 5,
+          borderSkipped: false,
+        },
+        {
+          label: 'Aportes',
+          data: (data.aportesPorMes || []).map(parseFloat),
+          backgroundColor: 'rgba(251, 146, 60, 0.7)',
+          borderColor: '#fb923c',
           borderWidth: 1,
           borderRadius: 5,
           borderSkipped: false,
@@ -305,6 +315,7 @@ let _dashboardData = null; // Cache do DTO para uso no monthly
 
 function initMonthlyDashboard() {
   const sel = document.getElementById('select-dash-mes');
+  const selAportes = document.getElementById('select-dash-mes-aportes');
   if (!sel) return;
   
   const MESES_FULL = [
@@ -312,20 +323,30 @@ function initMonthlyDashboard() {
     'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
   ];
   
-  sel.innerHTML = '';
-  MESES_FULL.forEach((nome, i) => {
-    const opt = document.createElement('option');
-    opt.value = i + 1;
-    opt.textContent = nome;
-    if (i + 1 === new Date().getMonth() + 1) opt.selected = true;
-    sel.appendChild(opt);
-  });
+  const populate = (s) => {
+    if (!s) return;
+    s.innerHTML = '';
+    MESES_FULL.forEach((nome, i) => {
+      const opt = document.createElement('option');
+      opt.value = i + 1;
+      opt.textContent = nome;
+      if (i + 1 === new Date().getMonth() + 1) opt.selected = true;
+      s.appendChild(opt);
+    });
+  };
+
+  populate(sel);
+  populate(selAportes);
   
-  sel.addEventListener('change', () => {
-    if (_dashboardData) {
-      renderMonthlyDashboard(_dashboardData, parseInt(sel.value));
-    }
-  });
+  const selEvent = document.getElementById('select-dash-mes');
+  if (selEvent) {
+    selEvent.addEventListener('change', () => {
+      if (_dashboardData) {
+        renderMonthlyDashboard(_dashboardData, parseInt(selEvent.value));
+        renderAportesDashboard(_dashboardData, parseInt(selEvent.value));
+      }
+    });
+  }
 }
 
 async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
@@ -339,7 +360,8 @@ async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
   const receitas = parseFloat(data.receitasPorMes?.[idx] ?? 0);
   const gastos = parseFloat(data.gastosPorMes?.[idx] ?? 0);
   const assinaturas = parseFloat(data.assinaturasPorMes?.[idx] ?? 0);
-  const saldo = receitas - gastos - assinaturas;
+  const aportes = parseFloat(data.aportesPorMes?.[idx] ?? 0);
+  const saldo = parseFloat(data.saldoPorMes?.[idx] ?? (receitas - gastos - assinaturas - aportes));
 
   const setCard = (id, val) => {
     const el = document.getElementById(id);
@@ -349,6 +371,7 @@ async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
   setCard(`card-${prefix}receitas`, receitas);
   setCard(`card-${prefix}gastos`, gastos);
   setCard(`card-${prefix}assinaturas`, assinaturas);
+  setCard(`card-${prefix}aportes`, aportes);
   setCard(`card-${prefix}saldo`, saldo);
 
   // Buscar lançamentos do mês para montar o donut e top 5
@@ -361,19 +384,42 @@ async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
     if (prefix === 't-' && typeof state !== 'undefined' && state.categoria) {
       filteredLancamentos = lancamentos.filter(l => l.categoria === state.categoria);
     } else {
-      // Padrão (Dashboard main) - Filtra apenas despesas (remove receitas)
-      filteredLancamentos = lancamentos.filter(l => l.categoria !== 'RECEITA');
+      // Padrão (Dashboard main) - Filtra apenas despesas de consumo (remove receitas e transferências/aportes)
+      filteredLancamentos = lancamentos.filter(l => l.categoria !== 'RECEITA' && l.categoria !== 'TRANSFERENCIA');
     }
     
     // Agrupar por subcategoria
     const porSubcat = {};
     filteredLancamentos.forEach(l => {
+      if (prefix === 't-' && typeof state !== 'undefined' && state.categoria === 'TRANSFERENCIA') {
+        const APORTES_SUBCATEGORIAS = [
+          'Investimentos', 'Ações', 'FIIs', 'Renda Fixa', 'ETFs', 'Tesouro Direto', 
+          'Criptomoedas', 'Fundos', 'Stock', 'BDRs', 'Reit', 'Poupança'
+        ];
+        if (!APORTES_SUBCATEGORIAS.includes(l.subcategoria)) {
+          return;
+        }
+      }
       const sub = l.subcategoria || 'Outros';
       porSubcat[sub] = (porSubcat[sub] || 0) + parseFloat(l.valor);
     });
 
     // Calcular o total mensal dos itens filtrados
-    const totalVal = filteredLancamentos.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
+    let totalVal = 0;
+    if (prefix === 't-' && typeof state !== 'undefined' && state.categoria === 'TRANSFERENCIA') {
+      const APORTES_SUBCATEGORIAS = [
+        'Investimentos', 'Ações', 'FIIs', 'Renda Fixa', 'ETFs', 'Tesouro Direto', 
+        'Criptomoedas', 'Fundos', 'Stock', 'BDRs', 'Reit', 'Poupança'
+      ];
+      filteredLancamentos.forEach(l => {
+        const val = parseFloat(l.valor || 0);
+        if (APORTES_SUBCATEGORIAS.includes(l.subcategoria)) {
+          totalVal += val;
+        }
+      });
+    } else {
+      totalVal = filteredLancamentos.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
+    }
 
     if (prefix === 'm-') {
       const valEl = document.getElementById('top-total-monthly-val');
@@ -388,19 +434,22 @@ async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
           if (state.categoria === 'RECEITA') {
             titleEl.textContent = 'Total Recebido no Mês';
           } else if (state.categoria === 'GASTO') {
-            titleEl.textContent = 'Total Gasto no Mês';
+            titleEl.textContent = 'Total Despesas no Mês';
           } else if (state.categoria === 'GASTO_FIXO') {
-            titleEl.textContent = 'Total Gasto Fixo no Mês';
+            titleEl.textContent = 'Total Despesas Fixas no Mês';
           } else if (state.categoria === 'ASSINATURA') {
             titleEl.textContent = 'Total de Assinaturas no Mês';
+          } else if (state.categoria === 'TRANSFERENCIA') {
+            titleEl.textContent = 'Total Aportado no Mês';
           } else {
             const labels = {
               RECEITA:    'Receitas',
-              GASTO:      'Gastos',
-              GASTO_FIXO: 'Gastos Fixos',
+              GASTO:      'Despesas',
+              GASTO_FIXO: 'Despesas Fixas',
               ASSINATURA: 'Assinaturas',
+              TRANSFERENCIA: 'Aportes',
             };
-            const labelTipo = labels[state.categoria] || 'Gastos';
+            const labelTipo = labels[state.categoria] || 'Despesas';
             titleEl.textContent = `Total de ${labelTipo} no Mês`;
           }
         }
@@ -416,6 +465,8 @@ async function renderMonthlyDashboard(data, mes, prefix = 'm-') {
           valEl.classList.add('top-total-value--orange');
         } else if (state.categoria === 'ASSINATURA') {
           valEl.classList.add('top-total-value--purple');
+        } else if (state.categoria === 'TRANSFERENCIA') {
+          valEl.classList.add('top-total-value--blue');
         }
       }
     }
@@ -517,6 +568,155 @@ function renderMonthlyTopGastos(gastosPorSubcategoria, suffix = '') {
 
   const max = entries[0][1];
   const colors = ['#10b981','#34d399','#60a5fa','#a78bfa','#fb923c'];
+
+  container.innerHTML = entries.map(([sub, val], i) => {
+    const pct = max > 0 ? (val / max * 100).toFixed(1) : 0;
+    return `
+      <div class="top-item">
+        <div class="top-rank">${i + 1}</div>
+        <div class="top-bar-wrapper">
+          <div class="top-label">${escHtml(sub)}</div>
+          <div class="top-bar-bg">
+            <div class="top-bar-fill" style="width:${pct}%; background: ${colors[i]}"></div>
+          </div>
+        </div>
+        <div class="top-value">${fmtCurrency(val)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function renderAportesDashboard(data, mes) {
+  if (isNaN(mes) || mes < 1 || mes > 12) {
+    mes = new Date().getMonth() + 1;
+  }
+  
+  try {
+    const ano = data.ano || new Date().getFullYear();
+    const res = await fetch(`/api/lancamentos?ano=${ano}&mes=${mes}`);
+    const lancamentos = await res.json();
+    
+    const APORTES_SUBCATEGORIAS = [
+      'Investimentos', 'Ações', 'FIIs', 'Renda Fixa', 'ETFs', 'Tesouro Direto', 
+      'Criptomoedas', 'Fundos', 'Stock', 'BDRs', 'Reit', 'Poupança'
+    ];
+    
+    const filteredAportes = lancamentos.filter(l => 
+      l.categoria === 'TRANSFERENCIA' && APORTES_SUBCATEGORIAS.includes(l.subcategoria)
+    );
+    
+    const porSubcategoria = {};
+    filteredAportes.forEach(l => {
+      const label = l.subcategoria || 'Outros Aportes';
+      porSubcategoria[label] = (porSubcategoria[label] || 0) + parseFloat(l.valor || 0);
+    });
+
+    const totalVal = filteredAportes.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
+    const valEl = document.getElementById('top-total-aportes-val');
+    if (valEl) {
+      valEl.textContent = fmtCurrency(totalVal);
+    }
+    
+    renderMonthlyAportesDonut(porSubcategoria);
+    renderMonthlyTopAportes(porSubcategoria);
+  } catch (err) {
+    console.error('Erro ao carregar aportes mensais:', err);
+  }
+}
+
+function renderMonthlyAportesDonut(porSubcategoria) {
+  const canvasId = 'chart-donut-aportes';
+  destroyIfExists(canvasId);
+  
+  let canvas = document.getElementById(canvasId);
+  if (!canvas) {
+    const parent = document.querySelector('#view-dashboard .charts-row:last-of-type .chart-wrapper--donut');
+    if (parent) {
+      parent.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+      canvas = document.getElementById(canvasId);
+    }
+  }
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+
+  const entries = Object.entries(porSubcategoria)
+    .filter(([, v]) => v > 0)
+    .sort(([,a],[,b]) => b - a)
+    .slice(0, 10);
+
+  if (entries.length === 0) {
+    ctx.canvas.parentElement.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div><p>Sem aportes neste mês</p></div>';
+    return;
+  }
+
+  const APORTES_DONUT_COLORS = DONUT_COLORS;
+
+  chartDonutAportes = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(([k]) => k),
+      datasets: [{
+        data: entries.map(([,v]) => v),
+        backgroundColor: APORTES_DONUT_COLORS.slice(0, entries.length).map(c => c + 'cc'),
+        borderColor: document.documentElement.getAttribute('data-theme') === 'light' ? '#ccd9ecff' : '#111827',
+        borderWidth: 1,
+        hoverBorderWidth: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            color: '#94a3b8',
+            font: { family: 'Inter', size: 11 },
+            boxWidth: 10,
+            padding: 8,
+          },
+        },
+        tooltip: {
+          backgroundColor: '#1f2937',
+          titleColor: '#f9fafb',
+          bodyColor: '#f3f4f6',
+          borderColor: '#374151',
+          borderWidth: 1,
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            label: function (context) {
+              const val = context.raw || 0;
+              const total = context.dataset.data.reduce((a, b) => a + b, 0);
+              const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+              return ` ${context.label}: ${fmtCurrency(val)} (${pct}%)`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+function renderMonthlyTopAportes(porSubcategoria) {
+  const containerId = 'top-aportes-monthly';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const entries = Object.entries(porSubcategoria)
+    .filter(([, v]) => v > 0)
+    .sort(([,a],[,b]) => b - a)
+    .slice(0, 5);
+
+  if (entries.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div><p>Sem aportes neste mês</p></div>';
+    return;
+  }
+
+  const max = entries[0][1];
+  const colors = ['#10b981', '#34d399', '#60a5fa', '#a78bfa', '#fb923c'];
 
   container.innerHTML = entries.map(([sub, val], i) => {
     const pct = max > 0 ? (val / max * 100).toFixed(1) : 0;

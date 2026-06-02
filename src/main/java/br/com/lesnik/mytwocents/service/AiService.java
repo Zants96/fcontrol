@@ -167,18 +167,19 @@ public class AiService {
     // Subcategorias válidas para referência no prompt
     private static final Map<String, List<String>> SUBCATEGORIAS = Map.of(
             "RECEITA", List.of("13º Salário", "Férias", "Freelancer", "Outras Receitas",
-                    "Participação nos Lucros", "Proventos", "Resgate de Investimentos", "Restituição de IR", "Salário",
+                    "Participação nos Lucros", "Proventos", "Restituição de IR", "Salário",
                     "Vendas"),
             "GASTO", List.of("Água", "Alimentação", "Aluguel", "Cartão de Crédito", "Casa & Decoração", "Consultas",
-                    "Delivery / Apps", "Educação", "Eletrônicos", "Empréstimo", "Investimentos", "Lanches", "Lazer",
+                    "Delivery / Apps", "Educação", "Eletrônicos", "Empréstimo", "Lanches", "Lazer",
                     "Manutenção/Reparos",
                     "Medicamentos", "Outros", "Pets", "Presentes / Doações", "Prestações",
                     "Restaurante", "Saúde & Beleza", "Taxas/Impostos", "Transporte", "Vestuário", "Viagens"),
             "GASTO_FIXO", List.of("Água", "Aluguel", "Condomínio", "Energia/Luz", "Impostos",
-                    "Internet", "Investimentos", "Outros", "Plano de Saúde", "Plano Odontológico", "Prestação",
+                    "Internet", "Outros", "Plano de Saúde", "Plano Odontológico", "Prestação",
                     "Seguro", "Seguro Residencial", "Telefonia"),
             "ASSINATURA", List.of("Educação/Cursos", "Jogos/Consoles", "Leitura/Notícias", "Outros",
-                    "Serviços de Assinatura", "Serviços Digitais/Cloud", "Streaming de Áudio", "Streaming de Vídeo"));
+                    "Serviços de Assinatura", "Serviços Digitais/Cloud", "Streaming de Áudio", "Streaming de Vídeo"),
+            "TRANSFERENCIA", List.of("Investimentos", "Ações", "FIIs", "Renda Fixa", "ETFs", "Tesouro Direto", "Criptomoedas", "Fundos", "Stock", "BDRs", "Reit", "Poupança", "Resgate de Investimentos", "Outras Transferências"));
 
     // ─── CONFIGURAÇÃO ────────────────────────────────────────────────────────
 
@@ -313,7 +314,7 @@ public class AiService {
                     2. Lançamentos de investimentos/proventos: extratos de negociação, comprovantes de dividendos, ou listas de posições atuais de custódia (portfólio).
 
                     PARTE 1: TRANSAÇÕES COMUNS (extrair para a chave "items")
-                    - CATEGORIAS: RECEITA, GASTO, GASTO_FIXO, ASSINATURA.
+                    - CATEGORIAS: RECEITA, GASTO, GASTO_FIXO, ASSINATURA, TRANSFERENCIA.
                     - SUBCATEGORIAS VÁLIDAS POR CATEGORIA:
                     %s
                     - Regras: Extraia descrição, categoria, subcategoria, valor e dia.
@@ -524,6 +525,8 @@ public class AiService {
                 categoriaAlvo = Categoria.GASTO_FIXO;
             } else if (tipoLabel.contains("assinatura")) {
                 categoriaAlvo = Categoria.ASSINATURA;
+            } else if (tipoLabel.contains("aporte") || tipoLabel.contains("transferencia")) {
+                categoriaAlvo = Categoria.TRANSFERENCIA;
             } else {
                 categoriaAlvo = Categoria.GASTO; // Gasto variável
             }
@@ -538,7 +541,8 @@ public class AiService {
             String mesNome = (mes >= 1 && mes <= 12) ? mesesNomes[mes - 1] : String.valueOf(mes);
             String labelCategoria = finalCat == Categoria.RECEITA ? "Receitas"
                     : finalCat == Categoria.GASTO_FIXO ? "Gastos Fixos"
-                            : finalCat == Categoria.ASSINATURA ? "Assinaturas" : "Gastos Variáveis";
+                            : finalCat == Categoria.ASSINATURA ? "Assinaturas"
+                                    : finalCat == Categoria.TRANSFERENCIA ? "Aportes" : "Gastos Variáveis";
 
             StringBuilder ctx = new StringBuilder();
             ctx.append("ANÁLISE DE ").append(labelCategoria.toUpperCase())
@@ -584,6 +588,8 @@ public class AiService {
                 foco = "Identifique assinaturas subutilizadas e calcule o desperdício anual em potencial de investimento.";
             } else if (finalCat == Categoria.RECEITA) {
                 foco = "Foque na maximização do fluxo de entrada, diversificação de receitas e estratégias de aumento de renda.";
+            } else if (finalCat == Categoria.TRANSFERENCIA) {
+                foco = "Foque na consistência dos aportes, alocação estratégica e acompanhamento da evolução do patrimônio.";
             } else {
                 foco = "Foque na redução de desperdícios, otimização e controle rigoroso de despesas.";
             }
@@ -673,11 +679,19 @@ public class AiService {
         ctx.append("DADOS FINANCEIROS DO USUÁRIO — ANO ").append(ano).append("\n\n");
 
         // Totais anuais
+        BigDecimal totalAportes = lancamentos.stream()
+                .filter(l -> l.getCategoria() == Categoria.TRANSFERENCIA 
+                        && !"Resgate de Investimentos".equals(l.getSubcategoria()) 
+                        && !"Outras Transferências".equals(l.getSubcategoria()))
+                .map(LancamentoDTO::getValor)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         ctx.append("RESUMO ANUAL:\n");
         ctx.append("- Receitas anuais: R$ ").append(formatarValor(dashboard.getTotalReceitas())).append("\n");
         ctx.append("- Gastos anuais (fixos + variáveis): R$ ").append(formatarValor(dashboard.getTotalGastos()))
                 .append("\n");
         ctx.append("- Assinaturas anuais: R$ ").append(formatarValor(dashboard.getTotalAssinaturas())).append("\n");
+        ctx.append("- Aportes anuais: R$ ").append(formatarValor(totalAportes)).append("\n");
         ctx.append("- Saldo anual: R$ ").append(formatarValor(dashboard.getSaldoAnual())).append("\n\n");
 
         // Dados mensais
@@ -690,13 +704,23 @@ public class AiService {
             BigDecimal gasto = dashboard.getGastosPorMes().get(i);
             BigDecimal assinatura = dashboard.getAssinaturasPorMes().get(i);
             BigDecimal saldo = dashboard.getSaldoPorMes().get(i);
+            
+            final int mesIdx = i + 1;
+            BigDecimal aportes = lancamentos.stream()
+                    .filter(l -> l.getMes() == mesIdx 
+                            && l.getCategoria() == Categoria.TRANSFERENCIA 
+                            && !"Resgate de Investimentos".equals(l.getSubcategoria()) 
+                            && !"Outras Transferências".equals(l.getSubcategoria()))
+                    .map(LancamentoDTO::getValor)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             // Só mostra meses com dados
-            if (receita.compareTo(BigDecimal.ZERO) > 0 || gasto.compareTo(BigDecimal.ZERO) > 0) {
+            if (receita.compareTo(BigDecimal.ZERO) > 0 || gasto.compareTo(BigDecimal.ZERO) > 0 || aportes.compareTo(BigDecimal.ZERO) > 0) {
                 ctx.append("- ").append(meses[i]).append(": ");
                 ctx.append("Receita R$").append(formatarValor(receita));
                 ctx.append(" | Gastos R$").append(formatarValor(gasto));
                 ctx.append(" | Assinaturas R$").append(formatarValor(assinatura));
+                ctx.append(" | Aportes R$").append(formatarValor(aportes));
                 ctx.append(" | Saldo R$").append(formatarValor(saldo));
                 if (i + 1 == mesAtual)
                     ctx.append(" ← MÊS ATUAL");
@@ -709,7 +733,7 @@ public class AiService {
         for (int i = 0; i < 12; i++) {
             final int mesIdx = i + 1;
             List<LancamentoDTO> gastosDoMes = lancamentos.stream()
-                    .filter(l -> l.getMes() == mesIdx && l.getCategoria() != Categoria.RECEITA)
+                    .filter(l -> l.getMes() == mesIdx && l.getCategoria() != Categoria.RECEITA && l.getCategoria() != Categoria.TRANSFERENCIA)
                     .toList();
 
             if (!gastosDoMes.isEmpty()) {

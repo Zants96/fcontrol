@@ -1,7 +1,9 @@
 package br.com.lesnik.mytwocents.service;
 
+import br.com.lesnik.mytwocents.model.AiConfig;
 import br.com.lesnik.mytwocents.model.Ativo;
 import br.com.lesnik.mytwocents.model.TipoAtivo;
+import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.AtivoRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +35,64 @@ public class CotacaoService {
     private static final String BRAPI_CRYPTO_URL = "https://brapi.dev/api/v2/crypto?coin=";
     private static final Duration CACHE_DURATION = Duration.ofMinutes(30);
 
+    private static final String COINGECKO_API_KEY = "CG-2xfzwvSvpTHnc91tqN7UA5WT";
+
+    private static final Map<String, String> COINGECKO_ID_MAP = Map.ofEntries(
+        Map.entry("BTC", "bitcoin"),
+        Map.entry("ETH", "ethereum"),
+        Map.entry("USDT", "tether"),
+        Map.entry("SOL", "solana"),
+        Map.entry("XRP", "ripple"),
+        Map.entry("ADA", "cardano"),
+        Map.entry("DOT", "polkadot"),
+        Map.entry("DOGE", "dogecoin"),
+        Map.entry("AVAX", "avalanche-2"),
+        Map.entry("MATIC", "matic-network"),
+        Map.entry("POL", "polygon"),
+        Map.entry("LINK", "chainlink"),
+        Map.entry("SHIB", "shiba-inu"),
+        Map.entry("LTC", "litecoin"),
+        Map.entry("BCH", "bitcoin-cash"),
+        Map.entry("XLM", "stellar"),
+        Map.entry("ALGO", "algorand"),
+        Map.entry("ATOM", "cosmos"),
+        Map.entry("UNI", "uniswap"),
+        Map.entry("ICP", "internet-computer"),
+        Map.entry("FIL", "filecoin"),
+        Map.entry("HBAR", "hedera-hashgraph"),
+        Map.entry("VET", "vechain"),
+        Map.entry("NEAR", "near"),
+        Map.entry("LDO", "lido-dao"),
+        Map.entry("GRT", "the-graph"),
+        Map.entry("AAVE", "aave"),
+        Map.entry("MKR", "maker"),
+        Map.entry("IMX", "immutable-x"),
+        Map.entry("OP", "optimism"),
+        Map.entry("ARB", "arbitrum"),
+        Map.entry("RNDR", "render-token"),
+        Map.entry("TIA", "celestia"),
+        Map.entry("SUI", "sui"),
+        Map.entry("SEI", "sei-network"),
+        Map.entry("FTM", "fantom"),
+        Map.entry("INJ", "injective-protocol"),
+        Map.entry("RENDER", "render-token")
+    );
+
+    private static final Map<String, String> COINGECKO_LOGO_MAP = Map.ofEntries(
+        Map.entry("BTC", "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"),
+        Map.entry("ETH", "https://assets.coingecko.com/coins/images/279/large/ethereum.png"),
+        Map.entry("USDT", "https://assets.coingecko.com/coins/images/325/large/tether.png"),
+        Map.entry("SOL", "https://assets.coingecko.com/coins/images/4128/large/solana.png"),
+        Map.entry("XRP", "https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png"),
+        Map.entry("ADA", "https://assets.coingecko.com/coins/images/975/large/cardano.png"),
+        Map.entry("DOT", "https://assets.coingecko.com/coins/images/12171/large/polkadot-new-dot-logo.png"),
+        Map.entry("DOGE", "https://assets.coingecko.com/coins/images/7829/large/dogecoin.png"),
+        Map.entry("AVAX", "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedLogo_Trans.png"),
+        Map.entry("LINK", "https://assets.coingecko.com/coins/images/877/large/chainlink-link-logo.png")
+    );
+
     private final AtivoRepository ativoRepository;
+    private final AiConfigRepository aiConfigRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -120,7 +179,7 @@ public class CotacaoService {
         return atualizados;
     }
 
-    private record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName, BigDecimal dividendYield) {
+    record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName, BigDecimal dividendYield) {
     }
 
     /**
@@ -302,10 +361,15 @@ public class CotacaoService {
     }
 
     /**
-     * Busca cotação de criptomoeda via endpoint específico da BrAPI.
+     * Busca cotação de criptomoeda via CoinGecko.
      */
-    private CotacaoResult buscarCotacaoCripto(String ticker, String token) throws Exception {
-        String url = BRAPI_CRYPTO_URL + ticker + "&currency=BRL&token=" + token;
+    CotacaoResult buscarCotacaoCripto(String ticker, String token) throws Exception {
+        String coingeckoId = COINGECKO_ID_MAP.getOrDefault(ticker.toUpperCase().trim(), ticker.toLowerCase().trim());
+        String dbKey = aiConfigRepository.findFirstByOrderByIdDesc()
+                .map(AiConfig::getCoingeckoKey)
+                .orElse(null);
+        String apiKey = (dbKey != null && !dbKey.isBlank()) ? dbKey.trim() : COINGECKO_API_KEY;
+        String url = "https://api.coingecko.com/api/v3/simple/price?vs_currencies=brl,usd&ids=" + coingeckoId + "&x_cg_demo_api_key=" + apiKey;
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -316,23 +380,30 @@ public class CotacaoService {
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
         if (response.statusCode() != 200) {
-            log.warn("BrAPI crypto retornou status {} para {}", response.statusCode(), ticker);
+            log.warn("CoinGecko retornou status {} para {}", response.statusCode(), ticker);
             return null;
         }
 
         JsonNode root = objectMapper.readTree(response.body());
-        JsonNode coins = root.path("coins");
-        if (coins.isArray() && !coins.isEmpty()) {
-            JsonNode first = coins.get(0);
-            double price = first.path("regularMarketPrice").asDouble(0);
-            String name = first.path("coinName").asText(null);
-            String logoUrl = first.path("coinImageUrl").asText(null);
+        JsonNode coinNode = root.path(coingeckoId);
+        if (coinNode.isMissingNode() || coinNode.isNull()) {
+            log.warn("CoinGecko não encontrou dados para id: {}", coingeckoId);
+            return null;
+        }
+
+        double price = coinNode.path("brl").asDouble(0);
+        if (price == 0) {
+            price = coinNode.path("usd").asDouble(0);
+        }
+
+        if (price > 0) {
+            String name = ticker.toUpperCase().trim();
+            String logoUrl = COINGECKO_LOGO_MAP.get(ticker.toUpperCase().trim());
             String sector = "Criptomoedas";
-            String longName = name;
-            if (price > 0) {
-                BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
-                return new CotacaoResult(p, name, logoUrl, sector, longName, BigDecimal.ZERO);
-            }
+            String longName = coingeckoId.substring(0, 1).toUpperCase() + coingeckoId.substring(1);
+
+            BigDecimal p = BigDecimal.valueOf(price).setScale(2, java.math.RoundingMode.HALF_UP);
+            return new CotacaoResult(p, name, logoUrl, sector, longName, BigDecimal.ZERO);
         }
 
         return null;

@@ -103,13 +103,18 @@ public class InvestimentoService {
 
         lancamento = lancamentoRepository.save(lancamento);
 
+        Categoria categoriaFinanceira = Categoria.TRANSFERENCIA;
+        if (dto.getTipoOperacao() == TipoOperacao.DIVIDENDO || dto.getTipoOperacao() == TipoOperacao.VENDA) {
+            categoriaFinanceira = Categoria.RECEITA;
+        }
+
         // Gera lançamento financeiro cruzado
         Lancamento fin = Lancamento.builder()
                 .descricao((dto.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Dividendo: " : 
                             dto.getTipoOperacao() == TipoOperacao.COMPRA ? "Compra de Ativo: " : "Venda de Ativo: ") 
                            + ativo.getTicker())
-                .categoria(dto.getTipoOperacao() == TipoOperacao.COMPRA ? Categoria.GASTO : Categoria.RECEITA)
-                .subcategoria(dto.getTipoOperacao() == TipoOperacao.COMPRA ? "Investimentos" :
+                .categoria(categoriaFinanceira)
+                .subcategoria(dto.getTipoOperacao() == TipoOperacao.COMPRA ? mapearSubcategoriaAporte(dto.getTipoAtivo()) :
                               dto.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Proventos" : "Resgate de Investimentos")
                 .valor(dto.getTipoOperacao() == TipoOperacao.DIVIDENDO ? valorLiquido : valorTotal)
                 .mes(dto.getData().getMonthValue())
@@ -167,8 +172,14 @@ public class InvestimentoService {
                 fin.setDescricao((lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Dividendo: " : 
                                   lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? "Compra de Ativo: " : "Venda de Ativo: ") 
                                  + lancamento.getAtivo().getTicker());
-                fin.setCategoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? Categoria.GASTO : Categoria.RECEITA);
-                fin.setSubcategoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? "Investimentos" :
+                
+                Categoria catFin = Categoria.TRANSFERENCIA;
+                if (lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO || lancamento.getTipoOperacao() == TipoOperacao.VENDA) {
+                    catFin = Categoria.RECEITA;
+                }
+                fin.setCategoria(catFin);
+                
+                fin.setSubcategoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? mapearSubcategoriaAporte(lancamento.getAtivo().getTipoAtivo()) :
                                     lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Proventos" : "Resgate de Investimentos");
                 fin.setValor(lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? lancamento.getValorLiquido() : lancamento.getValorTotal());
                 fin.setMes(lancamento.getData().getMonthValue());
@@ -178,12 +189,17 @@ public class InvestimentoService {
             });
         } else {
             // Caso seja um lançamento antigo e ainda não tenha sido sincronizado, cria um novo
+            Categoria catFin = Categoria.TRANSFERENCIA;
+            if (lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO || lancamento.getTipoOperacao() == TipoOperacao.VENDA) {
+                catFin = Categoria.RECEITA;
+            }
+            
             Lancamento fin = Lancamento.builder()
                     .descricao((lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Dividendo: " : 
                                 lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? "Compra de Ativo: " : "Venda de Ativo: ") 
                                + lancamento.getAtivo().getTicker())
-                    .categoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? Categoria.GASTO : Categoria.RECEITA)
-                    .subcategoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? "Investimentos" :
+                    .categoria(catFin)
+                    .subcategoria(lancamento.getTipoOperacao() == TipoOperacao.COMPRA ? mapearSubcategoriaAporte(lancamento.getAtivo().getTipoAtivo()) :
                                   lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? "Proventos" : "Resgate de Investimentos")
                     .valor(lancamento.getTipoOperacao() == TipoOperacao.DIVIDENDO ? lancamento.getValorLiquido() : lancamento.getValorTotal())
                     .mes(lancamento.getData().getMonthValue())
@@ -1021,5 +1037,18 @@ public class InvestimentoService {
         }
 
         return Map.of("investido", investido, "patrimonio", patrimonio);
+    }
+
+    private String mapearSubcategoriaAporte(TipoAtivo tipo) {
+        if (tipo == null) return "Investimentos";
+        switch (tipo) {
+            case ACAO: return "Ações";
+            case FII: return "FIIs";
+            case RENDA_FIXA: return "Renda Fixa";
+            case ETF: return "ETFs";
+            case TESOURO_DIRETO: return "Tesouro Direto";
+            case CRIPTO: return "Criptomoedas";
+            default: return "Investimentos";
+        }
     }
 }

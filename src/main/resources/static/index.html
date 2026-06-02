@@ -52,21 +52,27 @@
     </a>
     <a href="#" class="nav-item" id="nav-gastos" data-view="gastos">
       <span class="nav-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
       </span>
-      <span class="nav-label">Gastos</span>
+      <span class="nav-label">Despesas Variáveis</span>
     </a>
     <a href="#" class="nav-item" id="nav-gastos-fixos" data-view="gastos-fixos">
       <span class="nav-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="M8 14h.01"/><path d="M12 14h.01"/><path d="M16 14h.01"/><path d="M8 18h.01"/><path d="M12 18h.01"/><path d="M16 18h.01"/></svg>
       </span>
-      <span class="nav-label">Gastos Fixos</span>
+      <span class="nav-label">Despesas Fixas</span>
     </a>
     <a href="#" class="nav-item" id="nav-assinaturas" data-view="assinaturas">
       <span class="nav-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
       </span>
       <span class="nav-label">Assinaturas</span>
+    </a>
+    <a href="#" class="nav-item" id="nav-aportes" data-view="aportes">
+      <span class="nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+      </span>
+      <span class="nav-label">Aportes</span>
     </a>
     <a href="#" class="nav-item" id="nav-investimentos" data-view="investimentos">
       <span class="nav-icon">
@@ -96,13 +102,7 @@
       <select id="select-ano"></select>
     </div>
     
-    <div class="sidebar-item-row">
-      <label>Relatório</label>
-      <div class="export-btns">
-        <button class="btn-export" id="btn-export-csv" title="Exportar Planilha CSV (Ano Inteiro)">CSV</button>
-        <button class="btn-export" id="btn-export-pdf" title="Exportar Relatório PDF (Ano Inteiro)">PDF</button>
-      </div>
-    </div>
+
     <hr>
     <div class="sidebar-copyright">
       &copy; 2026 Leandro Lesnik
@@ -124,9 +124,15 @@
       <button class="menu-toggle" id="menu-toggle" aria-label="Abrir ou fechar menu" aria-expanded="false" aria-controls="sidebar">
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
       </button>
-      <h1 class="page-title" id="page-title">Dashboard</h1>
+      <h1 class="page-title" id="page-title">Dashboard Anual</h1>
     </div>
-    <div class="topbar-right">
+    <div class="topbar-right" style="display: flex; gap: 0.75rem; align-items: center;">
+      <button class="action-btn" id="btn-export-csv" title="Exportar para CSV" style="background: var(--bg-tertiary); color: var(--brand-glow); border: 1px solid var(--border);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
+      </button>
+      <button class="action-btn" id="btn-export-pdf" title="Exportar Relatório em PDF" style="background: var(--bg-tertiary); color: var(--accent-red); border: 1px solid var(--border);">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-6h3.5a2 2 0 1 1 0 4H9"/></svg>
+      </button>
       <div class="current-date" id="current-date"></div>
     </div>
   </header>
@@ -137,22 +143,27 @@
     <!-- Summary Cards -->
     <div class="cards-grid" id="dashboard-cards">
       <div class="card card--green">
-        <div class="card-label">Receitas Anuais</div>
+        <div class="card-label">Receitas</div>
         <div class="card-value" id="card-receitas">R$ 0,00</div>
         <div class="card-sub" id="card-receitas-sub">carregando...</div>
       </div>
       <div class="card card--red">
-        <div class="card-label">Gastos Anuais</div>
+        <div class="card-label">Despesas</div>
         <div class="card-value" id="card-gastos">R$ 0,00</div>
         <div class="card-sub" id="card-gastos-sub">carregando...</div>
       </div>
       <div class="card card--purple">
-        <div class="card-label">Assinaturas Anuais</div>
+        <div class="card-label">Assinaturas</div>
         <div class="card-value" id="card-assinaturas">R$ 0,00</div>
         <div class="card-sub" id="card-assinaturas-sub">carregando...</div>
       </div>
+      <div class="card card--orange">
+        <div class="card-label">Aportes</div>
+        <div class="card-value" id="card-aportes">R$ 0,00</div>
+        <div class="card-sub" id="card-aportes-sub">carregando...</div>
+      </div>
       <div class="card card--blue">
-        <div class="card-label">Saldo Anual</div>
+        <div class="card-label">Saldo</div>
         <div class="card-value" id="card-saldo">R$ 0,00</div>
         <div class="card-sub" id="card-saldo-sub">carregando...</div>
       </div>
@@ -162,7 +173,7 @@
     <div class="charts-row">
       <div class="chart-card chart-card--wide">
         <div class="chart-card-header">
-          <h2 class="chart-title">Receitas vs Gastos por Mês</h2>
+          <h2 class="chart-title">Receitas vs Despesas por Mês</h2>
         </div>
         <div class="chart-wrapper">
           <canvas id="chart-bar"></canvas>
@@ -170,7 +181,7 @@
       </div>
       <div class="chart-card">
         <div class="chart-card-header">
-          <h2 class="chart-title">Distribuição de Gastos (Ano)</h2>
+          <h2 class="chart-title">Distribuição de Despesas (Ano)</h2>
         </div>
         <div class="chart-wrapper chart-wrapper--donut">
           <canvas id="chart-donut"></canvas>
@@ -209,19 +220,23 @@
     <!-- Monthly Summary Cards -->
     <div class="cards-grid" id="monthly-cards">
       <div class="card card--green">
-        <div class="card-label">Receitas do Mês</div>
+        <div class="card-label">Receitas</div>
         <div class="card-value" id="card-m-receitas">R$ 0,00</div>
       </div>
       <div class="card card--red">
-        <div class="card-label">Gastos do Mês</div>
+        <div class="card-label">Despesas</div>
         <div class="card-value" id="card-m-gastos">R$ 0,00</div>
       </div>
       <div class="card card--purple">
-        <div class="card-label">Assinaturas do Mês</div>
+        <div class="card-label">Assinaturas</div>
         <div class="card-value" id="card-m-assinaturas">R$ 0,00</div>
       </div>
+      <div class="card card--orange">
+        <div class="card-label">Aportes</div>
+        <div class="card-value" id="card-m-aportes">R$ 0,00</div>
+      </div>
       <div class="card card--blue">
-        <div class="card-label">Saldo do Mês</div>
+        <div class="card-label">Saldo</div>
         <div class="card-value" id="card-m-saldo">R$ 0,00</div>
       </div>
     </div>
@@ -230,7 +245,7 @@
     <div class="charts-row">
       <div class="chart-card chart-card--wide">
         <div class="chart-card-header">
-          <h2 class="chart-title">Distribuição Gastos do Mês</h2>
+          <h2 class="chart-title">Distribuição Despesas do Mês</h2>
         </div>
         <div class="chart-wrapper chart-wrapper--donut">
           <canvas id="chart-donut-monthly"></canvas>
@@ -238,15 +253,48 @@
       </div>
       <div class="chart-card">
         <div class="chart-card-header">
-          <h2 class="chart-title">Total Gasto no Mês</h2>
+          <h2 class="chart-title">Total Despesas no Mês</h2>
         </div>
         <div class="top-total-container" id="top-total-monthly-container">
           <span class="top-total-value top-total-value--red" id="top-total-monthly-val">R$ 0,00</span>
         </div>
         <div class="chart-card-header">
-          <h2 class="chart-title">Top 5 Gastos do Mês</h2>
+          <h2 class="chart-title">Top 5 Despesas do Mês</h2>
         </div>
         <div class="top-list" id="top-gastos-monthly"></div>
+      </div>
+    </div>
+
+    <!-- ─── RESUMO DOS APORTES ─────────────────────────────────────────── -->
+    <div class="section-divider" style="margin-top: 2rem;">
+      <div class="section-divider-line"></div>
+      <div class="section-divider-title">
+        <!-- <span>Resumo dos Aportes</span> -->
+      </div>
+      <div class="section-divider-line"></div>
+    </div>
+
+    <!-- Aportes Charts Row -->
+    <div class="charts-row">
+      <div class="chart-card chart-card--wide">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Distribuição dos Aportes do Mês</h2>
+        </div>
+        <div class="chart-wrapper chart-wrapper--donut">
+          <canvas id="chart-donut-aportes"></canvas>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Total Aportado no Mês</h2>
+        </div>
+        <div class="top-total-container" id="top-total-aportes-container">
+          <span class="top-total-value top-total-value--orange" id="top-total-aportes-val">R$ 0,00</span>
+        </div>
+        <div class="chart-card-header">
+          <h2 class="chart-title">Top 5 Aportes do Mês</h2>
+        </div>
+        <div class="top-list" id="top-aportes-monthly"></div>
       </div>
     </div>
 
@@ -268,16 +316,7 @@
     <!-- Toolbar -->
     <div class="table-toolbar">
       <div class="month-tabs" id="month-tabs"></div>
-      <div class="table-actions" style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
-        <div style="display: flex; gap: 0.5rem; align-items: center; margin-right: 1rem;">
-          <label>Exportar:</label>
-          <button class="btn-export" id="btn-export-cat-csv" title="Exportar CSV desta Categoria/Mês" style="height: 38px;">CSV</button>
-          <button class="btn-export" id="btn-export-cat-pdf" title="Exportar PDF desta Categoria/Mês" style="height: 38px;">PDF</button>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn btn--primary" id="btn-add-row">+ Adicionar</button>
-        </div>
-      </div>
+      <button class="btn btn--primary" id="btn-add-row" style="white-space: nowrap; flex-shrink: 0;">+ Adicionar</button>
     </div>
 
 
@@ -285,7 +324,7 @@
     <div class="charts-row" style="margin-bottom: 1.5rem;">
       <div class="chart-card chart-card--wide">
         <div class="chart-card-header">
-          <h2 class="chart-title" id="title-dist-tabela">Distribuição de Gastos do Mês</h2>
+          <h2 class="chart-title" id="title-dist-tabela">Distribuição de Despesas do Mês</h2>
         </div>
         <div class="chart-wrapper chart-wrapper--donut">
           <canvas id="chart-donut-monthly-tabela"></canvas>
@@ -293,13 +332,13 @@
       </div>
       <div class="chart-card">
         <div class="chart-card-header">
-          <h2 class="chart-title" id="title-total-tabela">Total Gasto no Mês</h2>
+          <h2 class="chart-title" id="title-total-tabela">Total Despesas no Mês</h2>
         </div>
         <div class="top-total-container" id="top-total-tabela-container">
           <span class="top-total-value" id="top-total-tabela-val">R$ 0,00</span>
         </div>
         <div class="chart-card-header">
-          <h2 class="chart-title" id="title-top-tabela">Top 5 Gastos do Mês</h2>
+          <h2 class="chart-title" id="title-top-tabela">Top 5 Despesas do Mês</h2>
         </div>
         <div class="top-list" id="top-gastos-monthly-tabela"></div>
       </div>
@@ -314,7 +353,7 @@
             <th>Descrição</th>
             <th>Valor (R$)</th>
             <th>Dia</th>
-            <th class="col-actions">Ações</th>
+            <th class="col-actions" id="th-acoes">Ações</th>
           </tr>
         </thead>
         <tbody id="table-body"></tbody>
@@ -323,7 +362,7 @@
             <td colspan="2"><strong>Total do Mês</strong></td>
             <td id="table-total"><strong>R$ 0,00</strong></td>
             <td></td>
-            <td></td>
+            <td id="td-acoes-footer"></td>
           </tr>
         </tfoot>
       </table>
@@ -349,20 +388,13 @@
   <section class="view hidden" id="view-investimentos">
     
     <!-- Topbar actions -->
-    <div style="display: flex; justify-content: flex-end; gap: 1.5rem; margin-bottom: 1.5rem;">
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Exportar:</label>
-        <button class="btn-export" id="btn-inv-export-csv" title="Exportar Histórico de Investimentos (CSV)">CSV</button>
-        <button class="btn-export" id="btn-inv-export-pdf" title="Exportar Relatório de Investimentos (PDF)">PDF</button>
-      </div>
-      <div style="display: flex; gap: 0.75rem; align-items: center;">
-        <button class="btn btn--secondary" id="btn-atualizar-cotacoes" onclick="atualizarCotacoesBrapi()">Atualizar Cotações</button>
-        <button class="btn btn--primary" onclick="openInvModal()">+ Adicionar Lançamento</button>
-      </div>
+    <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-bottom: 1.5rem; align-items: center;">
+      <button class="btn btn--secondary" id="btn-atualizar-cotacoes" onclick="atualizarCotacoesBrapi()">Atualizar Cotações</button>
+      <button class="btn btn--primary" onclick="openInvModal()">+ Adicionar Lançamento</button>
     </div>
 
     <!-- Cards de Resumo -->
-    <div class="cards-grid">
+    <div class="cards-grid inv-cards-grid">
       <div class="card card--blue">
         <div class="card-label">Patrimônio Total</div>
         <div class="card-value" id="inv-card-patrimonio">R$ 0,00</div>
@@ -423,7 +455,7 @@
            style="border-left: 3px solid #a78bfa;">
         <div class="inv-accordion-title">
           <span class="inv-badge" style="background:#a78bfa20;color:#a78bfa;">Proventos</span>
-          <span class="inv-accordion-count" id="prov-count-label">carregando...</span>
+          <!-- <span class="inv-accordion-count" id="prov-count-label">carregando...</span> -->
         </div>
         <div class="inv-accordion-stats" style="position:relative;">
           <div style="display:flex;flex-direction:column;align-items:flex-end;position:relative;">
@@ -517,7 +549,7 @@
         <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Gere um arquivo de segurança contendo todos os seus lançamentos. Ideal para transferir dados para outro dispositivo.</p>
         <button class="btn" id="btn-export-backup" style="width: 100%; justify-content: center; background: rgba(16,185,129,0.12); color: var(--brand-glow); border: 1px solid var(--border-active); margin-top: auto;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-          Exportar Base de Dados (.mtc)
+          Exportar Dados (.mtc)
         </button>
       </div>
 
@@ -527,7 +559,7 @@
         <input type="file" id="file-import-backup" accept=".mtc" style="display: none;">
         <button class="btn" id="btn-import-backup" style="width: 100%; justify-content: center; background: rgba(244, 63, 94, 0.1); color: var(--accent-red); border: 1px solid rgba(244, 63, 94, 0.2); margin-top: auto;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-          Restaurar Banco de Dados (.mtc)
+          Restaurar Dados (.mtc)
         </button>
       </div>
 
@@ -582,6 +614,21 @@
           <button class="btn btn--primary" id="btn-save-brapi-token" style="white-space: nowrap; height: 40px; min-height: 40px; margin-bottom: 0px;">Salvar</button>
         </div>
         <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.75rem;">Crie sua conta gratuitamente em <a href="https://brapi.dev/" target="_blank" style="color: var(--brand-glow);">brapi.dev</a> para gerar o token.</p>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Integração CoinGecko</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1rem;">Configure sua API Key do CoinGecko para atualizar cotações de Criptomoedas. <strong>Opcional (se vazio, usa chave demo padrão)</strong>.</p>
+        <div id="coingecko-key-status" style="margin-bottom: 1rem;"></div>
+        
+        <div style="display: flex; gap: 0.5rem; align-items: flex-end; margin-bottom: 0.75rem;">
+          <div style="flex: 1;">
+            <label for="input-coingecko-key" style="display: block; font-size: 0.8rem; color: var(--text-secondary); font-weight: 500; margin-bottom: 0.25rem;">API Key CoinGecko</label>
+            <input type="password" id="input-coingecko-key" placeholder="Cole sua chave aqui..." style="width:100%; padding: 0.6rem 0.8rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-hover); color: var(--text-primary); font-size: 0.85rem;">
+          </div>
+          <button class="btn btn--primary" id="btn-save-coingecko-key" style="white-space: nowrap; height: 40px; min-height: 40px; margin-bottom: 0px;">Salvar</button>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.75rem;">Deixe vazio para usar a chave pública de demonstração padrão do CoinGecko.</p>
       </div>
     </div>
   </section>
@@ -647,6 +694,7 @@
           <option value="GASTO">Gasto</option>
           <option value="GASTO_FIXO">Gasto Fixo</option>
           <option value="ASSINATURA">Assinatura</option>
+          <option value="TRANSFERENCIA">Aportes</option>
         </select>
       </div>
 
@@ -756,6 +804,7 @@
           <option value="Rend. Trib.">Rend. Trib.</option>
         </select>
       </div>
+
 
       <div class="inv-summary-row" style="margin: 1.5rem 0 1rem; padding: 1rem; background: var(--bg-hover); border-radius: var(--radius-sm); border: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 600; color: var(--text-secondary);">Valor Total (R$)</span>

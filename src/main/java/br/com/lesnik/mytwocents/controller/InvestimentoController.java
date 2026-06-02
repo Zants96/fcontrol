@@ -205,4 +205,37 @@ public class InvestimentoController {
                 .orElse(false);
         return ResponseEntity.ok(Map.of("configurado", configurado));
     }
+
+    /**
+     * Salva a chave do CoinGecko.
+     */
+    @PostMapping("/coingecko/config")
+    public ResponseEntity<Map<String, String>> salvarCoingeckoKey(@RequestBody Map<String, String> body) {
+        String key = body.get("key");
+        if (key == null || key.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "A chave não pode ser vazia."));
+        }
+
+        AiConfig config = aiConfigRepository.findFirstByOrderByIdDesc()
+                .orElseGet(() -> AiConfig.builder()
+                        .apiKey("")
+                        .provider("gemini")
+                        .modelo("gemini-1.5-flash")
+                        .build());
+        config.setCoingeckoKey(key);
+        aiConfigRepository.save(config);
+
+        return ResponseEntity.ok(Map.of("status", "Chave CoinGecko salva com sucesso."));
+    }
+
+    /**
+     * Verifica se a chave CoinGecko está configurada.
+     */
+    @GetMapping("/coingecko/status")
+    public ResponseEntity<Map<String, Object>> coingeckoStatus() {
+        boolean configurado = aiConfigRepository.findFirstByOrderByIdDesc()
+                .map(c -> c.getCoingeckoKey() != null && !c.getCoingeckoKey().isBlank())
+                .orElse(false);
+        return ResponseEntity.ok(Map.of("configurado", configurado));
+    }
 }

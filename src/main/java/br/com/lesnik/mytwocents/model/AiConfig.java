@@ -40,6 +40,10 @@ public class AiConfig {
     @Column(length = 512)
     private String brapiToken;
 
+    /** Chave de API do CoinGecko para cotações de criptomoedas */
+    @Column(length = 512)
+    private String coingeckoKey;
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 

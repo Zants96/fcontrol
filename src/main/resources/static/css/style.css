@@ -435,9 +435,13 @@ select option { background: var(--bg-elevated); }
 /* ─── Dashboard Cards ───────────────────────────────────────────────────── */
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.inv-cards-grid {
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .card {
@@ -455,13 +459,14 @@ select option { background: var(--bg-elevated); }
 .card:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
 }
 
 .card::before {
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 3px;
+  height: 4px;
 }
 
 .card--green::before  { background: linear-gradient(90deg, var(--brand-primary), var(--brand-glow)); }
@@ -469,6 +474,7 @@ select option { background: var(--bg-elevated); }
 .card--purple::before { background: linear-gradient(90deg, #7c3aed, var(--accent-purple)); }
 .card--blue::before   { background: linear-gradient(90deg, #2563eb, var(--accent-blue)); }
 .card--orange::before { background: linear-gradient(90deg, #ea580c, var(--accent-orange)); }
+.card--cyan::before   { background: linear-gradient(90deg, #06b6d4, var(--accent-blue)); }
 
 .card::after {
   content: '';
@@ -501,7 +507,7 @@ select option { background: var(--bg-elevated); }
 }
 
 .card-value {
-  font-size: 1.6rem;
+  font-size: 1.45rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   margin-bottom: 0.5rem;
@@ -588,6 +594,7 @@ select option { background: var(--bg-elevated); }
 .top-total-value--purple { color: var(--accent-purple); }
 .top-total-value--blue   { color: var(--accent-blue); }
 .top-total-value--orange { color: var(--accent-orange); }
+.top-total-value--cyan   { color: #22d3ee; }
 
 /* ─── Top Gastos List ───────────────────────────────────────────────────── */
 .top-list {
@@ -659,8 +666,8 @@ select option { background: var(--bg-elevated); }
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
 }
 
 .table-toolbar label {

@@ -21,6 +21,11 @@ public class LancamentoService {
 
     private final LancamentoRepository repository;
 
+    public static final List<String> APORTES_SUBCATEGORIAS = List.of(
+            "Investimentos", "Ações", "FIIs", "Renda Fixa", "ETFs", "Tesouro Direto",
+            "Criptomoedas", "Fundos", "Stock", "BDRs", "Reit", "Poupança"
+    );
+
 
     // ─── CRUD ────────────────────────────────────────────────────────────────
 
@@ -203,6 +208,7 @@ public class LancamentoService {
         List<BigDecimal> receitasPorMes     = new ArrayList<>();
         List<BigDecimal> gastosPorMes       = new ArrayList<>();
         List<BigDecimal> assinaturasPorMes  = new ArrayList<>();
+        List<BigDecimal> aportesPorMes      = new ArrayList<>();
         List<BigDecimal> saldoPorMes        = new ArrayList<>();
 
         for (int mes = 1; mes <= 12; mes++) {
@@ -211,18 +217,21 @@ public class LancamentoService {
             BigDecimal gastos      = repository.sumByAnoAndMesAndCategoriaIn(ano, mes,
                     List.of(Categoria.GASTO, Categoria.GASTO_FIXO));
             BigDecimal assinaturas = repository.sumByAnoAndMesAndCategoria(ano, mes, Categoria.ASSINATURA);
-            BigDecimal saldo       = receitas.subtract(gastos).subtract(assinaturas);
+            BigDecimal aportes     = repository.sumByAnoAndMesAndCategoriaAndSubcategoriaIn(ano, mes, Categoria.TRANSFERENCIA, APORTES_SUBCATEGORIAS);
+            BigDecimal saldo       = receitas.subtract(gastos).subtract(assinaturas).subtract(aportes);
 
             receitasPorMes.add(receitas);
             gastosPorMes.add(gastos);
             assinaturasPorMes.add(assinaturas);
+            aportesPorMes.add(aportes);
             saldoPorMes.add(saldo);
         }
 
         BigDecimal totalReceitas    = repository.sumByAnoAndCategoria(ano, Categoria.RECEITA);
         BigDecimal totalGastos      = repository.sumByAnoAndCategoriaIn(ano, List.of(Categoria.GASTO, Categoria.GASTO_FIXO));
         BigDecimal totalAssinaturas = repository.sumByAnoAndCategoria(ano, Categoria.ASSINATURA);
-        BigDecimal saldoAnual       = totalReceitas.subtract(totalGastos).subtract(totalAssinaturas);
+        BigDecimal totalAportes     = repository.sumByAnoAndCategoriaAndSubcategoriaIn(ano, Categoria.TRANSFERENCIA, APORTES_SUBCATEGORIAS);
+        BigDecimal saldoAnual       = totalReceitas.subtract(totalGastos).subtract(totalAssinaturas).subtract(totalAportes);
 
         // Todos os tipos de saída para o gráfico donut e top 5
         List<Lancamento> todasSaidas = new ArrayList<>();
@@ -248,10 +257,12 @@ public class LancamentoService {
                 .totalReceitas(totalReceitas)
                 .totalGastos(totalGastos)
                 .totalAssinaturas(totalAssinaturas)
+                .totalAportes(totalAportes)
                 .saldoAnual(saldoAnual)
                 .receitasPorMes(receitasPorMes)
                 .gastosPorMes(gastosPorMes)
                 .assinaturasPorMes(assinaturasPorMes)
+                .aportesPorMes(aportesPorMes)
                 .saldoPorMes(saldoPorMes)
                 .gastosPorSubcategoria(gastosPorSubcategoria)
                 .topGastos(topGastos)
