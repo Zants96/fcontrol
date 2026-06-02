@@ -51,6 +51,12 @@ class LancamentoServiceTest {
         when(repository.sumByAnoAndCategoria(ano, Categoria.RECEITA)).thenReturn(new BigDecimal("12000.00"));
         when(repository.sumByAnoAndCategoriaIn(ano, Arrays.asList(Categoria.GASTO, Categoria.GASTO_FIXO))).thenReturn(new BigDecimal("4800.00"));
         when(repository.sumByAnoAndCategoria(ano, Categoria.ASSINATURA)).thenReturn(new BigDecimal("1200.00"));
+        
+
+        when(repository.sumByAnoAndMesAndCategoriaAndSubcategoriaIn(eq(ano), anyInt(), eq(Categoria.TRANSFERENCIA), any()))
+                .thenReturn(BigDecimal.ZERO);
+        when(repository.sumByAnoAndCategoriaAndSubcategoriaIn(eq(ano), eq(Categoria.TRANSFERENCIA), any()))
+                .thenReturn(BigDecimal.ZERO);
 
         // Mocking finds for top 5 calculation
         Lancamento l1 = Lancamento.builder().subcategoria("Alimentação").valor(new BigDecimal("2000.00")).build();
@@ -83,6 +89,9 @@ class LancamentoServiceTest {
         when(repository.sumByAnoAndMesAndCategoriaIn(anyInt(), anyInt(), any())).thenReturn(BigDecimal.ZERO);
         when(repository.sumByAnoAndCategoria(anyInt(), any())).thenReturn(BigDecimal.ZERO);
         when(repository.sumByAnoAndCategoriaIn(anyInt(), any())).thenReturn(BigDecimal.ZERO);
+
+        when(repository.sumByAnoAndMesAndCategoriaAndSubcategoriaIn(anyInt(), anyInt(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(repository.sumByAnoAndCategoriaAndSubcategoriaIn(anyInt(), any(), any())).thenReturn(BigDecimal.ZERO);
 
         DashboardDTO dashboard = service.calcularDashboard(ano);
 

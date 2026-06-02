@@ -31,11 +31,6 @@ async function loadInvestimentos() {
     renderInvAcordeoes(data);
     renderProvHistoricoCard();
 
-    // Binds para Exportação
-    const btnCsv = $('btn-inv-export-csv');
-    const btnPdf = $('btn-inv-export-pdf');
-    if (btnCsv) btnCsv.onclick = () => downloadInvestimentos('csv');
-    if (btnPdf) btnPdf.onclick = () => downloadInvestimentos('pdf');
 
     // Carrega botão/insights da IA para a carteira
     if (typeof loadAiInsights === 'function') {
@@ -1261,6 +1256,33 @@ function initBrapiConfig() {
   });
 }
 
+async function checkCoingeckoStatus() {
+  try {
+    const status = await Api.getCoingeckoStatus();
+    const el = $('coingecko-key-status');
+    if (el) {
+      el.innerHTML = status.configurado
+        ? '<span style="color:var(--brand-glow);">✅ Chave CoinGecko configurada</span>'
+        : '<span style="color:var(--text-muted);">ℹ️ Usando chave de demonstração padrão</span>';
+    }
+  } catch (e) { /* silently fail */ }
+}
+
+function initCoingeckoConfig() {
+  $('btn-save-coingecko-key')?.addEventListener('click', async () => {
+    const key = $('input-coingecko-key')?.value?.trim();
+    if (!key) { showToast('Cole a chave de API do CoinGecko.', 'error'); return; }
+    try {
+      await Api.saveCoingeckoKey(key);
+      showToast('Chave CoinGecko salva!', 'success');
+      $('input-coingecko-key').value = '';
+      checkCoingeckoStatus();
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+}
+
 // ─── HISTÓRICO DE PROVENTOS ──────────────────────────────────────────────
 
 async function renderProvHistoricoCard() {
@@ -1418,6 +1440,7 @@ function initVarCellTooltips() {
 }
 
 function abrirModalProventosMes(ano, mes) {
+  window._activeProventosFilter = { type: 'mes', ano, mes };
   const data = window._proventosHistoricoData;
   if (!data) return;
   const nomeMes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][mes - 1];
@@ -1430,6 +1453,7 @@ function abrirModalProventosMes(ano, mes) {
 }
 
 function abrirModalProventos() {
+  window._activeProventosFilter = { type: 'todos' };
   const data = window._proventosHistoricoData;
   if (!data) return;
   abrirModalProventosComLista((data.lancamentos || []).slice().reverse(), 'Histórico de Proventos');
@@ -1526,7 +1550,13 @@ async function editarLancamentoDoModal(id) {
       // Reopen the proventos modal with fresh data
       const overlay = $('prov-modal-overlay');
       if (overlay && !overlay.classList.contains('hidden')) {
-        setTimeout(abrirModalProventos, 600);
+        setTimeout(() => {
+          if (window._activeProventosFilter && window._activeProventosFilter.type === 'mes') {
+             abrirModalProventosMes(window._activeProventosFilter.ano, window._activeProventosFilter.mes);
+          } else {
+             abrirModalProventos();
+          }
+        }, 600);
       }
     }, { once: false });
   }
@@ -1538,7 +1568,11 @@ async function excluirProventoDoModal(lancamentoId, ticker) {
     await Api.excluirLancamentoInvestimento(lancamentoId);
     showToast('Provento excluído!', 'success');
     await renderProvHistoricoCard();
-    abrirModalProventos();
+    if (window._activeProventosFilter && window._activeProventosFilter.type === 'mes') {
+       abrirModalProventosMes(window._activeProventosFilter.ano, window._activeProventosFilter.mes);
+    } else {
+       abrirModalProventos();
+    }
     loadInvestimentos();
   } catch (err) {
     showToast('Erro ao excluir: ' + err.message, 'error');

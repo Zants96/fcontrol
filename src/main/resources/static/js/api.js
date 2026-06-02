@@ -233,4 +233,20 @@ const Api = {
     if (!res.ok) throw new Error('Erro ao verificar status BrAPI');
     return res.json();
   },
+
+  async saveCoingeckoKey(key) {
+    const res = await fetch(`${API_BASE}/investimentos/coingecko/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    });
+    if (!res.ok) throw new Error('Erro ao salvar chave CoinGecko');
+    return res.json();
+  },
+
+  async getCoingeckoStatus() {
+    const res = await fetch(`${API_BASE}/investimentos/coingecko/status`);
+    if (!res.ok) throw new Error('Erro ao verificar status CoinGecko');
+    return res.json();
+  },
 };

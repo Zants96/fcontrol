@@ -141,6 +141,7 @@ public class LancamentoController {
             case "gastos" -> Categoria.GASTO;
             case "gastos-fixos" -> Categoria.GASTO_FIXO;
             case "assinaturas" -> Categoria.ASSINATURA;
+            case "aportes" -> Categoria.TRANSFERENCIA;
             default -> null;
         };
     }
@@ -159,6 +160,7 @@ public class LancamentoController {
                 case "gastos" -> "Gastos";
                 case "gastos-fixos" -> "Gastos Fixos";
                 case "assinaturas" -> "Assinaturas";
+                case "aportes" -> "Aportes";
                 default -> "Geral";
             };
             name.append(" - ").append(aba);
