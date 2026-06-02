@@ -696,8 +696,14 @@ async function onInvFormSubmit(e) {
   try {
     await Api.criarLancamentoInvestimento(dto);
     showToast('Lançamento registrado!', 'success');
-    closeInvModal();
-    loadInvestimentos();
+    if (confirm('Lançamento registrado com sucesso!\n\nDeseja registrar outro lançamento de investimento agora?')) {
+      openInvModal(tipoAtivo);
+      loadInvestimentos();
+      return;
+    } else {
+      closeInvModal();
+      loadInvestimentos();
+    }
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
@@ -912,7 +918,12 @@ async function excluirLancamentoInvestimento(lancamentoId, ativoId, ticker) {
     // Atualiza o histórico e o dashboard por trás
     const lancamentos = await Api.getLancamentosInvestimento(ativoId);
     const filtrados = (lancamentos || []).filter(l => l.tipoOperacao !== 'DIVIDENDO');
-    renderizarTabelaHistorico(filtrados);
+    
+    if (filtrados.length === 0) {
+      $('inv-historico-close')?.click();
+    } else {
+      renderizarTabelaHistorico(filtrados);
+    }
     loadInvestimentos();
   } catch (err) {
     showToast(err.message, 'error');
@@ -1199,6 +1210,7 @@ function initInvEditModalListeners() {
       const lancamentos = await Api.getLancamentosInvestimento(ativoId);
       renderizarTabelaHistorico(lancamentos);
       loadInvestimentos();
+      form.dispatchEvent(new CustomEvent('inv-saved'));
     } catch (err) {
       showToast('Erro ao atualizar lançamento: ' + err.message, 'error');
     }
@@ -1452,12 +1464,7 @@ function abrirModalProventosMes(ano, mes) {
   abrirModalProventosComLista(filtrados, `Proventos – ${nomeMes}/${ano}`);
 }
 
-function abrirModalProventos() {
-  window._activeProventosFilter = { type: 'todos' };
-  const data = window._proventosHistoricoData;
-  if (!data) return;
-  abrirModalProventosComLista((data.lancamentos || []).slice().reverse(), 'Histórico de Proventos');
-}
+
 
 function abrirModalProventosComLista(lancamentos, titulo) {
   let overlay = $('prov-modal-overlay');
@@ -1545,7 +1552,7 @@ async function editarLancamentoDoModal(id) {
   const form = $('inv-edit-form');
   if (form && !form._proventosHooked) {
     form._proventosHooked = true;
-    form.addEventListener('submit', async () => {
+    form.addEventListener('inv-saved', async () => {
       await renderProvHistoricoCard();
       // Reopen the proventos modal with fresh data
       const overlay = $('prov-modal-overlay');
@@ -1553,8 +1560,6 @@ async function editarLancamentoDoModal(id) {
         setTimeout(() => {
           if (window._activeProventosFilter && window._activeProventosFilter.type === 'mes') {
              abrirModalProventosMes(window._activeProventosFilter.ano, window._activeProventosFilter.mes);
-          } else {
-             abrirModalProventos();
           }
         }, 600);
       }
@@ -1570,8 +1575,6 @@ async function excluirProventoDoModal(lancamentoId, ticker) {
     await renderProvHistoricoCard();
     if (window._activeProventosFilter && window._activeProventosFilter.type === 'mes') {
        abrirModalProventosMes(window._activeProventosFilter.ano, window._activeProventosFilter.mes);
-    } else {
-       abrirModalProventos();
     }
     loadInvestimentos();
   } catch (err) {

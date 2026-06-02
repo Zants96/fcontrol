@@ -14,7 +14,7 @@ jobs:
     outputs:
       new_tag: ${{ steps.tag_action.outputs.new_tag }}
       clean_version: ${{ steps.tag_action.outputs.new_version }}
-      changelog: ${{ steps.tag_action.outputs.changelog }}
+      changelog: ${{ steps.custom_changelog.outputs.changelog }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,6 +26,32 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: patch
+
+      - name: Generate custom changelog with full commit descriptions
+        id: custom_changelog
+        shell: bash
+        run: |
+          PREV_TAG="${{ steps.tag_action.outputs.previous_tag }}"
+          
+          # Fetch tags so git has local reference to PREV_TAG
+          git fetch --tags
+          
+          echo "Previous tag: $PREV_TAG"
+          
+          if [ -n "$PREV_TAG" ] && git rev-parse "$PREV_TAG" >/dev/null 2>&1; then
+            # Format as: * Subject\nBody
+            CHANGES=$(git log --pretty=format:"* %s%n%b" ${PREV_TAG}..HEAD)
+          else
+            # Fallback if no previous tag
+            CHANGES=$(git log --pretty=format:"* %s%n%b" -n 10 HEAD)
+          fi
+          
+          # Write multi-line output using a random safe delimiter
+          EOF_DELIMITER=$(dd if=/dev/urandom bs=15 count=1 2>/dev/null | base64 | tr -dc 'a-zA-Z')
+          echo "changelog<<$EOF_DELIMITER" >> $GITHUB_OUTPUT
+          echo "$CHANGES" >> $GITHUB_OUTPUT
+          echo "$EOF_DELIMITER" >> $GITHUB_OUTPUT
+
 
   build:
     name: Build ${{ matrix.target }}
