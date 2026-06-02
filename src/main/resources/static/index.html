@@ -127,10 +127,10 @@
       <h1 class="page-title" id="page-title">Dashboard Anual</h1>
     </div>
     <div class="topbar-right" style="display: flex; gap: 0.75rem; align-items: center;">
-      <button class="action-btn" id="btn-export-csv" title="Exportar Planilha CSV (Ano Inteiro)" style="background: var(--bg-tertiary); color: var(--brand-glow); border: 1px solid var(--border);">
+      <button class="action-btn" id="btn-export-csv" title="Exportar para CSV" style="background: var(--bg-tertiary); color: var(--brand-glow); border: 1px solid var(--border);">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
       </button>
-      <button class="action-btn" id="btn-export-pdf" title="Exportar Relatório PDF (Ano Inteiro)" style="background: var(--bg-tertiary); color: var(--accent-red); border: 1px solid var(--border);">
+      <button class="action-btn" id="btn-export-pdf" title="Exportar Relatório em PDF" style="background: var(--bg-tertiary); color: var(--accent-red); border: 1px solid var(--border);">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-6h3.5a2 2 0 1 1 0 4H9"/></svg>
       </button>
       <div class="current-date" id="current-date"></div>
@@ -316,16 +316,7 @@
     <!-- Toolbar -->
     <div class="table-toolbar">
       <div class="month-tabs" id="month-tabs"></div>
-      <div class="table-actions" style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
-        <div style="display: flex; gap: 0.5rem; align-items: center; margin-right: 1rem;">
-          <label>Exportar:</label>
-          <button class="btn-export" id="btn-export-cat-csv" title="Exportar CSV desta Categoria/Mês" style="height: 38px;">CSV</button>
-          <button class="btn-export" id="btn-export-cat-pdf" title="Exportar PDF desta Categoria/Mês" style="height: 38px;">PDF</button>
-        </div>
-        <div style="display: flex; gap: 0.5rem; align-items: center;">
-          <button class="btn btn--primary" id="btn-add-row">+ Adicionar</button>
-        </div>
-      </div>
+      <button class="btn btn--primary" id="btn-add-row" style="white-space: nowrap; flex-shrink: 0;">+ Adicionar</button>
     </div>
 
 
@@ -397,16 +388,9 @@
   <section class="view hidden" id="view-investimentos">
     
     <!-- Topbar actions -->
-    <div style="display: flex; justify-content: flex-end; gap: 1.5rem; margin-bottom: 1.5rem;">
-      <div style="display: flex; gap: 0.5rem; align-items: center;">
-        <label style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Exportar:</label>
-        <button class="btn-export" id="btn-inv-export-csv" title="Exportar Histórico de Investimentos (CSV)">CSV</button>
-        <button class="btn-export" id="btn-inv-export-pdf" title="Exportar Relatório de Investimentos (PDF)">PDF</button>
-      </div>
-      <div style="display: flex; gap: 0.75rem; align-items: center;">
-        <button class="btn btn--secondary" id="btn-atualizar-cotacoes" onclick="atualizarCotacoesBrapi()">Atualizar Cotações</button>
-        <button class="btn btn--primary" onclick="openInvModal()">+ Adicionar Lançamento</button>
-      </div>
+    <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-bottom: 1.5rem; align-items: center;">
+      <button class="btn btn--secondary" id="btn-atualizar-cotacoes" onclick="atualizarCotacoesBrapi()">Atualizar Cotações</button>
+      <button class="btn btn--primary" onclick="openInvModal()">+ Adicionar Lançamento</button>
     </div>
 
     <!-- Cards de Resumo -->
@@ -820,6 +804,7 @@
           <option value="Rend. Trib.">Rend. Trib.</option>
         </select>
       </div>
+
 
       <div class="inv-summary-row" style="margin: 1.5rem 0 1rem; padding: 1rem; background: var(--bg-hover); border-radius: var(--radius-sm); border: 1px dashed var(--border); display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 600; color: var(--text-secondary);">Valor Total (R$)</span>

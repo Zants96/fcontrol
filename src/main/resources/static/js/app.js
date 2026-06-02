@@ -216,6 +216,9 @@ function refreshView() {
 
 // ─── Exportação ──────────────────────────────────────────────────────────────
 function buildExportUrl(format, isFullReport) {
+  if (state.view === 'investimentos') {
+    return `/api/investimentos/export/${format}`;
+  }
   const mes = isFullReport ? 0 : state.mes;
   const view = isFullReport ? 'dashboard' : state.view;
   const safeMes = Number.isInteger(mes) && mes > 0 && mes <= 12 ? mes : null;
@@ -232,9 +235,14 @@ function buildFileName(format, isFullReport) {
     'gastos': 'Despesas Variáveis',
     'gastos-fixos': 'Despesas Fixas',
     'assinaturas': 'Assinaturas',
-    'dashboard': 'Geral'
+    'dashboard': 'Geral',
+    'investimentos': 'Investimentos',
+    'aportes': 'Aportes',
   };
   let name = `MyTwoCents - ${state.ano}`;
+  if (state.view === 'investimentos') {
+    return `MyTwoCents - Carteira de Investimentos.${format}`;
+  }
   const mes = isFullReport ? 0 : state.mes;
   const view = isFullReport ? 'dashboard' : state.view;
   
@@ -275,13 +283,14 @@ function triggerExport(format, isFullReport = false) {
 }
 
 function initExport() {
-  $('btn-export-csv').addEventListener('click', () => triggerExport('csv', true));
-  $('btn-export-pdf').addEventListener('click', () => triggerExport('pdf', true));
-  
-  const catCsv = $('btn-export-cat-csv');
-  if (catCsv) catCsv.addEventListener('click', () => triggerExport('csv', false));
-  const catPdf = $('btn-export-cat-pdf');
-  if (catPdf) catPdf.addEventListener('click', () => triggerExport('pdf', false));
+  $('btn-export-csv').addEventListener('click', () => {
+    const isFullReport = state.view === 'dashboard';
+    triggerExport('csv', isFullReport);
+  });
+  $('btn-export-pdf').addEventListener('click', () => {
+    const isFullReport = state.view === 'dashboard';
+    triggerExport('pdf', isFullReport);
+  });
 }
 
 // ─── Mobile Menu ─────────────────────────────────────────────────────────────

@@ -666,8 +666,8 @@ select option { background: var(--bg-elevated); }
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
-  gap: 1rem;
-  flex-wrap: wrap;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
 }
 
 .table-toolbar label {

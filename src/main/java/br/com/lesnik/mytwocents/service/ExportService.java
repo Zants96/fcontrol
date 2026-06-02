@@ -53,7 +53,7 @@ public class ExportService {
             sb.append(l.getAno()).append(";");
             if (incluirMes) sb.append(MESES[l.getMes() - 1]).append(";");
             sb.append(l.getDia() != null ? String.format("%02d", l.getDia()) : "").append(";");
-            sb.append(l.getCategoria()).append(";")
+            sb.append(formatarCategoria(l)).append(";")
                     .append(sanitizarCampoCsv(l.getSubcategoria())).append(";")
                     .append(sanitizarCampoCsv(l.getDescricao())).append(";")
                     .append(l.getValor().toString().replace(".", ","))
@@ -181,8 +181,8 @@ public class ExportService {
     private String formatarCategoria(Categoria cat) {
         return switch (cat) {
             case RECEITA -> "Receita";
-            case GASTO -> "Gasto";
-            case GASTO_FIXO -> "Gasto Fixo";
+            case GASTO -> "Despesa";
+            case GASTO_FIXO -> "Despesa Fixa";
             case ASSINATURA -> "Assinatura";
             case TRANSFERENCIA -> "Aporte";
         };

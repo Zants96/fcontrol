@@ -31,11 +31,6 @@ async function loadInvestimentos() {
     renderInvAcordeoes(data);
     renderProvHistoricoCard();
 
-    // Binds para Exportação
-    const btnCsv = $('btn-inv-export-csv');
-    const btnPdf = $('btn-inv-export-pdf');
-    if (btnCsv) btnCsv.onclick = () => downloadInvestimentos('csv');
-    if (btnPdf) btnPdf.onclick = () => downloadInvestimentos('pdf');
 
     // Carrega botão/insights da IA para a carteira
     if (typeof loadAiInsights === 'function') {
