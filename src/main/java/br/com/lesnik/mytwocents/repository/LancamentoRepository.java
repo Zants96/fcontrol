@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -45,6 +47,18 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
     @Query("DELETE FROM Lancamento l WHERE l.valor = 0")
     int deleteAllZeroValue();
 
+    @Query("SELECT COALESCE(SUM(l.valor), 0) FROM Lancamento l WHERE l.ano = :ano AND l.mes = :mes AND l.categoria = :cat AND l.subcategoria = :sub")
+    BigDecimal sumByAnoAndMesAndCategoriaAndSubcategoria(@Param("ano") Integer ano, @Param("mes") Integer mes, @Param("cat") Categoria cat, @Param("sub") String sub);
+
+    @Query("SELECT COALESCE(SUM(l.valor), 0) FROM Lancamento l WHERE l.ano = :ano AND l.categoria = :cat AND l.subcategoria = :sub")
+    BigDecimal sumByAnoAndCategoriaAndSubcategoria(@Param("ano") Integer ano, @Param("cat") Categoria cat, @Param("sub") String sub);
+
+    @Query("SELECT COALESCE(SUM(l.valor), 0) FROM Lancamento l WHERE l.ano = :ano AND l.mes = :mes AND l.categoria = :cat AND l.subcategoria IN :subs")
+    BigDecimal sumByAnoAndMesAndCategoriaAndSubcategoriaIn(@Param("ano") Integer ano, @Param("mes") Integer mes, @Param("cat") Categoria cat, @Param("subs") List<String> subs);
+
+    @Query("SELECT COALESCE(SUM(l.valor), 0) FROM Lancamento l WHERE l.ano = :ano AND l.categoria = :cat AND l.subcategoria IN :subs")
+    BigDecimal sumByAnoAndCategoriaAndSubcategoriaIn(@Param("ano") Integer ano, @Param("cat") Categoria cat, @Param("subs") List<String> subs);
+
     List<Lancamento> findByGrupoId(String grupoId);
 
     @Modifying
@@ -54,4 +68,15 @@ public interface LancamentoRepository extends JpaRepository<Lancamento, Long> {
     @Modifying
     @Query("DELETE FROM Lancamento l WHERE l.grupoId = :grupoId AND l.parcelaActual >= :parcela")
     void deleteByGrupoIdAndParcelaActualGreaterThanEqual(@Param("grupoId") String grupoId, @Param("parcela") Integer parcela);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Lancamento l SET l.categoria = br.com.lesnik.mytwocents.model.Categoria.TRANSFERENCIA WHERE l.subcategoria = 'Investimentos' AND l.categoria IN (br.com.lesnik.mytwocents.model.Categoria.GASTO, br.com.lesnik.mytwocents.model.Categoria.GASTO_FIXO)")
+    int migrateInvestimentosToTransferencia();
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Lancamento l SET l.categoria = br.com.lesnik.mytwocents.model.Categoria.RECEITA WHERE l.subcategoria = 'Resgate de Investimentos' AND l.categoria = br.com.lesnik.mytwocents.model.Categoria.TRANSFERENCIA")
+    int migrateResgatesToReceita();
 }
+

@@ -10,20 +10,29 @@ const SUBCATEGORIAS = {
   ],
   GASTO: [
     'Água', 'Alimentação', 'Aluguel', 'Cartão de Crédito', 'Casa & Decoração', 'Consultas', 
-    'Delivery / Apps', 'Educação', 'Eletrônicos', 'Empréstimo', 'Investimentos', 'Lanches', 'Lazer', 'Manutenção/Reparos', 
+    'Delivery / Apps', 'Educação', 'Eletrônicos', 'Empréstimo', 'Lanches', 'Lazer', 'Manutenção/Reparos', 
     'Medicamentos', 'Outros', 'Pets', 'Presentes / Doações', 'Prestações', 
     'Restaurante', 'Saúde & Beleza', 'Taxas/Impostos', 'Transporte', 'Vestuário', 'Viagens'
   ],
   GASTO_FIXO: [
     'Água', 'Aluguel', 'Condomínio', 'Energia/Luz', 'Impostos', 
-    'Internet', 'Investimentos', 'Outros', 'Plano de Saúde', 'Plano Odontológico', 'Prestação', 'Seguro', 'Seguro Residencial', 
+    'Internet', 'Outros', 'Plano de Saúde', 'Plano Odontológico', 'Prestação', 'Seguro', 'Seguro Residencial', 
     'Telefonia'
   ],
   ASSINATURA: [
     'Educação/Cursos', 'Jogos/Consoles', 'Leitura/Notícias', 'Outros', 'Serviços de Assinatura', 
     'Serviços Digitais/Cloud', 'Streaming de Áudio', 'Streaming de Vídeo'
   ],
+  TRANSFERENCIA: [
+    'Ações', 'FIIs', 'Renda Fixa', 'ETFs', 'Tesouro Direto', 'Criptomoedas', 'Fundos', 'Stock', 'BDRs', 'Reit', 'Poupança',
+    'Outras Transferências'
+  ],
 };
+
+const APORTES_SUBCATEGORIAS = [
+  'Investimentos', 'Ações', 'FIIs', 'Renda Fixa', 'ETFs', 'Tesouro Direto', 
+  'Criptomoedas', 'Fundos', 'Stock', 'BDRs', 'Reit', 'Poupança'
+];
 
 // ─── Estado Global ───────────────────────────────────────────────────────────
 const state = {
@@ -42,9 +51,10 @@ const MESES_FULL = [
 
 const CATEGORIA_LABEL = {
   RECEITA:    'Receitas',
-  GASTO:      'Gastos',
-  GASTO_FIXO: 'Gastos Fixos',
+  GASTO:      'Despesas',
+  GASTO_FIXO: 'Despesas Fixas',
   ASSINATURA: 'Assinaturas',
+  TRANSFERENCIA: 'Aportes',
 };
 
 const CATEGORIA_VIEW = {
@@ -52,6 +62,7 @@ const CATEGORIA_VIEW = {
   gastos:         'GASTO',
   'gastos-fixos': 'GASTO_FIXO',
   assinaturas:    'ASSINATURA',
+  aportes:        'TRANSFERENCIA',
 };
 
 // ─── DOM Refs ─────────────────────────────────────────────────────────────────
@@ -72,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   initAiChat();
   initBrapiConfig();
+  initCoingeckoConfig();
   navigateTo('dashboard');
 });
 
@@ -137,14 +149,15 @@ function navigateTo(view) {
   if (navItem) navItem.classList.add('active');
 
   const titles = {
-    dashboard:       'Dashboard',
-    receitas:        'Receitas',
-    gastos:          'Gastos',
-    'gastos-fixos':  'Gastos Fixos',
-    assinaturas:     'Assinaturas',
-    investimentos:   'Investimentos',
+    dashboard: 'Dashboard Anual',
+    receitas: 'Receitas',
+    gastos: 'Despesas Variáveis',
+    'gastos-fixos': 'Despesas Fixas',
+    assinaturas: 'Assinaturas',
+    investimentos: 'Carteira de Investimentos',
+    aportes: 'Aportes',
     'assistente-ia': 'Assistente IA',
-    configuracoes:   'Configurações',
+    configuracoes: 'Configurações',
   };
   $('page-title').textContent = titles[view] || view;
 
@@ -167,6 +180,7 @@ function navigateTo(view) {
     $('view-configuracoes')?.classList.remove('hidden');
     checkAiKeyStatus();
     checkBrapiStatus();
+    checkCoingeckoStatus();
   } else {
     state.categoria = CATEGORIA_VIEW[view];
     
@@ -180,9 +194,9 @@ function navigateTo(view) {
       if (state.categoria === 'RECEITA') {
         tTotal.textContent = 'Total Recebido no Mês';
       } else if (state.categoria === 'GASTO') {
-        tTotal.textContent = 'Total Gasto no Mês';
+        tTotal.textContent = 'Total Despesas no Mês';
       } else if (state.categoria === 'GASTO_FIXO') {
-        tTotal.textContent = 'Total Gasto Fixo no Mês';
+        tTotal.textContent = 'Total Despesas Fixas no Mês';
       } else if (state.categoria === 'ASSINATURA') {
         tTotal.textContent = 'Total de Assinaturas no Mês';
       } else {
@@ -202,6 +216,9 @@ function refreshView() {
 
 // ─── Exportação ──────────────────────────────────────────────────────────────
 function buildExportUrl(format, isFullReport) {
+  if (state.view === 'investimentos') {
+    return `/api/investimentos/export/${format}`;
+  }
   const mes = isFullReport ? 0 : state.mes;
   const view = isFullReport ? 'dashboard' : state.view;
   const safeMes = Number.isInteger(mes) && mes > 0 && mes <= 12 ? mes : null;
@@ -215,12 +232,17 @@ function buildFileName(format, isFullReport) {
   ];
   const VIEW_NOMES = {
     'receitas': 'Receitas',
-    'gastos': 'Gastos',
-    'gastos-fixos': 'Gastos Fixos',
+    'gastos': 'Despesas Variáveis',
+    'gastos-fixos': 'Despesas Fixas',
     'assinaturas': 'Assinaturas',
-    'dashboard': 'Geral'
+    'dashboard': 'Geral',
+    'investimentos': 'Investimentos',
+    'aportes': 'Aportes',
   };
   let name = `MyTwoCents - ${state.ano}`;
+  if (state.view === 'investimentos') {
+    return `MyTwoCents - Carteira de Investimentos.${format}`;
+  }
   const mes = isFullReport ? 0 : state.mes;
   const view = isFullReport ? 'dashboard' : state.view;
   
@@ -261,13 +283,14 @@ function triggerExport(format, isFullReport = false) {
 }
 
 function initExport() {
-  $('btn-export-csv').addEventListener('click', () => triggerExport('csv', true));
-  $('btn-export-pdf').addEventListener('click', () => triggerExport('pdf', true));
-  
-  const catCsv = $('btn-export-cat-csv');
-  if (catCsv) catCsv.addEventListener('click', () => triggerExport('csv', false));
-  const catPdf = $('btn-export-cat-pdf');
-  if (catPdf) catPdf.addEventListener('click', () => triggerExport('pdf', false));
+  $('btn-export-csv').addEventListener('click', () => {
+    const isFullReport = state.view === 'dashboard';
+    triggerExport('csv', isFullReport);
+  });
+  $('btn-export-pdf').addEventListener('click', () => {
+    const isFullReport = state.view === 'dashboard';
+    triggerExport('pdf', isFullReport);
+  });
 }
 
 // ─── Mobile Menu ─────────────────────────────────────────────────────────────
@@ -297,6 +320,12 @@ async function loadDashboard() {
     const mesSelecionado = !isNaN(parsedMes) ? parsedMes : (new Date().getMonth() + 1);
     renderMonthlyDashboard(data, mesSelecionado);
 
+    // Dashboard Aportes
+    const mesSelAportes = document.getElementById('select-dash-mes-aportes');
+    const parsedMesAportes = mesSelAportes ? parseInt(mesSelAportes.value) : NaN;
+    const mesSelecionadoAportes = !isNaN(parsedMesAportes) ? parsedMesAportes : (new Date().getMonth() + 1);
+    renderAportesDashboard(data, mesSelecionadoAportes);
+
     // Insights da IA (com cache de 4h)
     loadAiInsights('ai-insights-dashboard');
   } catch (err) {
@@ -306,26 +335,34 @@ async function loadDashboard() {
 }
 
 function setDashboardLoadingState() {
-  ['card-receitas','card-gastos','card-assinaturas','card-saldo'].forEach(id => {
+  ['card-receitas','card-gastos','card-assinaturas','card-aportes','card-saldo'].forEach(id => {
     const el = $(id);
-    el.textContent = 'carregando...';
-    el.style.animation = 'pulse 1.2s infinite';
+    if (el) {
+      el.textContent = 'carregando...';
+      el.style.animation = 'pulse 1.2s infinite';
+    }
   });
 }
 
 function renderDashboardCards(data) {
   const fields = [
-    ['card-receitas',    data.totalReceitas,    'card-receitas-sub',    'Total anual de receitas'],
-    ['card-gastos',      data.totalGastos,       'card-gastos-sub',      'Gastos + Gastos Fixos no ano'],
-    ['card-assinaturas', data.totalAssinaturas,  'card-assinaturas-sub', 'Total anual de assinaturas'],
-    ['card-saldo',       data.saldoAnual,        'card-saldo-sub',       'Receitas − Gastos − Assinaturas'],
+    ['card-receitas',    data.totalReceitas,    'card-receitas-sub',    'Total de receitas'],
+    ['card-gastos',      data.totalGastos,       'card-gastos-sub',      'Gastos + Gastos Fixos'],
+    ['card-assinaturas', data.totalAssinaturas,  'card-assinaturas-sub', 'Total de assinaturas'],
+    ['card-aportes',     data.totalAportes,      'card-aportes-sub',     'Total de aportes'],
+    ['card-saldo',       data.saldoAnual,        'card-saldo-sub',       'Receitas − Despesas − Aportes'],
   ];
 
   fields.forEach(([id, val, subId, label]) => {
     const el = $(id);
-    el.style.animation = '';
-    el.textContent = fmtCurrency(parseFloat(val));
-    if (subId) $(subId).textContent = label;
+    if (el) {
+      el.style.animation = '';
+      el.textContent = fmtCurrency(parseFloat(val));
+      if (subId) {
+        const subEl = $(subId);
+        if (subEl) subEl.textContent = label;
+      }
+    }
   });
 }
 
@@ -400,8 +437,29 @@ function renderTabela(lancamentos) {
     return;
   }
 
-  const total = lancamentos.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
+  let total = 0;
+  if (state.categoria === 'TRANSFERENCIA') {
+    lancamentos.forEach(l => {
+      const val = parseFloat(l.valor || 0);
+      if (APORTES_SUBCATEGORIAS.includes(l.subcategoria)) {
+        total += val;
+      }
+    });
+  } else {
+    total = lancamentos.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
+  }
   $('table-total').innerHTML = `<strong>${fmtCurrency(total)}</strong>`;
+
+  const hideActions = state.categoria === 'TRANSFERENCIA';
+  if (hideActions) {
+    $('th-acoes')?.classList.add('hidden');
+    $('td-acoes-footer')?.classList.add('hidden');
+    $('btn-add-row')?.classList.add('hidden');
+  } else {
+    $('th-acoes')?.classList.remove('hidden');
+    $('td-acoes-footer')?.classList.remove('hidden');
+    $('btn-add-row')?.classList.remove('hidden');
+  }
 
   tbody.innerHTML = lancamentos.map(l => {
     const valor = parseFloat(l.valor || 0);
@@ -411,7 +469,7 @@ function renderTabela(lancamentos) {
         <td>${escHtml(l.descricao || l.subcategoria)}</td>
         <td class="cell-valor">${fmtCurrency(valor)}</td>
         <td>${l.dia || '-'}</td>
-        <td class="col-actions">
+        <td class="col-actions ${hideActions ? 'hidden' : ''}">
           <div class="action-btns">
             <button class="action-btn action-btn--edit" title="Editar" onclick="openEditModal(${l.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>
             <button class="action-btn action-btn--del"  title="Excluir" onclick="excluir(${l.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button>
