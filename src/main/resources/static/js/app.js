@@ -455,10 +455,12 @@ function renderTabela(lancamentos) {
     $('th-acoes')?.classList.add('hidden');
     $('td-acoes-footer')?.classList.add('hidden');
     $('btn-add-row')?.classList.add('hidden');
+    $('msg-aportes')?.classList.remove('hidden');
   } else {
     $('th-acoes')?.classList.remove('hidden');
     $('td-acoes-footer')?.classList.remove('hidden');
     $('btn-add-row')?.classList.remove('hidden');
+    $('msg-aportes')?.classList.add('hidden');
   }
 
   tbody.innerHTML = lancamentos.map(l => {
@@ -695,12 +697,22 @@ async function onFormSubmit(e) {
     if (state.editingId) {
       await Api.atualizarLancamento(state.editingId, dto);
       showToast('Lançamento atualizado!', 'success');
+      _dashboardData = null; // Invalida o cache do dashboard
+      closeModal();
     } else {
       await Api.criarLancamento(dto);
       showToast('Lançamento criado!', 'success');
+      _dashboardData = null; // Invalida o cache do dashboard
+      if (confirm('Lançamento adicionado com sucesso!\n\nDeseja registrar outro lançamento agora?')) {
+        openCreateModal();
+        if (state.view === 'dashboard') loadDashboard();
+        else loadTabela();
+        return;
+      } else {
+        closeModal();
+      }
     }
-    _dashboardData = null; // Invalida o cache do dashboard
-    closeModal();
+
     if (state.view === 'dashboard') {
       loadDashboard();
     } else {
