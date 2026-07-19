@@ -260,7 +260,6 @@ const Api = {
     }
     return res.text();
   },
-
   async checkUpdate() {
     const res = await fetch(`${API_BASE}/update/check`);
     if (!res.ok) throw new Error('Erro ao verificar atualizações');
