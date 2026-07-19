@@ -260,4 +260,41 @@ const Api = {
     }
     return res.text();
   },
+  async checkUpdate() {
+    const res = await fetch(`${API_BASE}/update/check`);
+    if (!res.ok) throw new Error('Erro ao verificar atualizações');
+    return res.json();
+  },
+
+  async startDownloadUpdate(url, fileName) {
+    const params = new URLSearchParams();
+    params.append('url', url);
+    params.append('fileName', fileName);
+    const res = await fetch(`${API_BASE}/update/download`, {
+      method: 'POST',
+      body: params
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(msg || 'Erro ao iniciar download');
+    }
+    return res.text();
+  },
+
+  async getDownloadProgress() {
+    const res = await fetch(`${API_BASE}/update/progress`);
+    if (!res.ok) throw new Error('Erro ao obter progresso do download');
+    return res.json();
+  },
+
+  async applyUpdate() {
+    const res = await fetch(`${API_BASE}/update/apply`, {
+      method: 'POST'
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(msg || 'Erro ao aplicar atualização');
+    }
+    return res.text();
+  },
 };

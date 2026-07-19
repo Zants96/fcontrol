@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initMenuToggle();
   initExport();
   initBackup();
+  initUpdater();
   initMonthlyDashboard();
   initTheme();
   initAiChat();
@@ -767,9 +768,14 @@ let toastTimer = null;
 
 function showToast(message, type = 'success') {
   const toast = $('toast');
-  const icon = type === 'success' 
-    ? `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><polyline points="20 6 9 17 4 12"/></svg>`
-    : `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+  let icon = '';
+  if (type === 'success') {
+    icon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><polyline points="20 6 9 17 4 12"/></svg>`;
+  } else if (type === 'info') {
+    icon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+  } else {
+    icon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+  }
   
   toast.innerHTML = icon;
   const span = document.createElement('span');
@@ -931,5 +937,138 @@ async function handleImportBackup(e) {
     e.target.value = '';
     btn.innerHTML = originalHtml;
     btn.disabled = false;
+  }
+}
+
+// ─── UPDATER (ATUALIZAÇÃO DE APLICATIVO) ──────────────────────────────────────
+let updateState = {
+  latestVersion: null,
+  downloadUrl: null,
+  fileName: null
+};
+
+function initUpdater() {
+  const btnCheck = $('btn-check-update');
+  const btnApply = $('btn-apply-update');
+
+  btnCheck?.addEventListener('click', () => checkForUpdates(true));
+  btnApply?.addEventListener('click', startUpdateFlow);
+
+  // Executa uma verificação silenciosa na inicialização do app
+  setTimeout(() => checkForUpdates(false), 2000);
+}
+
+async function checkForUpdates(manual = false) {
+  const btnCheck = $('btn-check-update');
+  const txtUpdate = $('app-update-text');
+  const detailsContainer = $('update-details-container');
+  const changelog = $('update-changelog');
+  const btnApply = $('btn-apply-update');
+
+  if (manual) {
+    txtUpdate.textContent = 'Verificando atualizações...';
+    if (btnCheck) btnCheck.disabled = true;
+  }
+
+  try {
+    const res = await Api.checkUpdate();
+    updateState.latestVersion = res.latestVersion;
+    updateState.downloadUrl = res.downloadUrl;
+    updateState.fileName = res.fileName;
+
+    if (res.updateAvailable) {
+      txtUpdate.innerHTML = `Uma nova versão está disponível: <strong>${res.latestVersion}</strong> (Versão atual: ${res.currentVersion}).`;
+      
+      if (res.releaseNotes) {
+        changelog.textContent = res.releaseNotes;
+        detailsContainer.classList.remove('hidden');
+      } else {
+        detailsContainer.classList.add('hidden');
+      }
+      
+      btnApply.classList.remove('hidden');
+      btnApply.textContent = 'Baixar e Instalar';
+      btnApply.disabled = false;
+      
+      showToast(`Atualização disponível: ${res.latestVersion}`, 'info');
+    } else {
+      txtUpdate.textContent = `Seu aplicativo está atualizado! (Versão: ${res.currentVersion})`;
+      detailsContainer.classList.add('hidden');
+      btnApply.classList.add('hidden');
+      if (manual) {
+        showToast('Você já está utilizando a versão mais recente.');
+      }
+    }
+  } catch (err) {
+    console.error(err);
+    if (manual) {
+      txtUpdate.textContent = 'Erro ao verificar atualizações.';
+      showToast('Não foi possível verificar atualizações: ' + err.message, 'error');
+    }
+  } finally {
+    if (btnCheck) btnCheck.disabled = false;
+  }
+}
+
+async function startUpdateFlow() {
+  const btnApply = $('btn-apply-update');
+  const btnCheck = $('btn-check-update');
+  const progressContainer = $('update-progress-container');
+  const progressBar = $('update-progress-bar');
+  const progressPercent = $('update-progress-percent');
+  const progressLabel = $('update-progress-label');
+
+  if (!updateState.downloadUrl) return;
+
+  btnApply.disabled = true;
+  if (btnCheck) btnCheck.disabled = true;
+  progressContainer.classList.remove('hidden');
+  progressLabel.textContent = 'Iniciando download...';
+  progressBar.style.width = '0%';
+  progressPercent.textContent = '0%';
+
+  try {
+    await Api.startDownloadUpdate(updateState.downloadUrl, updateState.fileName);
+    
+    const interval = setInterval(async () => {
+      try {
+        const status = await Api.getDownloadProgress();
+        if (status.downloading) {
+          progressLabel.textContent = 'Baixando instalador...';
+          progressBar.style.width = `${status.progressPercent}%`;
+          progressPercent.textContent = `${status.progressPercent}%`;
+        } else if (status.complete) {
+          clearInterval(interval);
+          progressLabel.textContent = 'Download concluído! Executando...';
+          progressBar.style.width = '100%';
+          progressPercent.textContent = '100%';
+          showToast('Download concluído! Iniciando atualização...', 'success');
+          
+          setTimeout(async () => {
+            try {
+              await Api.applyUpdate();
+            } catch (err) {
+              showToast('Erro ao iniciar instalador: ' + err.message, 'error');
+              btnApply.disabled = false;
+              if (btnCheck) btnCheck.disabled = false;
+            }
+          }, 1500);
+        } else if (status.error) {
+          clearInterval(interval);
+          progressContainer.classList.add('hidden');
+          showToast('Erro no download: ' + status.error, 'error');
+          btnApply.disabled = false;
+          if (btnCheck) btnCheck.disabled = false;
+        }
+      } catch (err) {
+        console.error('Erro ao ler progresso:', err);
+      }
+    }, 1000);
+
+  } catch (err) {
+    showToast(err.message, 'error');
+    btnApply.disabled = false;
+    if (btnCheck) btnCheck.disabled = false;
+    progressContainer.classList.add('hidden');
   }
 }
