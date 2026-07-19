@@ -545,6 +545,35 @@
         </div>
       </div>
 
+      <div class="card" id="card-update-manager">
+        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Atualizações</h2>
+        <p id="app-update-text" style="color: var(--text-muted); margin-bottom: 1.5rem;">Verifique se há novas versões disponíveis do MyTwoCents.</p>
+        
+        <div id="update-details-container" class="hidden" style="margin-bottom: 1.5rem; background: var(--bg-hover); padding: 1rem; border-radius: var(--radius-sm); border: 1px dashed var(--border);">
+          <div style="font-weight: bold; color: var(--brand-glow); margin-bottom: 0.5rem;" id="update-version-title">Nova versão disponível!</div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); max-height: 120px; overflow-y: auto; white-space: pre-wrap;" id="update-changelog"></div>
+        </div>
+
+        <div id="update-progress-container" class="hidden" style="margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+            <span id="update-progress-label">Baixando atualização...</span>
+            <span id="update-progress-percent">0%</span>
+          </div>
+          <div style="width: 100%; height: 8px; background: var(--bg-hover); border-radius: 4px; overflow: hidden; border: 1px solid var(--border);">
+            <div id="update-progress-bar" style="width: 0%; height: 100%; background: var(--brand-glow); transition: width 0.2s;"></div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: auto;">
+          <button class="btn" id="btn-check-update" style="flex: 1; justify-content: center; background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border);">
+            Verificar Agora
+          </button>
+          <button class="btn btn--primary hidden" id="btn-apply-update" style="flex: 1; justify-content: center;">
+            Baixar e Instalar
+          </button>
+        </div>
+      </div>
+
       <div class="card">
         <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Exportar Backup</h2>
         <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Gere um arquivo de segurança contendo todos os seus lançamentos. Ideal para transferir dados para outro dispositivo.</p>
