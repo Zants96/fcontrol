@@ -108,7 +108,6 @@ public class BackupController {
             stmt.execute("TRUNCATE TABLE investimento_lancamento");
             stmt.execute("TRUNCATE TABLE ativo");
             stmt.execute("TRUNCATE TABLE lancamento");
-            stmt.execute("TRUNCATE TABLE ai_config");
             stmt.execute("SET REFERENTIAL_INTEGRITY TRUE");
             
             return ResponseEntity.ok("Base de dados zerada com sucesso!");
