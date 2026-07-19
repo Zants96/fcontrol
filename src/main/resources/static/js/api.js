@@ -249,4 +249,15 @@ const Api = {
     if (!res.ok) throw new Error('Erro ao verificar status CoinGecko');
     return res.json();
   },
+
+  async resetDatabase() {
+    const res = await fetch(`${API_BASE}/backup/reset`, {
+      method: 'POST',
+    });
+    if (!res.ok) {
+      const msg = await res.text();
+      throw new Error(msg || 'Erro ao zerar base de dados');
+    }
+    return res.text();
+  },
 };

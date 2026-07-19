@@ -808,6 +808,39 @@ function initBackup() {
     }
   });
   $('file-import-backup')?.addEventListener('change', handleImportBackup);
+  $('btn-reset-db')?.addEventListener('click', handleResetDatabase);
+}
+
+async function handleResetDatabase() {
+  const confirmMsg = '⚠️ ATENÇÃO: Esta ação é irreversível!\n\n' +
+                     'Isso apagará permanentemente todos os seus lançamentos, transações, investimentos e configurações do assistente de IA.\n\n' +
+                     'Deseja realmente zerar a base de dados?';
+                     
+  if (!confirm(confirmMsg)) return;
+
+  const doubleConfirmMsg = 'Digite "ZERAR" (em maiúsculas) para confirmar a exclusão definitiva de todos os dados:';
+  const confirmationInput = prompt(doubleConfirmMsg);
+  
+  if (confirmationInput !== 'ZERAR') {
+    showToast('Ação cancelada ou confirmação incorreta.', 'error');
+    return;
+  }
+
+  const btn = $('btn-reset-db');
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = 'Zerando...';
+  btn.disabled = true;
+
+  try {
+    await Api.resetDatabase();
+    showToast('Base de dados zerada com sucesso! Recarregando...');
+    setTimeout(() => location.reload(), 1500);
+  } catch (err) {
+    showToast(err.message, 'error');
+  } finally {
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }
 }
 
 async function exportBackup() {
