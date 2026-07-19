@@ -39,11 +39,11 @@ jobs:
           echo "Previous tag: $PREV_TAG"
           
           if [ -n "$PREV_TAG" ] && git rev-parse "$PREV_TAG" >/dev/null 2>&1; then
-            # Format as: * Subject\nBody
-            CHANGES=$(git log --pretty=format:"* %s%n%b" ${PREV_TAG}..HEAD)
+            # Format as: * Subject\nBody, excluding merges and auto-PRs
+            CHANGES=$(git log --no-merges --invert-grep --grep="\[Auto-PR\]" --pretty=format:"* %s%n%b" ${PREV_TAG}..HEAD)
           else
             # Fallback if no previous tag
-            CHANGES=$(git log --pretty=format:"* %s%n%b" -n 10 HEAD)
+            CHANGES=$(git log --no-merges --invert-grep --grep="\[Auto-PR\]" --pretty=format:"* %s%n%b" -n 10 HEAD)
           fi
           
           # Write multi-line output using a random safe delimiter
