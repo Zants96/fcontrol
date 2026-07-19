@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 @RequestMapping("/api/update")
 public class UpdateController {
 
-    @Value("${app.version}")
+    @Value("${app.version:1.0.0}")
     private String appVersion;
 
     private static final String GITHUB_API_URL = "https://api.github.com/repos/Zants96/fcontrol/releases/latest";
