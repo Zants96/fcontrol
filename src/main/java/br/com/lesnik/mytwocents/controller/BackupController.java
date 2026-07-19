@@ -98,4 +98,22 @@ public class BackupController {
             return ResponseEntity.internalServerError().body("Erro ao restaurar backup: " + errorMsg);
         }
     }
+
+    @PostMapping("/reset")
+    public ResponseEntity<String> resetDatabase() {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
+            
+            stmt.execute("SET REFERENTIAL_INTEGRITY FALSE");
+            stmt.execute("TRUNCATE TABLE investimento_lancamento");
+            stmt.execute("TRUNCATE TABLE ativo");
+            stmt.execute("TRUNCATE TABLE lancamento");
+            stmt.execute("SET REFERENTIAL_INTEGRITY TRUE");
+            
+            return ResponseEntity.ok("Base de dados zerada com sucesso!");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Erro ao zerar base de dados: " + e.getMessage());
+        }
+    }
 }

@@ -20,6 +20,7 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.ServerSocket;
 import java.net.URL;
 import java.nio.file.Files;
 import java.sql.Connection;
@@ -33,8 +34,14 @@ public class MyTwoCentsDesktopApp extends Application {
     private static final String DB_FILE = DB_DIR + File.separator + DB_NAME + ".mv.db";
     private static final String ENCRYPTED_MARKER = DB_DIR + File.separator + ".encrypted";
 
+    private static final int DEFAULT_PORT = 8085;
+    private static final int MAX_PORT     = 9000;
+
     private ConfigurableApplicationContext springContext;
     private Stage primaryStage;
+
+    /** Porta efetivamente usada pelo servidor Spring Boot. */
+    private int serverPort = DEFAULT_PORT;
 
     /**
      * IMPORTANTE: Mantemos uma referência forte (campo da classe) para a
@@ -69,7 +76,7 @@ public class MyTwoCentsDesktopApp extends Application {
                     if (file == null)
                         return;
 
-                    URL url = new URL("http://localhost:8085" + urlPath);
+                    URL url = new URL("http://localhost:" + serverPort + urlPath);
                     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("GET");
                     if (password != null) {
@@ -134,7 +141,7 @@ public class MyTwoCentsDesktopApp extends Application {
                     String boundary = "---" + System.currentTimeMillis();
                     java.net.http.HttpClient client = java.net.http.HttpClient.newHttpClient();
                     java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
-                            .uri(java.net.URI.create("http://localhost:8085/api/backup/import"))
+                            .uri(java.net.URI.create("http://localhost:" + serverPort + "/api/backup/import"))
                             .header("X-Backup-Password", password)
                             .header("Content-Type", "multipart/form-data; boundary=" + boundary)
                             .POST(createMultipartBody(file, boundary))
@@ -533,7 +540,34 @@ public class MyTwoCentsDesktopApp extends Application {
      * Configura as System Properties do Spring para usar o banco encriptado.
      * O Spring usará estas propriedades ao inicializar o DataSource.
      */
+    /**
+     * Encontra a primeira porta TCP disponível no intervalo [DEFAULT_PORT, MAX_PORT].
+     * Tenta abrir um ServerSocket em cada porta; a primeira que abrir sem exceção
+     * é considerada livre.
+     *
+     * @return número da porta disponível
+     * @throws IllegalStateException se nenhuma porta estiver disponível no intervalo
+     */
+    private int findAvailablePort() {
+        for (int port = DEFAULT_PORT; port <= MAX_PORT; port++) {
+            try (ServerSocket socket = new ServerSocket(port)) {
+                socket.setReuseAddress(true);
+                return port; // porta livre encontrada
+            } catch (IOException ignored) {
+                // porta ocupada, tenta a próxima
+            }
+        }
+        throw new IllegalStateException(
+                "Nenhuma porta disponível no intervalo " + DEFAULT_PORT + "–" + MAX_PORT + ". " +
+                "Libere uma porta e tente novamente.");
+    }
+
     private void configureEncryptedDatabase(String password) {
+        // ── Porta dinâmica ──────────────────────────────────────────────────────
+        serverPort = findAvailablePort();
+        System.setProperty("server.port", String.valueOf(serverPort));
+
+        // ── Datasource ──────────────────────────────────────────────────────────
         String url = "jdbc:h2:file:" + DB_DIR + File.separator + DB_NAME
                 + ";CIPHER=AES;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1";
         System.setProperty("spring.datasource.url", url);
@@ -580,9 +614,9 @@ public class MyTwoCentsDesktopApp extends Application {
                 e.printStackTrace();
                 Platform.runLater(() -> {
                     showErrorAlert("Erro de Inicialização",
-                            "Não foi possível iniciar o servidor interno.\n\n" +
+                            "Não foi possível iniciar o servidor interno na porta " + serverPort + ".\n\n" +
                                     "Verifique se não há outra instância do app aberta " +
-                                    "ou se a porta 8085 está disponível.\n\nErro: " + e.getMessage());
+                                    "ou se todas as portas no intervalo 8085–9000 estão ocupadas.\n\nErro: " + e.getMessage());
                     Platform.exit();
                     System.exit(1);
                 });
@@ -631,7 +665,7 @@ public class MyTwoCentsDesktopApp extends Application {
         // Intercepta navegações diretas para sites externos no próprio WebView
         webView.getEngine().locationProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null && !newValue.isEmpty() && !newValue.equals("about:blank")) {
-                if (!newValue.startsWith("http://localhost:8085")) {
+                if (!newValue.startsWith("http://localhost:" + serverPort)) {
                     Platform.runLater(() -> {
                         webView.getEngine().getLoadWorker().cancel();
                         getHostServices().showDocument(newValue);
@@ -658,7 +692,7 @@ public class MyTwoCentsDesktopApp extends Application {
             }
         });
 
-        webView.getEngine().load("http://localhost:8085");
+        webView.getEngine().load("http://localhost:" + serverPort);
 
         // Substitui a loading screen pelo WebView
         StackPane root = new StackPane();
