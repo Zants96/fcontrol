@@ -818,11 +818,11 @@ async function handleResetDatabase() {
                      
   if (!confirm(confirmMsg)) return;
 
-  const doubleConfirmMsg = 'Digite "ZERAR" (em maiúsculas) para confirmar a exclusão definitiva de todos os dados:';
-  const confirmationInput = prompt(doubleConfirmMsg);
+  const doubleConfirmMsg = '⚠️ CONFIRMAÇÃO FINAL:\n\n' +
+                           'Você tem certeza absoluta de que deseja apagar todos os dados e restaurar o aplicativo para o estado original de fábrica?';
   
-  if (confirmationInput !== 'ZERAR') {
-    showToast('Ação cancelada ou confirmação incorreta.', 'error');
+  if (!confirm(doubleConfirmMsg)) {
+    showToast('Ação cancelada.', 'error');
     return;
   }
 
