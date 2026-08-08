@@ -451,13 +451,12 @@ select option { background: var(--bg-elevated); }
   padding: 1.5rem;
   position: relative;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   display: flex;
   flex-direction: column;
 }
 
 .card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
   border-color: var(--border-hover);
 }
@@ -1517,6 +1516,12 @@ select option { background: var(--bg-elevated); }
 /* ─── Config Cards Grid (Max 3 columns for normal width, 4 only on large width) ─── */
 .config-cards-grid {
   grid-template-columns: repeat(3, 1fr) !important;
+}
+
+@media (min-width: 1101px) and (max-width: 1349px) {
+  #card-ai-assistant {
+    grid-row: span 2;
+  }
 }
 
 @media (min-width: 1350px) {
