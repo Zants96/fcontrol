@@ -423,14 +423,31 @@ async function loadTabela() {
 
 function renderTabela(lancamentos) {
   const tbody = $('table-body');
+  const hideActions = state.categoria === 'TRANSFERENCIA';
+
+  if (hideActions) {
+    $('th-acoes')?.classList.add('hidden');
+    $('td-acoes-footer')?.classList.add('hidden');
+    $('btn-add-row')?.classList.add('hidden');
+    $('msg-aportes')?.classList.remove('hidden');
+  } else {
+    $('th-acoes')?.classList.remove('hidden');
+    $('td-acoes-footer')?.classList.remove('hidden');
+    $('btn-add-row')?.classList.remove('hidden');
+    $('msg-aportes')?.classList.add('hidden');
+  }
 
   if (lancamentos.length === 0) {
+    const emptyMsg = hideActions
+      ? 'Nenhum aporte para este mês.<br>Realize os seus aportes na aba <strong>Investimentos</strong>.'
+      : 'Nenhum lançamento para este mês.<br>Clique em <strong>+ Adicionar</strong> para incluir.';
+
     tbody.innerHTML = `
       <tr>
         <td colspan="5">
           <div class="empty-state">
             <div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div>
-            <p>Nenhum lançamento para este mês.<br>Clique em <strong>+ Adicionar</strong> para incluir.</p>
+            <p>${emptyMsg}</p>
           </div>
         </td>
       </tr>`;
@@ -450,19 +467,6 @@ function renderTabela(lancamentos) {
     total = lancamentos.reduce((acc, l) => acc + parseFloat(l.valor || 0), 0);
   }
   $('table-total').innerHTML = `<strong>${fmtCurrency(total)}</strong>`;
-
-  const hideActions = state.categoria === 'TRANSFERENCIA';
-  if (hideActions) {
-    $('th-acoes')?.classList.add('hidden');
-    $('td-acoes-footer')?.classList.add('hidden');
-    $('btn-add-row')?.classList.add('hidden');
-    $('msg-aportes')?.classList.remove('hidden');
-  } else {
-    $('th-acoes')?.classList.remove('hidden');
-    $('td-acoes-footer')?.classList.remove('hidden');
-    $('btn-add-row')?.classList.remove('hidden');
-    $('msg-aportes')?.classList.add('hidden');
-  }
 
   tbody.innerHTML = lancamentos.map(l => {
     const valor = parseFloat(l.valor || 0);
@@ -978,14 +982,6 @@ async function checkForUpdates(manual = false) {
 
     if (res.updateAvailable) {
       txtUpdate.innerHTML = `Uma nova versão está disponível: <strong>${res.latestVersion}</strong> (Versão atual: ${res.currentVersion}).`;
-      
-      if (res.releaseNotes) {
-        changelog.textContent = res.releaseNotes;
-        detailsContainer.classList.remove('hidden');
-      } else {
-        detailsContainer.classList.add('hidden');
-      }
-      
       btnApply.classList.remove('hidden');
       btnApply.textContent = 'Baixar e Instalar';
       btnApply.disabled = false;
