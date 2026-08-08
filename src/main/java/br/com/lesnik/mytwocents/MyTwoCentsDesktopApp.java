@@ -33,6 +33,7 @@ public class MyTwoCentsDesktopApp extends Application {
     private static final String DB_NAME = "data";
     private static final String DB_FILE = DB_DIR + File.separator + DB_NAME + ".mv.db";
     private static final String ENCRYPTED_MARKER = DB_DIR + File.separator + ".encrypted";
+    private static final String HINT_FILE = DB_DIR + File.separator + ".hint";
 
     private static final int DEFAULT_PORT = 8085;
     private static final int MAX_PORT     = 9000;
@@ -343,6 +344,26 @@ public class MyTwoCentsDesktopApp extends Application {
                         this::shutdownApp);
                 return null;
             }
+            if ("__RESET_DB__".equals(password)) {
+                // Usuário optou por zerar o banco de dados
+                String newPassword = showSetupDialog(
+                        "Você resetou a aplicação. Crie uma nova senha mestra para o banco de dados zerado.");
+                if (newPassword == null) {
+                    showAutoClosingAlert(Alert.AlertType.INFORMATION,
+                            "Configuração Cancelada",
+                            "A criação da nova senha foi cancelada pelo usuário.",
+                            5,
+                            this::shutdownApp);
+                    return null;
+                }
+                try {
+                    new File(DB_DIR).mkdirs();
+                    new File(ENCRYPTED_MARKER).createNewFile();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                return newPassword;
+            }
             PasswordValidationResult result = validatePassword(password);
             if (result == PasswordValidationResult.SUCCESS) {
                 return password;
@@ -373,20 +394,76 @@ public class MyTwoCentsDesktopApp extends Application {
         dialog.getDialogPane().getButtonTypes().addAll(unlockType, ButtonType.CANCEL);
 
         PasswordField passwordField = new PasswordField();
-        passwordField.setPromptText("Senha Mestra");
-        passwordField.setPrefWidth(300);
+        passwordField.setPromptText("Digite sua senha mestra");
 
-        Label titleLabel = new Label("🔑 Digite sua Senha Mestra");
+        Label titleLabel = new Label("Desbloquear MyTwoCents");
         titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+        titleLabel.setMaxWidth(Double.MAX_VALUE);
+        titleLabel.setAlignment(Pos.CENTER);
 
-        Label infoLabel = new Label("Digite a senha para acessar seus dados financeiros.");
-        infoLabel.setStyle("-fx-text-fill: #666;");
+        Label infoLabel = new Label("Digite a senha mestra para acessar seus dados financeiros.");
+        infoLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
+        infoLabel.setMaxWidth(Double.MAX_VALUE);
+        infoLabel.setAlignment(Pos.CENTER);
+
+        // ── Botões de Recuperação (Estilo Padrão do Sistema) ──
+        Label recoveryLabel = new Label("Esqueceu a senha?");
+        recoveryLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #4b5563;");
+
+        String hint = readPasswordHint();
+        Button hintBtn = new Button("Dica de Senha");
+        hintBtn.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+        if (hint != null && !hint.isBlank()) {
+            hintBtn.setOnAction(e -> {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Dica de Senha");
+                alert.setHeaderText("Sua Dica de Senha Cadastrada");
+                alert.setContentText(hint);
+                alert.showAndWait();
+            });
+        } else {
+            hintBtn.setOnAction(e -> {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Dica de Senha");
+                alert.setHeaderText(null);
+                alert.setContentText("Nenhuma dica de senha foi cadastrada para esta base de dados.\n\nVocê pode definir uma dica ao criar ou restaurar a senha mestra.");
+                alert.showAndWait();
+            });
+        }
+
+        Button restoreBtn = new Button("Restaurar Backup");
+        restoreBtn.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+        restoreBtn.setOnAction(e -> {
+            String restoredPassword = handleRestoreBackupFromLogin();
+            if (restoredPassword != null) {
+                dialog.setResult(restoredPassword);
+                dialog.close();
+            }
+        });
+
+        Button resetBtn = new Button("Zerar Banco");
+        resetBtn.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+        resetBtn.setOnAction(e -> {
+            if (handleFactoryReset()) {
+                dialog.setResult("__RESET_DB__");
+                dialog.close();
+            }
+        });
+
+        javafx.scene.layout.HBox actionsBox = new javafx.scene.layout.HBox(8);
+        actionsBox.setAlignment(Pos.CENTER);
+        actionsBox.getChildren().addAll(hintBtn, restoreBtn, resetBtn);
+
+        VBox recoverySection = new VBox(6);
+        recoverySection.setAlignment(Pos.CENTER);
+        recoverySection.getChildren().addAll(recoveryLabel, actionsBox);
 
         VBox content = new VBox(12);
-        content.setPadding(new Insets(20, 20, 10, 20));
-        content.getChildren().addAll(titleLabel, infoLabel, new Separator(), passwordField);
+        content.setPadding(new Insets(16, 16, 12, 16));
+        content.getChildren().addAll(titleLabel, infoLabel, new Separator(), passwordField, new Separator(), recoverySection);
 
         dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().setPrefWidth(440);
 
         // Desabilita botão se campo vazio
         dialog.getDialogPane().lookupButton(unlockType)
@@ -424,6 +501,10 @@ public class MyTwoCentsDesktopApp extends Application {
             pwd2.setPromptText("Confirme a senha");
             pwd2.setPrefWidth(300);
 
+            TextField hintField = new TextField();
+            hintField.setPromptText("Ex: Nome do meu primeiro pet");
+            hintField.setPrefWidth(300);
+
             Label titleLabel = new Label("🔒 Crie sua Senha Mestra");
             titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
@@ -449,8 +530,8 @@ public class MyTwoCentsDesktopApp extends Application {
 
             Label warningLabel = new Label(
                     "⚠ IMPORTANTE: Se você esquecer esta senha, seus dados\n" +
-                            "NÃO poderão ser recuperados. Faça backups regulares\n" +
-                            "pelo menu Configurações.");
+                            "NÃO poderão ser recuperados sem um backup.\n" +
+                            "Faça backups regulares pelo menu Configurações.");
             warningLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-font-size: 11px;");
 
             VBox content = new VBox(10);
@@ -461,6 +542,7 @@ public class MyTwoCentsDesktopApp extends Application {
                     new Label("Senha:"), pwd1,
                     new Label("Confirmar Senha:"), pwd2,
                     matchLabel,
+                    new Label("Dica de Senha (Opcional):"), hintField,
                     new Separator(),
                     warningLabel);
 
@@ -494,8 +576,178 @@ public class MyTwoCentsDesktopApp extends Application {
                 showErrorAlert("Senha Muito Curta", "A senha deve ter pelo menos 4 caracteres.");
                 continue;
             }
+            savePasswordHint(hintField.getText());
             return result;
         }
+    }
+
+    // ─── MÉTODOS DE RECUPERAÇÃO E GERENCIAMENTO DE ACESSO ────────────────────────
+
+    private void savePasswordHint(String hint) {
+        File file = new File(HINT_FILE);
+        if (hint == null || hint.isBlank()) {
+            if (file.exists()) {
+                file.delete();
+            }
+            return;
+        }
+        try {
+            new File(DB_DIR).mkdirs();
+            Files.writeString(file.toPath(), hint.trim(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String readPasswordHint() {
+        File file = new File(HINT_FILE);
+        if (!file.exists()) {
+            return null;
+        }
+        try {
+            String hint = Files.readString(file.toPath(), java.nio.charset.StandardCharsets.UTF_8);
+            return hint.isBlank() ? null : hint.trim();
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private boolean handleFactoryReset() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Zerar Banco de Dados");
+        alert.setHeaderText("⚠️ ATENÇÃO: Esta ação é irreversível!");
+        alert.setContentText("Todos os seus lançamentos, investimentos e configurações serão apagados permanentemente.\n\n" +
+                "Esta opção deve ser usada apenas se você tiver certeza ou desejar começar do zero.\n\n" +
+                "Deseja realmente apagar todos os dados?");
+
+        ButtonType confirmBtn = new ButtonType("Sim, Apagar Tudo", ButtonBar.ButtonData.OK_DONE);
+        ButtonType cancelBtn = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(confirmBtn, cancelBtn);
+
+        java.util.Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == confirmBtn) {
+            deleteDatabaseFiles();
+            Alert info = new Alert(Alert.AlertType.INFORMATION);
+            info.setTitle("Banco de Dados Zerado");
+            info.setHeaderText(null);
+            info.setContentText("Os dados anteriores foram apagados com sucesso.\nAgora você poderá criar uma nova senha mestra.");
+            info.showAndWait();
+            return true;
+        }
+        return false;
+    }
+
+    private void deleteDatabaseFiles() {
+        File dbFile = new File(DB_FILE);
+        if (dbFile.exists()) dbFile.delete();
+
+        File traceFile = new File(DB_DIR + File.separator + DB_NAME + ".trace.db");
+        if (traceFile.exists()) traceFile.delete();
+
+        File lockFile = new File(DB_DIR + File.separator + DB_NAME + ".lock.db");
+        if (lockFile.exists()) lockFile.delete();
+
+        File markerFile = new File(ENCRYPTED_MARKER);
+        if (markerFile.exists()) markerFile.delete();
+
+        File hintFile = new File(HINT_FILE);
+        if (hintFile.exists()) hintFile.delete();
+    }
+
+    private String handleRestoreBackupFromLogin() {
+        try {
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Selecionar Backup Encriptado");
+            fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Backup Encriptado (*.mtc)", "*.mtc"));
+
+            File file = fileChooser.showOpenDialog(primaryStage);
+            if (file == null) return null;
+
+            TextInputDialog pwdDialog = new TextInputDialog();
+            pwdDialog.setTitle("Senha do Backup");
+            pwdDialog.setHeaderText("Este backup está encriptado.");
+            pwdDialog.setContentText("Digite a senha usada na exportação do backup:");
+            java.util.Optional<String> pwdResult = pwdDialog.showAndWait();
+
+            if (pwdResult.isEmpty() || pwdResult.get().isBlank()) {
+                return null;
+            }
+            String backupPassword = pwdResult.get();
+
+            byte[] encryptedBytes = Files.readAllBytes(file.toPath());
+            byte[] sqlBytes;
+            try {
+                sqlBytes = decryptBackupData(encryptedBytes, backupPassword);
+            } catch (Exception e) {
+                showErrorAlert("Erro ao Desencriptar",
+                        "A senha informada para o backup está incorreta ou o arquivo está danificado.");
+                return null;
+            }
+
+            Alert confirm = new Alert(
+                    Alert.AlertType.CONFIRMATION,
+                    "ATENÇÃO: A restauração substituirá TODOS os dados atuais pelo conteúdo do backup.\n\nArquivo: " + file.getName()
+                            + "\n\nDeseja continuar?",
+                    ButtonType.YES, ButtonType.NO);
+            confirm.setTitle("Confirmação de Restauração");
+            confirm.setHeaderText(null);
+            java.util.Optional<ButtonType> confirmResult = confirm.showAndWait();
+            if (confirmResult.isEmpty() || confirmResult.get() != ButtonType.YES) {
+                return null;
+            }
+
+            // Exclui banco antigo
+            deleteDatabaseFiles();
+            new File(DB_DIR).mkdirs();
+
+            // Grava o SQL desencriptado em um arquivo temporário para inicializar o H2
+            File tempSqlFile = File.createTempFile("login_restore", ".sql");
+            Files.write(tempSqlFile.toPath(), sqlBytes);
+
+            String initScript = tempSqlFile.getAbsolutePath().replace("\\", "/");
+            String url = "jdbc:h2:file:" + DB_DIR + File.separator + DB_NAME
+                    + ";CIPHER=AES;INIT=RUNSCRIPT FROM '" + initScript + "'";
+
+            try (Connection conn = DriverManager.getConnection(url, "sa", backupPassword + " ")) {
+                // Banco criado e restaurado com sucesso!
+            } finally {
+                tempSqlFile.delete();
+            }
+
+            new File(ENCRYPTED_MARKER).createNewFile();
+
+            // Pergunta se deseja definir uma dica de senha para esta senha restaurada
+            TextInputDialog hintDialog = new TextInputDialog();
+            hintDialog.setTitle("Dica de Senha");
+            hintDialog.setHeaderText("Backup Restaurado com Sucesso!");
+            hintDialog.setContentText("Deseja cadastrar uma dica de senha para lembrar essa senha no futuro? (Opcional):");
+            java.util.Optional<String> newHint = hintDialog.showAndWait();
+            newHint.ifPresent(this::savePasswordHint);
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Restauração Concluída");
+            alert.setHeaderText(null);
+            alert.setContentText("O backup foi restaurado com sucesso!\nO aplicativo será aberto com seus dados.");
+            alert.showAndWait();
+
+            return backupPassword;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showErrorAlert("Erro na Restauração", "Não foi possível restaurar o backup.\nErro: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private byte[] decryptBackupData(byte[] encryptedData, String password) throws Exception {
+        byte[] key = password.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        java.security.MessageDigest sha = java.security.MessageDigest.getInstance("SHA-256");
+        key = sha.digest(key);
+        javax.crypto.spec.SecretKeySpec secretKey = new javax.crypto.spec.SecretKeySpec(key, "AES");
+        javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES");
+        cipher.init(javax.crypto.Cipher.DECRYPT_MODE, secretKey);
+        return cipher.doFinal(encryptedData);
     }
 
     // ─── BANCO DE DADOS ──────────────────────────────────────────────────────────
