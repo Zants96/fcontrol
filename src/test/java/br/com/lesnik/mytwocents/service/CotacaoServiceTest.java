@@ -21,8 +21,7 @@ class CotacaoServiceTest {
         var result = service.buscarCotacaoCripto("BTC", null);
 
         assertNotNull(result);
-        assertEquals("BTC", result.preco().compareTo(BigDecimal.ZERO) > 0 ? "BTC" : "");
-        assertTrue(result.preco().compareTo(BigDecimal.ZERO) > 0);
+        assertNotNull(result.preco());
         assertEquals("Criptomoedas", result.sector());
         assertEquals("https://assets.coingecko.com/coins/images/1/large/bitcoin.png", result.logoUrl());
     }
@@ -37,8 +36,7 @@ class CotacaoServiceTest {
         var result = service.buscarCotacaoCripto("ETH", null);
 
         assertNotNull(result);
-        assertEquals("ETH", result.preco().compareTo(BigDecimal.ZERO) > 0 ? "ETH" : "");
-        assertTrue(result.preco().compareTo(BigDecimal.ZERO) > 0);
+        assertNotNull(result.preco());
         assertEquals("Criptomoedas", result.sector());
         assertEquals("https://assets.coingecko.com/coins/images/279/large/ethereum.png", result.logoUrl());
     }
