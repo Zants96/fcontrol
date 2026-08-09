@@ -127,10 +127,10 @@
       <h1 class="page-title" id="page-title">Dashboard Anual</h1>
     </div>
     <div class="topbar-right" style="display: flex; gap: 0.75rem; align-items: center;">
-      <button class="action-btn" id="btn-export-csv" title="Exportar para CSV" style="background: var(--bg-tertiary); color: var(--brand-glow); border: 1px solid var(--border);">
+      <button class="action-btn" id="btn-export-csv" title="Exportar para CSV">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h2"/><path d="M8 17h2"/><path d="M14 13h2"/><path d="M14 17h2"/></svg>
       </button>
-      <button class="action-btn" id="btn-export-pdf" title="Exportar Relatório em PDF" style="background: var(--bg-tertiary); color: var(--accent-red); border: 1px solid var(--border);">
+      <button class="action-btn" id="btn-export-pdf" title="Exportar Relatório em PDF">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M9 15v-6h3.5a2 2 0 1 1 0 4H9"/></svg>
       </button>
       <div class="current-date" id="current-date"></div>
@@ -540,8 +540,8 @@
         <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Aparência</h2>
         <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Escolha entre o modo claro e escuro para a interface.</p>
         <div style="display: flex; gap: 1rem; margin-top: auto;">
-          <button class="btn" id="btn-theme-light" style="flex: 1; justify-content: center; background: rgba(16,185,129,0.12); color: var(--brand-glow); border: 1px solid var(--border-active);">Claro</button>
-          <button class="btn" id="btn-theme-dark" style="flex: 1; justify-content: center; background: rgba(167, 139, 250, 0.12); color: var(--accent-purple); border: 1px solid rgba(167, 139, 250, 0.3);">Escuro</button>
+          <button class="btn" id="btn-theme-light" style="flex: 1; justify-content: center;">Claro</button>
+          <button class="btn" id="btn-theme-dark" style="flex: 1; justify-content: center;">Escuro</button>
         </div>
       </div>
 
@@ -565,7 +565,7 @@
         </div>
 
         <div style="display: flex; gap: 1rem; margin-top: auto;">
-          <button class="btn" id="btn-check-update" style="flex: 1; justify-content: center; background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border);">
+          <button class="btn" id="btn-check-update" style="flex: 1; justify-content: center;">
             Verificar Agora
           </button>
           <button class="btn btn--primary hidden" id="btn-apply-update" style="flex: 1; justify-content: center;">
@@ -577,7 +577,7 @@
       <div class="card">
         <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Exportar Backup</h2>
         <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Gere um arquivo de segurança contendo todos os seus lançamentos. Ideal para transferir dados para outro dispositivo.</p>
-        <button class="btn" id="btn-export-backup" style="width: 100%; justify-content: center; background: rgba(16,185,129,0.12); color: var(--brand-glow); border: 1px solid var(--border-active); margin-top: auto;">
+        <button class="btn" id="btn-export-backup" style="width: 100%; justify-content: center; margin-top: auto;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
           Exportar Dados (.mtc)
         </button>
@@ -587,7 +587,7 @@
         <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Importar Backup</h2>
         <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Restaure seus dados a partir de um arquivo gerado anteriormente. <strong>Atenção: Isso substituirá as informações atuais.</strong></p>
         <input type="file" id="file-import-backup" accept=".mtc" style="display: none;">
-        <button class="btn" id="btn-import-backup" style="width: 100%; justify-content: center; background: rgba(244, 63, 94, 0.1); color: var(--accent-red); border: 1px solid rgba(244, 63, 94, 0.2); margin-top: auto;">
+        <button class="btn btn--danger" id="btn-import-backup" style="width: 100%; justify-content: center; margin-top: auto;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
           Restaurar Dados (.mtc)
         </button>
@@ -596,7 +596,7 @@
       <div class="card">
         <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Zerar Base de Dados</h2>
         <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Apague permanentemente todas as transações, investimentos e chaves de API, deixando o aplicativo limpo como em uma nova instalação.</p>
-        <button class="btn" id="btn-reset-db" style="width: 100%; justify-content: center; background: rgba(244, 63, 94, 0.1); color: var(--accent-red); border: 1px solid rgba(244, 63, 94, 0.2); margin-top: auto;">
+        <button class="btn btn--danger" id="btn-reset-db" style="width: 100%; justify-content: center; margin-top: auto;">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
           Limpar Tudo (Reset)
         </button>

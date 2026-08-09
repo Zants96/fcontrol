@@ -1,35 +1,38 @@
 package br.com.lesnik.mytwocents.service;
 
-import br.com.lesnik.mytwocents.dto.AiChatDTO;
+import br.com.lesnik.mytwocents.dto.AiChatDTO.*;
 import br.com.lesnik.mytwocents.model.*;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.InvestimentoLancamentoRepository;
 import br.com.lesnik.mytwocents.repository.LancamentoRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-public class AiServiceDuplicateTest {
+class AiServiceDuplicateTest {
 
     @Mock
-    private LancamentoRepository lancamentoRepository;
-
-    @Mock
-    private InvestimentoLancamentoRepository investimentoLancamentoRepository;
+    private AiConfigRepository configRepository;
 
     @Mock
     private LancamentoService lancamentoService;
@@ -41,91 +44,143 @@ public class AiServiceDuplicateTest {
     private CotacaoService cotacaoService;
 
     @Mock
-    private AiConfigRepository aiConfigRepository;
+    private LancamentoRepository lancamentoRepository;
 
+    @Mock
+    private InvestimentoLancamentoRepository investimentoLancamentoRepository;
+
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper();
+
+    @Spy
     @InjectMocks
     private AiService aiService;
 
     @Test
-    void deveMarcarLancamentosComunsDuplicados() {
-        Lancamento l1 = Lancamento.builder()
+    @DisplayName("Deve identificar lançamentos comuns duplicados com base em valor, dia e descrição")
+    void deveMarcarLancamentosComunsDuplicados() throws Exception {
+        int ano = 2026;
+        int mes = 8;
+
+        Lancamento existente = Lancamento.builder()
                 .id(1L)
-                .descricao("Uber Trip")
-                .valor(new BigDecimal("25.50"))
-                .ano(2026)
-                .mes(8)
-                .dia(15)
+                .descricao("Uber Trip Sao Paulo")
                 .categoria(Categoria.GASTO)
                 .subcategoria("Transporte")
+                .valor(new BigDecimal("25.50"))
+                .mes(mes)
+                .ano(ano)
+                .dia(15)
                 .build();
 
-        when(lancamentoRepository.findByAno(2026)).thenReturn(List.of(l1));
+        when(lancamentoRepository.findByAnoAndMesOrderByCategoriaAscSubcategoriaAsc(eq(ano), eq(mes)))
+                .thenReturn(List.of(existente));
+        when(investimentoLancamentoRepository.findAllWithAtivoByOrderByDataDesc())
+                .thenReturn(Collections.emptyList());
 
-        List<AiChatDTO.ParsedItem> itens = new ArrayList<>();
-        itens.add(AiChatDTO.ParsedItem.builder()
-                .descricao("Uber Trip")
-                .valor(new BigDecimal("25.50"))
-                .dia(15)
-                .categoria("GASTO")
-                .subcategoria("Transporte")
-                .duplicado(false)
-                .build());
+        String jsonGemini = """
+                {
+                  "items": [
+                    {
+                      "descricao": "Uber Trip",
+                      "categoria": "GASTO",
+                      "subcategoria": "Transporte",
+                      "valor": 25.50,
+                      "dia": 15
+                    },
+                    {
+                      "descricao": "Padaria da Esquina",
+                      "categoria": "GASTO",
+                      "subcategoria": "Alimentação",
+                      "valor": 12.00,
+                      "dia": 15
+                    }
+                  ],
+                  "investimentos": [],
+                  "resumo": "2 transações encontradas"
+                }
+                """;
 
-        itens.add(AiChatDTO.ParsedItem.builder()
-                .descricao("Padaria")
-                .valor(new BigDecimal("12.00"))
-                .dia(15)
-                .categoria("GASTO")
-                .subcategoria("Alimentação")
-                .duplicado(false)
-                .build());
+        doReturn(jsonGemini).when(aiService).chamarGemini(anyString(), anyString());
 
-        aiService.marcarDuplicadosItens(itens, 2026, 8);
+        ParseResponse response = aiService.parsearDocumento("texto fatura", mes, ano);
 
-        assertTrue(itens.get(0).getDuplicado(), "Uber Trip deve ser marcado como duplicado");
-        assertFalse(itens.get(1).getDuplicado(), "Padaria não deve ser marcada como duplicado");
+        assertThat(response).isNotNull();
+        assertThat(response.getItems()).hasSize(2);
+
+        ParsedItem itemDuplicado = response.getItems().get(0);
+        ParsedItem itemNovo = response.getItems().get(1);
+
+        assertThat(itemDuplicado.getDescricao()).isEqualTo("Uber Trip");
+        assertThat(itemDuplicado.getDuplicado()).isTrue();
+
+        assertThat(itemNovo.getDescricao()).isEqualTo("Padaria da Esquina");
+        assertThat(itemNovo.getDuplicado()).isFalse();
     }
 
     @Test
-    void deveMarcarInvestimentosDuplicados() {
-        Ativo ativoBbas = Ativo.builder()
-                .id(1L)
-                .ticker("BBAS3")
-                .tipoAtivo(TipoAtivo.ACAO)
-                .build();
+    @DisplayName("Deve identificar lançamentos de investimento duplicados")
+    void deveMarcarInvestimentosDuplicados() throws Exception {
+        int ano = 2026;
+        int mes = 8;
 
-        InvestimentoLancamento inv1 = InvestimentoLancamento.builder()
-                .id(10L)
-                .ativo(ativoBbas)
+        Ativo bbas3 = Ativo.builder().id(10L).ticker("BBAS3").build();
+        InvestimentoLancamento existente = InvestimentoLancamento.builder()
+                .id(100L)
+                .ativo(bbas3)
                 .tipoOperacao(TipoOperacao.COMPRA)
+                .data(LocalDate.of(ano, mes, 10))
+                .quantidade(new BigDecimal("100"))
+                .precoUnitario(new BigDecimal("23.50"))
                 .valorTotal(new BigDecimal("2350.00"))
-                .data(LocalDate.of(2026, 8, 10))
                 .build();
 
-        when(investimentoLancamentoRepository.findAllWithAtivoByOrderByDataDesc()).thenReturn(List.of(inv1));
+        when(lancamentoRepository.findByAnoAndMesOrderByCategoriaAscSubcategoriaAsc(eq(ano), eq(mes)))
+                .thenReturn(Collections.emptyList());
+        when(investimentoLancamentoRepository.findAllWithAtivoByOrderByDataDesc())
+                .thenReturn(List.of(existente));
 
-        List<AiChatDTO.ParsedInvestimentoItem> investimentos = new ArrayList<>();
-        investimentos.add(AiChatDTO.ParsedInvestimentoItem.builder()
-                .ticker("BBAS3")
-                .tipoOperacao("COMPRA")
-                .tipoAtivo("ACAO")
-                .valorTotal(new BigDecimal("2350.00"))
-                .dia(10)
-                .duplicado(false)
-                .build());
+        String jsonGemini = """
+                {
+                  "items": [],
+                  "investimentos": [
+                    {
+                      "ticker": "BBAS3",
+                      "tipoAtivo": "ACAO",
+                      "tipoOperacao": "COMPRA",
+                      "quantidade": 100,
+                      "precoUnitario": 23.50,
+                      "valorTotal": 2350.00,
+                      "dia": 10
+                    },
+                    {
+                      "ticker": "PETR4",
+                      "tipoAtivo": "ACAO",
+                      "tipoOperacao": "COMPRA",
+                      "quantidade": 50,
+                      "precoUnitario": 35.00,
+                      "valorTotal": 1750.00,
+                      "dia": 10
+                    }
+                  ],
+                  "resumo": "2 investimentos encontrados"
+                }
+                """;
 
-        investimentos.add(AiChatDTO.ParsedInvestimentoItem.builder()
-                .ticker("PETR4")
-                .tipoOperacao("COMPRA")
-                .tipoAtivo("ACAO")
-                .valorTotal(new BigDecimal("1750.00"))
-                .dia(10)
-                .duplicado(false)
-                .build());
+        doReturn(jsonGemini).when(aiService).chamarGemini(anyString(), anyString());
 
-        aiService.marcarDuplicadosInvestimentos(investimentos, 2026, 8);
+        ParseResponse response = aiService.parsearDocumento("extrato corretora", mes, ano);
 
-        assertTrue(investimentos.get(0).getDuplicado(), "BBAS3 deve ser marcado como duplicado");
-        assertFalse(investimentos.get(1).getDuplicado(), "PETR4 não deve ser marcado como duplicado");
+        assertThat(response).isNotNull();
+        assertThat(response.getInvestimentos()).hasSize(2);
+
+        ParsedInvestimentoItem invDuplicado = response.getInvestimentos().get(0);
+        ParsedInvestimentoItem invNovo = response.getInvestimentos().get(1);
+
+        assertThat(invDuplicado.getTicker()).isEqualTo("BBAS3");
+        assertThat(invDuplicado.getDuplicado()).isTrue();
+
+        assertThat(invNovo.getTicker()).isEqualTo("PETR4");
+        assertThat(invNovo.getDuplicado()).isFalse();
     }
 }

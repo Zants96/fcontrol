@@ -8,7 +8,11 @@ import br.com.lesnik.mytwocents.dto.InvestimentoDashboardDTO;
 import br.com.lesnik.mytwocents.dto.AtivoDTO;
 import br.com.lesnik.mytwocents.model.AiConfig;
 import br.com.lesnik.mytwocents.model.Categoria;
+import br.com.lesnik.mytwocents.model.InvestimentoLancamento;
+import br.com.lesnik.mytwocents.model.Lancamento;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
+import br.com.lesnik.mytwocents.repository.InvestimentoLancamentoRepository;
+import br.com.lesnik.mytwocents.repository.LancamentoRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
@@ -32,6 +37,8 @@ public class AiService {
     private final AiConfigRepository configRepository;
     private final LancamentoService lancamentoService;
     private final InvestimentoService investimentoService;
+    private final LancamentoRepository lancamentoRepository;
+    private final InvestimentoLancamentoRepository investimentoLancamentoRepository;
     private final ObjectMapper objectMapper;
 
     private static final String GEMINI_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
@@ -300,6 +307,7 @@ public class AiService {
 
     // ─── PARSER DE DOCUMENTOS ────────────────────────────────────────────────
 
+    @Transactional(readOnly = true)
     public ParseResponse parsearDocumento(String texto, int mes, int ano) {
         try {
             String subcategoriasJson = SUBCATEGORIAS.entrySet().stream()
@@ -338,7 +346,7 @@ public class AiService {
                       * "custos": custos ou taxas se houver (caso contrário, 0.0).
                       * "valorTotal": valor total bruto da operação/provento (ex: 2.74).
                       * "valorLiquido": valor total líquido do provento após impostos (ex: 2.33).
-                      * "tipoProvento": se for provento (tipoOperacao = DIVIDENDO), extraia o tipo exato: "Dividendo", "JSCP" ou "Rend. Trib.".
+                      * "tipoProvento": se for provento (tipoOperacao = DIVIDENDO), extraia o tipo exato: "Dividendo", "JSCP" ou "Rend. Trib." (SEMPRE no singular "Dividendo", NUNCA no plural "Dividendos").
                       * "dia": o dia do mês do lançamento se disponível no texto.
                       * "dataVencimento": a data de vencimento se disponível no texto (formato DD/MM/YYYY).
                       * "indexador": indexador se disponível no texto (ex: "IPCA", "SELIC", "CDI", "PRE").
@@ -468,12 +476,15 @@ public class AiService {
                                     ? new BigDecimal(item.get("taxa").asText()).setScale(2, RoundingMode.HALF_UP)
                                     : null)
                             .data(item.has("data") && !item.get("data").isNull() ? item.get("data").asText() : null)
-                            .tipoProvento(item.has("tipoProvento") && !item.get("tipoProvento").isNull()
+                            .tipoProvento(normalizarTipoProvento(item.has("tipoProvento") && !item.get("tipoProvento").isNull()
                                     ? item.get("tipoProvento").asText()
-                                    : null)
+                                    : null))
                             .build());
                 }
             }
+
+            marcarDuplicadosItens(items, mes, ano);
+            marcarDuplicadosInvestimentos(investimentos, mes, ano);
 
             String resumo = root.has("resumo") ? root.get("resumo").asText() : "Documento processado.";
 
@@ -491,6 +502,111 @@ public class AiService {
                     .investimentos(Collections.emptyList())
                     .build();
         }
+    }
+
+    private void marcarDuplicadosItens(List<ParsedItem> items, int defaultMes, int defaultAno) {
+        if (items == null || items.isEmpty()) return;
+
+        Map<String, List<Lancamento>> lancamentosPorMesAno = new HashMap<>();
+        Set<Long> matchedIds = new HashSet<>();
+
+        for (ParsedItem item : items) {
+            int mes = defaultMes;
+            int ano = defaultAno;
+
+            String key = ano + "-" + mes;
+            List<Lancamento> existentes = lancamentosPorMesAno.computeIfAbsent(key, k ->
+                    lancamentoRepository.findByAnoAndMesOrderByCategoriaAscSubcategoriaAsc(ano, mes)
+            );
+
+            for (Lancamento l : existentes) {
+                if (matchedIds.contains(l.getId())) continue;
+
+                boolean valorIgual = l.getValor() != null && item.getValor() != null
+                        && l.getValor().compareTo(item.getValor()) == 0;
+
+                boolean diaIgual = (item.getDia() == null || l.getDia() == null || l.getDia().equals(item.getDia()));
+
+                String normL = normalizarTexto(l.getDescricao());
+                String normItem = normalizarTexto(item.getDescricao());
+
+                boolean descIgual = normL.equals(normItem)
+                        || (!normL.isEmpty() && !normItem.isEmpty() && (normL.contains(normItem) || normItem.contains(normL)))
+                        || (l.getDia() != null && l.getDia().equals(item.getDia()) && normalizarTexto(l.getSubcategoria()).equalsIgnoreCase(normalizarTexto(item.getSubcategoria())));
+
+                if (valorIgual && diaIgual && descIgual) {
+                    item.setDuplicado(true);
+                    matchedIds.add(l.getId());
+                    break;
+                }
+            }
+        }
+    }
+
+    private void marcarDuplicadosInvestimentos(List<ParsedInvestimentoItem> investimentos, int defaultMes, int defaultAno) {
+        if (investimentos == null || investimentos.isEmpty()) return;
+
+        List<InvestimentoLancamento> existentes = investimentoLancamentoRepository.findAllWithAtivoByOrderByDataDesc();
+        Set<Long> matchedIds = new HashSet<>();
+
+        for (ParsedInvestimentoItem inv : investimentos) {
+            LocalDate targetDate = null;
+            if (inv.getData() != null && !inv.getData().isBlank()) {
+                try {
+                    targetDate = LocalDate.parse(inv.getData().trim());
+                } catch (Exception ignored) {
+                }
+            }
+            if (targetDate == null && inv.getDia() != null) {
+                try {
+                    targetDate = LocalDate.of(defaultAno, defaultMes, inv.getDia());
+                } catch (Exception ignored) {
+                }
+            }
+
+            for (InvestimentoLancamento il : existentes) {
+                if (matchedIds.contains(il.getId())) continue;
+
+                boolean tickerIgual = il.getAtivo() != null && il.getAtivo().getTicker() != null
+                        && il.getAtivo().getTicker().equalsIgnoreCase(inv.getTicker());
+
+                boolean tipoOpIgual = il.getTipoOperacao() != null
+                        && il.getTipoOperacao().name().equalsIgnoreCase(inv.getTipoOperacao());
+
+                boolean dataIgual = targetDate != null && il.getData() != null && il.getData().equals(targetDate);
+                if (!dataIgual && targetDate != null && il.getData() != null) {
+                    dataIgual = il.getData().getYear() == targetDate.getYear()
+                            && il.getData().getMonthValue() == targetDate.getMonthValue()
+                            && il.getData().getDayOfMonth() == targetDate.getDayOfMonth();
+                }
+
+                boolean valorIgual = il.getValorTotal() != null && inv.getValorTotal() != null
+                        && il.getValorTotal().compareTo(inv.getValorTotal()) == 0;
+
+                if (tickerIgual && tipoOpIgual && dataIgual && valorIgual) {
+                    inv.setDuplicado(true);
+                    matchedIds.add(il.getId());
+                    break;
+                }
+            }
+        }
+    }
+
+    private String normalizarTexto(String input) {
+        if (input == null) return "";
+        return java.text.Normalizer.normalize(input, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase()
+                .replaceAll("[^a-z0-9]", "");
+    }
+
+    public static String normalizarTipoProvento(String tp) {
+        if (tp == null || tp.isBlank()) return "Dividendo";
+        String tpLower = tp.trim().toLowerCase();
+        if (tpLower.startsWith("div")) return "Dividendo";
+        if (tpLower.contains("jcp") || tpLower.contains("jscp")) return "JSCP";
+        if (tpLower.contains("rend")) return "Rend. Trib.";
+        return tp.trim();
     }
 
     // ─── INSIGHTS AUTOMÁTICOS ────────────────────────────────────────────────
@@ -807,11 +923,11 @@ public class AiService {
         return ctx.toString();
     }
 
-    private String chamarGemini(String prompt) {
+    protected String chamarGemini(String prompt) {
         return chamarGemini(prompt, null);
     }
 
-    private String chamarGemini(String prompt, String responseMimeType) {
+    protected String chamarGemini(String prompt, String responseMimeType) {
         AiConfig config = configRepository.findFirstByOrderByIdDesc()
                 .orElseThrow(() -> new RuntimeException(
                         "API Key de IA não configurada. Vá em Configurações para adicionar."));

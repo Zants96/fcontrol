@@ -56,6 +56,8 @@ public class AiChatDTO {
         private String subcategoria;
         private BigDecimal valor;
         private Integer dia;
+        @Builder.Default
+        private Boolean duplicado = false;
     }
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -74,6 +76,8 @@ public class AiChatDTO {
         private String indexador;
         private BigDecimal taxa;
         private String data;           // YYYY-MM-DD
+        @Builder.Default
+        private Boolean duplicado = false;
     }
 
     // ─── Insights ────────────────────────────────────────────────────────────

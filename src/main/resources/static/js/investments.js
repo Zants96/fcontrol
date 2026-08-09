@@ -1518,12 +1518,17 @@ function abrirModalProventosComLista(lancamentos, titulo) {
       
       const qtdText = hasQtd ? parseFloat(l.quantidade).toFixed(4).replace(/\.?0+$/, '') : '-';
       const unitText = hasUnit ? fmtCurrency(parseFloat(l.precoUnitario)) : '-';
-      
+      let tpFmt = l.tipoProvento || 'Dividendo';
+      if (tpFmt.toLowerCase().startsWith('div')) tpFmt = 'Dividendo';
+      else if (tpFmt.toLowerCase().includes('jcp') || tpFmt.toLowerCase().includes('jscp')) tpFmt = 'JSCP';
+      else if (tpFmt.toLowerCase().includes('rend')) tpFmt = 'Rend. Trib.';
+      const badgeCls = tpFmt.toLowerCase().replace(/[^a-z0-9]/g, '');
+
       tr.innerHTML = `
         <td>${dataFmt}</td>
         <td><strong>${escHtml(l.ticker)}</strong></td>
         <td><span style="font-size:0.75rem;color:var(--text-muted);">${tipoLabels[l.tipoAtivo] || l.tipoAtivo || '-'}</span></td>
-        <td><span class="ai-cat-badge ai-cat-badge--${(l.tipoProvento || 'Dividendo').toLowerCase().replace('.', '').replace(' ', '')}" style="font-size:0.75rem;font-weight:600;padding:2px 6px;border-radius:4px;">${l.tipoProvento || 'Dividendo'}</span></td>
+        <td><span class="ai-cat-badge ai-cat-badge--${badgeCls}" style="font-size:0.75rem;font-weight:600;padding:2px 6px;border-radius:4px;">${tpFmt}</span></td>
         <td>${qtdText}</td>
         <td class="cell-valor">${unitText}</td>
         <td>${fmtCurrency(parseFloat(l.valorTotal || 0))}</td>
