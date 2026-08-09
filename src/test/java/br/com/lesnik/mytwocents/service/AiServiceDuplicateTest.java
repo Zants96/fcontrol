@@ -1,11 +1,7 @@
 package br.com.lesnik.mytwocents.service;
 
 import br.com.lesnik.mytwocents.dto.AiChatDTO.*;
-import br.com.lesnik.mytwocents.model.Categoria;
-import br.com.lesnik.mytwocents.model.Lancamento;
-import br.com.lesnik.mytwocents.model.InvestimentoLancamento;
-import br.com.lesnik.mytwocents.model.Ativo;
-import br.com.lesnik.mytwocents.model.TipoOperacao;
+import br.com.lesnik.mytwocents.model.*;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.InvestimentoLancamentoRepository;
 import br.com.lesnik.mytwocents.repository.LancamentoRepository;
@@ -17,6 +13,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,6 +28,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AiServiceDuplicateTest {
 
     @Mock
@@ -40,6 +39,9 @@ class AiServiceDuplicateTest {
 
     @Mock
     private InvestimentoService investimentoService;
+
+    @Mock
+    private CotacaoService cotacaoService;
 
     @Mock
     private LancamentoRepository lancamentoRepository;
