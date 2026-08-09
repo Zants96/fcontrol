@@ -784,6 +784,38 @@ select option { background: var(--bg-elevated); }
 .action-btn--del { background: rgba(248,113,113,0.1); color: var(--accent-red); }
 .action-btn--del:hover { background: rgba(248,113,113,0.25); }
 
+#btn-export-csv {
+  background: var(--bg-hover);
+  color: var(--brand-glow);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+#btn-export-csv:hover {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--brand-glow);
+  border-color: var(--brand-glow);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+  transform: none;
+}
+
+#btn-export-pdf {
+  background: var(--bg-hover);
+  color: var(--accent-red);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+#btn-export-pdf:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.4);
+  transform: none;
+}
+
 /* ─── Buttons ───────────────────────────────────────────────────────────── */
 .btn {
   padding: 0.75rem 1.5rem;
@@ -798,32 +830,78 @@ select option { background: var(--bg-elevated); }
   gap: 0.4rem;
 }
 
-.btn--primary {
-  background: linear-gradient(135deg, var(--brand-primary), #059669);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(16,185,129,0.3);
+/* Botões Verdes (Salvar, Baixar e Instalar, Claro, Exportar) */
+.btn--primary,
+#btn-theme-light,
+#btn-export-backup {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--brand-glow);
+  border: 1px solid var(--border-active);
+  box-shadow: none;
 }
 
-.btn--primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(16,185,129,0.45);
+.btn--primary:hover,
+#btn-theme-light:hover,
+#btn-export-backup:hover {
+  background: rgba(16, 185, 129, 0.22);
+  color: var(--brand-glow);
+  border-color: var(--brand-glow);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+  transform: none;
 }
 
+/* Botões Roxos (Escuro, Verificar Agora) */
+#btn-theme-dark,
+#btn-check-update {
+  background: rgba(167, 139, 250, 0.12);
+  color: var(--accent-purple);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  box-shadow: none;
+}
+
+#btn-theme-dark:hover,
+#btn-check-update:hover {
+  background: rgba(167, 139, 250, 0.22);
+  color: var(--accent-purple);
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.4);
+  transform: none;
+}
+
+/* Botões Secundários */
 .btn--secondary {
   background: var(--bg-elevated);
   color: var(--text-secondary);
   border: 1px solid var(--border);
+  box-shadow: none;
 }
 
 .btn--secondary:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+  border-color: var(--brand-glow);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
+  transform: none;
 }
 
-.btn--danger {
-  background: rgba(248,113,113,0.15);
+/* Botões de Perigo/Vermelho (Restaurar, Limpar Tudo) */
+.btn--danger,
+#btn-import-backup,
+#btn-reset-db {
+  background: rgba(248, 113, 113, 0.12);
   color: var(--accent-red);
-  border: 1px solid rgba(248,113,113,0.2);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  box-shadow: none;
+}
+
+.btn--danger:hover,
+#btn-import-backup:hover,
+#btn-reset-db:hover {
+  background: rgba(248, 113, 113, 0.22);
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+  box-shadow: 0 0 16px rgba(248, 113, 113, 0.4);
+  transform: none;
 }
 
 /* ─── Modal ─────────────────────────────────────────────────────────────── */
@@ -1350,9 +1428,9 @@ select option { background: var(--bg-elevated); }
 .ai-cat-badge--assinatura { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
 .ai-cat-badge--compra { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
 .ai-cat-badge--venda { background: rgba(16, 185, 129, 0.15); color: var(--brand-glow); }
-.ai-cat-badge--dividendo { background: rgba(234, 179, 8, 0.15); color: #facc15; }
-.ai-cat-badge--jscp { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
-.ai-cat-badge--rendtrib { background: rgba(45, 212, 191, 0.15); color: #2dd4bf; }
+.ai-cat-badge--dividendo, .ai-cat-badge--dividendos { background: rgba(234, 179, 8, 0.15); color: #facc15; }
+.ai-cat-badge--jscp, .ai-cat-badge--jcp { background: rgba(249, 115, 22, 0.15); color: #fb923c; }
+.ai-cat-badge--rendtrib, .ai-cat-badge--rendimento, .ai-cat-badge--rendimentotributavel { background: rgba(45, 212, 191, 0.15); color: #2dd4bf; }
 
 .ai-parse-actions {
   display: flex;
@@ -1748,3 +1826,22 @@ select option { background: var(--bg-elevated); }
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
+
+/* Lançamentos Parse IA - Duplicados e Badges */
+.ai-parse-row--duplicate {
+  opacity: 0.6;
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.ai-cat-badge--warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.ai-cat-badge--success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
