@@ -874,6 +874,10 @@ public class InvestimentoService {
     }
 
     private InvestimentoLancamentoDTO toLancamentoDTO(InvestimentoLancamento l) {
+        String tpNorm = l.getTipoOperacao() == TipoOperacao.DIVIDENDO
+                ? AiService.normalizarTipoProvento(l.getTipoProvento())
+                : l.getTipoProvento();
+
         return InvestimentoLancamentoDTO.builder()
                 .id(l.getId())
                 .ativoId(l.getAtivo().getId())
@@ -889,7 +893,7 @@ public class InvestimentoService {
                 .dataVencimento(l.getDataVencimento())
                 .indexador(l.getIndexador())
                 .taxa(l.getTaxa())
-                .tipoProvento(l.getTipoProvento())
+                .tipoProvento(tpNorm)
                 .build();
     }
 

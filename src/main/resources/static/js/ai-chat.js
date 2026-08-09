@@ -23,10 +23,10 @@ function safeParseFloat(val) {
 }
 
 const SUGESTOES_RAPIDAS = [
-  { label: '📊 Analise meus gastos', msg: 'Analise meus gastos deste ano e me dê recomendações.' },
-  { label: '💰 Como economizar?', msg: 'O que posso fazer para economizar mais baseado nos meus dados?' },
-  { label: '📈 Previsão do saldo', msg: 'Se eu manter esse ritmo, como será meu saldo no final do ano?' },
-  { label: '📋 Colar fatura/boleto', msg: null }, // Abre input com placeholder diferente
+  { label: 'Analise meus gastos', msg: 'Analise meus gastos deste ano e me dê recomendações.' },
+  { label: 'Como economizar?', msg: 'O que posso fazer para economizar mais baseado nos meus dados?' },
+  { label: 'Previsão do saldo', msg: 'Se eu manter esse ritmo, como será meu saldo no final do ano?' },
+  { label: 'Colar fatura/boleto', msg: null }, // Abre input com placeholder diferente
 ];
 
 // ─── Inicialização ───────────────────────────────────────────────────────────
@@ -121,10 +121,24 @@ async function sendAiMessage() {
       if (result.error) {
         addChatMessage('ai', `❌ ${result.error}`);
       } else if (result.investimentos && result.investimentos.length > 0) {
-        addChatMessage('ai', `📈 **Encontrei ${result.investimentos.length} lançamentos de investimentos/proventos!**\n\n${result.resumo || ''}`);
+        const novosCount = result.investimentos.filter(i => !i.duplicado).length;
+        const dupCount = result.investimentos.filter(i => i.duplicado).length;
+        let msgStr = `📈 **Encontrei ${result.investimentos.length} lançamentos de investimentos/proventos!**`;
+        if (dupCount > 0) {
+          msgStr += `\n\n✨ **${novosCount} novo(s)** | ⚠️ **${dupCount} já cadastrado(s)**`;
+        }
+        msgStr += `\n\n${result.resumo || ''}`;
+        addChatMessage('ai', msgStr);
         renderInvestimentoParsePreview(result.investimentos);
       } else if (result.items && result.items.length > 0) {
-        addChatMessage('ai', `📋 **Encontrei ${result.items.length} transações!**\n\n${result.resumo || ''}`);
+        const novosCount = result.items.filter(i => !i.duplicado).length;
+        const dupCount = result.items.filter(i => i.duplicado).length;
+        let msgStr = `📋 **Encontrei ${result.items.length} transações!**`;
+        if (dupCount > 0) {
+          msgStr += `\n\n✨ **${novosCount} nova(s)** | ⚠️ **${dupCount} já cadastrada(s)**`;
+        }
+        msgStr += `\n\n${result.resumo || ''}`;
+        addChatMessage('ai', msgStr);
         renderParsePreview(result.items);
       } else {
         addChatMessage('ai', '🤔 Não consegui identificar transações ou investimentos no texto. Tente colar novamente com mais detalhes.');
@@ -242,6 +256,8 @@ function renderParsePreview(items) {
     ASSINATURA: '🟣 Assinatura',
   };
 
+  const novos = items.filter(i => !i.duplicado);
+  const duplicados = items.filter(i => i.duplicado);
   const total = items.reduce((acc, item) => acc + parseFloat(item.valor || 0), 0);
 
   const previewHtml = `
@@ -256,31 +272,44 @@ function renderParsePreview(items) {
               <th>Subcategoria</th>
               <th>Valor</th>
               <th>Dia</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
             ${items.map((item, i) => `
-              <tr id="parse-row-${i}">
+              <tr id="parse-row-${i}" class="${item.duplicado ? 'ai-parse-row--duplicate' : ''}">
                 <td>${escHtml(item.descricao)}</td>
                 <td><span class="ai-cat-badge ai-cat-badge--${(item.categoria || '').toLowerCase()}">${categoriaLabels[item.categoria] || item.categoria}</span></td>
                 <td>${escHtml(item.subcategoria)}</td>
                 <td class="cell-valor">${fmtCurrency(parseFloat(item.valor))}</td>
                 <td>${item.dia || '-'}</td>
+                <td>
+                  ${item.duplicado 
+                    ? '<span class="ai-cat-badge ai-cat-badge--warning">⚠️ Já cadastrado</span>' 
+                    : '<span class="ai-cat-badge ai-cat-badge--success">✨ Novo</span>'}
+                </td>
               </tr>
             `).join('')}
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="3"><strong>Total</strong></td>
+              <td colspan="3"><strong>Total (${items.length} itens, ${novos.length} novos)</strong></td>
               <td class="cell-valor"><strong>${fmtCurrency(total)}</strong></td>
-              <td></td>
+              <td colspan="2"></td>
             </tr>
           </tfoot>
         </table>
         <div class="ai-parse-actions">
-          <button class="btn btn--primary" id="btn-parse-confirm" onclick="confirmParsedItems()">
-            ✅ Cadastrar Todos (${items.length} itens)
-          </button>
+          ${novos.length > 0 ? `
+            <button class="btn btn--primary" id="btn-parse-confirm" onclick="confirmParsedItems(false)">
+              ✅ Cadastrar Apenas Novos (${novos.length} itens)
+            </button>
+          ` : ''}
+          ${duplicados.length > 0 ? `
+            <button class="btn ${novos.length === 0 ? 'btn--primary' : 'btn--secondary'}" id="btn-parse-confirm-all" onclick="confirmParsedItems(true)">
+              ${novos.length === 0 ? '⚠️ Cadastrar Mesmo Assim' : 'Forçar Cadastro de Todos'} (${items.length} itens)
+            </button>
+          ` : ''}
           <button class="btn btn--secondary" id="btn-parse-cancel" onclick="cancelParsedItems()">
             ✕ Descartar
           </button>
@@ -296,10 +325,19 @@ function renderParsePreview(items) {
   aiState.pendingItems = items;
 }
 
-async function confirmParsedItems() {
+async function confirmParsedItems(includeDuplicates = false) {
   if (!aiState.pendingItems || aiState.pendingItems.length === 0) return;
 
-  const btn = $('btn-parse-confirm');
+  const itemsToCreate = includeDuplicates 
+    ? aiState.pendingItems 
+    : aiState.pendingItems.filter(i => !i.duplicado);
+
+  if (itemsToCreate.length === 0) {
+    showToast('Nenhum item novo para cadastrar!', 'info');
+    return;
+  }
+
+  const btn = $('btn-parse-confirm') || $('btn-parse-confirm-all');
   if (btn) {
     btn.textContent = 'Cadastrando...';
     btn.disabled = true;
@@ -308,7 +346,7 @@ async function confirmParsedItems() {
   let success = 0;
   let errors = 0;
 
-  for (const item of aiState.pendingItems) {
+  for (const item of itemsToCreate) {
     try {
       await Api.criarLancamento({
         descricao: item.descricao,
@@ -333,6 +371,10 @@ async function confirmParsedItems() {
 
   // Feedback
   let msg = `✅ **${success} lançamento${success > 1 ? 's' : ''} cadastrado${success > 1 ? 's' : ''} com sucesso!**`;
+  const ignoredCount = aiState.pendingItems.length - itemsToCreate.length;
+  if (ignoredCount > 0) {
+    msg += `\nℹ️ ${ignoredCount} item(ns) duplicado(s) foram ignorados.`;
+  }
   if (errors > 0) msg += `\n⚠️ ${errors} item(ns) falharam.`;
   addChatMessage('ai', msg);
 
@@ -369,6 +411,9 @@ function renderInvestimentoParsePreview(investimentos) {
     CRIPTO: 'Cripto',
   };
 
+  const novos = investimentos.filter(i => !i.duplicado);
+  const duplicados = investimentos.filter(i => i.duplicado);
+
   const previewHtml = `
     <div class="ai-msg ai-msg--ai" id="ai-parse-preview">
       <div class="ai-msg-avatar">📈</div>
@@ -383,6 +428,7 @@ function renderInvestimentoParsePreview(investimentos) {
               <th>Preço Unit.</th>
               <th>Valor Total</th>
               <th>Taxa/Venc.</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -390,7 +436,6 @@ function renderInvestimentoParsePreview(investimentos) {
               const tipoOp = item.tipoOperacao || 'COMPRA';
               const badgeClass = tipoOp.toLowerCase();
               
-              // Formata taxa/vencimento se existirem
               let extraInfo = '-';
               if (item.taxa && item.indexador) {
                 extraInfo = `${item.indexador} + ${item.taxa}%`;
@@ -404,7 +449,7 @@ function renderInvestimentoParsePreview(investimentos) {
               }
 
               return `
-                <tr id="parse-row-${i}">
+                <tr id="parse-row-${i}" class="${item.duplicado ? 'ai-parse-row--duplicate' : ''}">
                   <td><strong>${escHtml(item.ticker)}</strong></td>
                   <td><span class="ai-cat-badge ai-cat-badge--${badgeClass}">${operacaoLabels[tipoOp] || tipoOp}</span></td>
                   <td>${ativoLabels[item.tipoAtivo] || item.tipoAtivo || '-'}</td>
@@ -412,15 +457,27 @@ function renderInvestimentoParsePreview(investimentos) {
                   <td class="cell-valor">${fmtCurrency(parseFloat(item.precoUnitario || 0))}</td>
                   <td class="cell-valor">${fmtCurrency(parseFloat(item.valorTotal || 0))}</td>
                   <td><small style="color: var(--text-muted)">${escHtml(extraInfo)}</small></td>
+                  <td>
+                    ${item.duplicado 
+                      ? '<span class="ai-cat-badge ai-cat-badge--warning">⚠️ Já cadastrado</span>' 
+                      : '<span class="ai-cat-badge ai-cat-badge--success">✨ Novo</span>'}
+                  </td>
                 </tr>
               `;
             }).join('')}
           </tbody>
         </table>
         <div class="ai-parse-actions">
-          <button class="btn btn--primary" id="btn-parse-confirm" onclick="confirmParsedInvestimentos()">
-            ✅ Cadastrar Todos (${investimentos.length} itens)
-          </button>
+          ${novos.length > 0 ? `
+            <button class="btn btn--primary" id="btn-parse-confirm" onclick="confirmParsedInvestimentos(false)">
+              ✅ Cadastrar Apenas Novos (${novos.length} itens)
+            </button>
+          ` : ''}
+          ${duplicados.length > 0 ? `
+            <button class="btn ${novos.length === 0 ? 'btn--primary' : 'btn--secondary'}" id="btn-parse-confirm-all" onclick="confirmParsedInvestimentos(true)">
+              ${novos.length === 0 ? '⚠️ Cadastrar Mesmo Assim' : 'Forçar Cadastro de Todos'} (${investimentos.length} itens)
+            </button>
+          ` : ''}
           <button class="btn btn--secondary" id="btn-parse-cancel" onclick="cancelParsedInvestimentos()">
             ✕ Descartar
           </button>
@@ -436,10 +493,19 @@ function renderInvestimentoParsePreview(investimentos) {
   aiState.pendingInvestimentos = investimentos;
 }
 
-async function confirmParsedInvestimentos() {
+async function confirmParsedInvestimentos(includeDuplicates = false) {
   if (!aiState.pendingInvestimentos || aiState.pendingInvestimentos.length === 0) return;
 
-  const btn = $('btn-parse-confirm');
+  const invsToCreate = includeDuplicates 
+    ? aiState.pendingInvestimentos 
+    : aiState.pendingInvestimentos.filter(i => !i.duplicado);
+
+  if (invsToCreate.length === 0) {
+    showToast('Nenhum investimento novo para cadastrar!', 'info');
+    return;
+  }
+
+  const btn = $('btn-parse-confirm') || $('btn-parse-confirm-all');
   if (btn) {
     btn.textContent = 'Cadastrando...';
     btn.disabled = true;
@@ -448,7 +514,7 @@ async function confirmParsedInvestimentos() {
   let success = 0;
   let errors = 0;
 
-  for (const item of aiState.pendingInvestimentos) {
+  for (const item of invsToCreate) {
     try {
       const dataIso = item.data || `${state.ano}-${String(state.mes).padStart(2, '0')}-${String(item.dia || new Date().getDate()).padStart(2, '0')}`;
 
@@ -480,6 +546,10 @@ async function confirmParsedInvestimentos() {
 
   // Feedback
   let msg = `✅ **${success} lançamento${success > 1 ? 's' : ''} de investimento cadastrado${success > 1 ? 's' : ''} com sucesso!**`;
+  const ignoredCount = aiState.pendingInvestimentos.length - invsToCreate.length;
+  if (ignoredCount > 0) {
+    msg += `\nℹ️ ${ignoredCount} lançamento(s) duplicado(s) foram ignorados.`;
+  }
   if (errors > 0) msg += `\n⚠️ ${errors} lançamento(s) falharam.`;
   addChatMessage('ai', msg);
 
