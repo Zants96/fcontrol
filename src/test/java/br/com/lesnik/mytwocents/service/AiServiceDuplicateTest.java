@@ -23,6 +23,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
 
@@ -72,7 +73,8 @@ class AiServiceDuplicateTest {
                 .dia(15)
                 .build();
 
-        when(lancamentoRepository.findByAno(ano)).thenReturn(List.of(existente));
+        when(lancamentoRepository.findByAnoAndMesOrderByCategoriaAscSubcategoriaAsc(eq(ano), eq(mes)))
+                .thenReturn(List.of(existente));
         when(investimentoLancamentoRepository.findAllWithAtivoByOrderByDataDesc())
                 .thenReturn(Collections.emptyList());
 
@@ -133,7 +135,8 @@ class AiServiceDuplicateTest {
                 .valorTotal(new BigDecimal("2350.00"))
                 .build();
 
-        when(lancamentoRepository.findByAno(ano)).thenReturn(Collections.emptyList());
+        when(lancamentoRepository.findByAnoAndMesOrderByCategoriaAscSubcategoriaAsc(eq(ano), eq(mes)))
+                .thenReturn(Collections.emptyList());
         when(investimentoLancamentoRepository.findAllWithAtivoByOrderByDataDesc())
                 .thenReturn(List.of(existente));
 
