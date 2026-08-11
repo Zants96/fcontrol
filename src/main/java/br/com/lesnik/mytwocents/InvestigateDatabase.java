@@ -4,10 +4,12 @@ import br.com.lesnik.mytwocents.model.Categoria;
 import br.com.lesnik.mytwocents.model.Lancamento;
 import br.com.lesnik.mytwocents.repository.LancamentoRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Profile("dev")
 @Component
 public class InvestigateDatabase implements CommandLineRunner {
 

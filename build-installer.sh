@@ -18,7 +18,7 @@ mkdir -p target/jpackage-input
 cp target/mytwocents-*.jar target/jpackage-input/mytwocents.jar
 
 echo "🛠️ 2. Criando o JRE Customizado com jlink..."
-$JAVA_HOME/bin/jlink --add-modules java.se,jdk.unsupported,java.management,java.desktop,java.naming,java.sql,java.net.http,java.instrument,java.rmi,java.security.jgss,jdk.crypto.ec,jdk.charsets,jdk.localedata,java.xml,java.management.rmi,jdk.jsobject,jdk.xml.dom,jdk.zipfs,jdk.crypto.cryptoki,jdk.naming.dns --output target/custom-jre --no-header-files --no-man-pages
+$JAVA_HOME/bin/jlink --add-modules java.base,java.desktop,java.sql,java.net.http,java.naming,java.instrument,java.management,java.transaction.xa,jdk.unsupported,jdk.crypto.ec,jdk.jsobject,jdk.charsets,jdk.localedata,jdk.zipfs --output target/custom-jre --no-header-files --no-man-pages --strip-debug --compress=2
 
 echo "🛠️ 3. Empacotando Instalador RPM..."
 $JAVA_HOME/bin/jpackage \

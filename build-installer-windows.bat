@@ -27,7 +27,7 @@ copy target\mytwocents-*.jar target\jpackage-input\
 
 echo.
 echo [2/3] Criando JRE Customizado com jlink...
-"%JAVA_HOME%\bin\jlink" --add-modules java.se,jdk.unsupported,java.management,java.desktop,java.naming,java.sql,java.net.http,java.instrument,java.rmi,java.security.jgss,jdk.crypto.ec --output target\custom-jre --no-header-files --no-man-pages --strip-debug
+"%JAVA_HOME%\bin\jlink" --add-modules java.base,java.desktop,java.sql,java.net.http,java.naming,java.instrument,java.management,java.transaction.xa,jdk.unsupported,jdk.crypto.ec,jdk.jsobject,jdk.charsets,jdk.localedata,jdk.zipfs --output target\custom-jre --no-header-files --no-man-pages --strip-debug --compress=2
 
 echo.
 echo [3/3] Empacotando Instalador Nativo do Windows...

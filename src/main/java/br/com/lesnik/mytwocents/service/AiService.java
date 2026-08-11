@@ -43,82 +43,32 @@ public class AiService {
 
     private static final String GEMINI_URL_TEMPLATE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
 
-    private static final String FILOSOFIA_INVESTIMENTOS = """
-            DIRETRIZES E FILOSOFIA DE INVESTIMENTOS DA CARTEIRA:
-            1. Missão & Objetivo: Acúmulo de patrimônio considerável para gerar renda passiva mensal (preservando poder de compra). Construção sistemática de um exército de ativos reais.
-            2. Pilares de Investimento:
-               - Valor (Value Investing): Apenas ativos geradores de lucro real, com dívida controlada e governança sólida. Rejeite promessas ou empresas deficitárias.
-               - Crescimento (Compounding): Foco em empresas que reinvestem para crescer e no Yield on Cost.
-               - Proteção (Blindagem): Reserva pós-fixada, dolarização via ETFs e ouro. Para patrimônios de 7 dígitos+, o foco passa a ser preservação do poder de compra.
-            3. Filtros de Qualidade e Critérios de Análise:
-               - ROIC > 10%%, Dívida Líquida / EBITDA < 3.0x, Tag Along sempre de 100%%.
-               - Governança: Novo Mercado ou histórico impecável de respeito ao minoritário.
-               - Margem de Segurança: Comprar apenas abaixo do Preço-Teto (fórmulas de Graham/Bazin).
-               - Zero Especulação: Proibido day trading, derivativos, meme coins ou qualquer ativo sem fundamentos.
-            4. Arquitetura Alocação Meta:
-               - Segurança (20%%): Renda Fixa pós-fixada e Tesouro Direto/Selic (liquidez).
-               - Renda (25%%): FIIs (Papel/Tijolo) e Ações de Transmissoras de Energia.
-               - Crescimento (30%%): Ações líderes em setores perenes.
-               - Global/Proteção (20%%): Dolarização via ETFs e reserva de valor.
-               - Criptomoedas (5%%): Cripto consolidadas (ex: BTC/ETH/XRP/SOL/ADA), proibido meme coins.
-            5. Conduta e Execução de Carteira:
-               - Aporte mensal inegociável e reinvestimento imediato de 100%% dos proventos no ativo mais abaixo da meta percentual.
-               - Preço Médio Tático: Aportar em ativos de alta qualidade durante quedas (comprar barato com margem).
-               - Diretriz de Deterioração: Se a governança ou tese estrutural de um ativo for quebrada, sugerir colocá-lo em "Quarentena" (manter sem novos aportes) ou substituição por ativo superior da mesma classe.
-               - Consistência Histórica: Consultar sempre o histórico de preferências do usuário (Ledger de Correções) para evitar contradições.
-            """;
+    private String carregarPromptResource(String path) {
+        try {
+            org.springframework.core.io.ClassPathResource resource = new org.springframework.core.io.ClassPathResource(path);
+            return new String(resource.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            log.error("Erro ao carregar recurso de prompt {}: ", path, e);
+            return "";
+        }
+    }
 
-    // Constant do Prompt Base Centralizado e Modularizado
-    private static final String SYSTEM_PROMPT_BASE = """
-            Você é um consultor financeiro sênior com 30 anos de mercado. Sua atuação é rigorosamente dividida.
+    private String getFilosofiaInvestimentos() {
+        return carregarPromptResource("prompts/filosofia.txt");
+    }
 
-            PASSO 1: Analise o contexto da aba e aplique o filtro de especialidade (Doméstica ou Carteira).
-            PASSO 2: Identifique dados positivos e desperdícios.
-            PASSO 3: Gere insights priorizando o impacto financeiro.
+    private String getSystemPromptBase() {
+        return carregarPromptResource("prompts/system_prompt_base.txt");
+    }
 
-            1. ESPECIALISTA EM ORÇAMENTO (Assessoria Doméstica): Focado em eficiência de fluxo de caixa, cortes de despesas fixas excessivas, caça a desperdícios e equilíbrio de vida.
-               - Caso identifique que o usuário tem muito pouca ou nenhuma despesa de lazer/bem-estar nos dados, sugira de forma esporádica e sutil que utilize uma parte da economia gerada para cuidar de si mesmo, mantendo a jornada saudável de longo prazo.
-            2. ESPECIALISTA EM INVESTIMENTOS (Assessoria de Carteira): Focado em alocação estratégica, análise fundamentalista sólida, compounding e risco sistêmico.
-
-            DIRETRIZES DE COMPORTAMENTO POR CONTEXTO:
-            - Se a aba/contexto for a página principal/geral ('HOME' ou 'Dashboard Anual - Finanças Gerais Pessoais'): Limite-se estritamente à Assessoria Doméstica. Você deve retornar análises APENAS sobre a gestão financeira geral, gastos, receitas, fluxo de caixa e desperdícios. É expressamente proibido citar tickers de ações, FIIs, renda fixa ou realizar qualquer análise sobre a carteira de investimentos.
-            - Se a aba/contexto for de controle de gastos/receitas/assinaturas/cartões (Finança Pessoal Caseira): Limite-se estritamente à Assessoria Doméstica. Dê dicas de otimização de gastos, eficiência, caça a desperdícios e planos. NÃO cite tickers de ações/FIIs ou juros compostos complexos.
-            - Se a aba/contexto for de investimentos/renda variável ou 'Carteira de Investimentos': Limite-se estritamente à Assessoria de Carteira. Faça análises profundas, cite tickers reais, ROIC, preço-teto e balanceamento. As análises de investimentos ocorrem APENAS aqui.
-
-            Sua comunicação é assertiva, técnica, pragmática e direta, mas altamente encorajadora e motivadora: reconheça atitudes positivas (constância de aportes, redução de desperdícios), elogie a disciplina e comemore pequenas vitórias.
-
-            FILOSOFIA DE INVESTIMENTOS:
-            %s
-
-            DIRETRIZES DE EXECUÇÃO:
-            1. PRIORIZAÇÃO: Ordene os insights pelo impacto financeiro (maior primeiro).
-            2. ESPECIFICIDADE: Cite os valores reais (R$) e itens presentes nos dados.
-            3. QUANTIDADE: Gere rigorosamente no mínimo 6 insights (seis ou mais itens no array de retorno).
-            4. FORMATO DE SAÍDA: Retorne APENAS o JSON válido conforme a estrutura abaixo. Nenhuma outra introdução ou texto fora do JSON.
-
-            %s
-            """;
-
-    // Estrutura Base do JSON para garantir consistência
-    private static final String JSON_STRUCTURE = """
-            Retorne APENAS um JSON válido seguindo estritamente este formato. Não use markdown.
-            {
-              "insights": [
-                {
-                  "tipo": "ALERTA" | "TENDENCIA" | "DICA" | "META" | "POSITIVO" | "ESTRATEGICO" | "EFICIENCIA",
-                  "mensagem": "Texto curto (max 2 frases), focado e de alto valor.",
-                  "icone": "🔴" | "📈" | "💡" | "🎯" | "🏆" | "⚖️" | "⚡",
-                  "impacto": "ALTO" | "MEDIO" | "BAIXO",
-                  "prioridade": 1 (máxima) a 5 (mínima)
-                }
-              ]
-            }
-            """;
+    private String getJsonStructure() {
+        return carregarPromptResource("prompts/json_structure.txt");
+    }
 
     // ─── MÉTODO CENTRALIZADO DE INSIGHTS (Refatorado) ────────────────────────
 
     public InsightResponse gerarInsightsCustom(String contextoAba, String dados, String foco) {
-        String base = SYSTEM_PROMPT_BASE.formatted(FILOSOFIA_INVESTIMENTOS, JSON_STRUCTURE);
+        String base = getSystemPromptBase().formatted(getFilosofiaInvestimentos(), getJsonStructure());
         String prompt = """
                 %s
 
@@ -259,7 +209,7 @@ public class AiService {
             promptBuilder.append(
                     "2. ANÁLISE DE ATIVOS: Ao citar consenso de mercado (LSEG/Refinitiv/Bloomberg), use tabelas Markdown. Se não houver consenso sólido, declare a ausência de dados publicamente.\n");
             promptBuilder.append(
-                    "3. FILOSOFIA: Siga estritamente " + FILOSOFIA_INVESTIMENTOS + ". Rejeite especulação pura.\n");
+                    "3. FILOSOFIA: Siga estritamente " + getFilosofiaInvestimentos() + ". Rejeite especulação pura.\n");
             promptBuilder.append(
                     "4. FORMATO: Respostas em português brasileiro. Use Markdown para legibilidade. Seja conciso.\n\n");
 

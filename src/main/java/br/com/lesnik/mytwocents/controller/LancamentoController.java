@@ -16,6 +16,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -58,7 +60,7 @@ public class LancamentoController {
      * POST /api/lancamentos
      */
     @PostMapping("/lancamentos")
-    public ResponseEntity<LancamentoDTO> criar(@RequestBody LancamentoDTO dto) {
+    public ResponseEntity<LancamentoDTO> criar(@Valid @RequestBody LancamentoDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(dto));
     }
 
@@ -67,7 +69,7 @@ public class LancamentoController {
      * PUT /api/lancamentos/{id}
      */
     @PutMapping("/lancamentos/{id}")
-    public ResponseEntity<LancamentoDTO> atualizar(@PathVariable Long id, @RequestBody LancamentoDTO dto) {
+    public ResponseEntity<LancamentoDTO> atualizar(@PathVariable Long id, @Valid @RequestBody LancamentoDTO dto) {
         try {
             return ResponseEntity.ok(service.atualizar(id, dto));
         } catch (NoSuchElementException e) {

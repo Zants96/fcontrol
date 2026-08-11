@@ -28,24 +28,21 @@ public class BackupController {
     }
 
     @GetMapping("/export")
-    public ResponseEntity<Resource> exportBackup(@RequestHeader("X-Backup-Password") String password) {
-        try {
-            if (password == null || password.isBlank()) {
-                return ResponseEntity.badRequest().build();
-            }
+    public ResponseEntity<Resource> exportBackup(@RequestHeader(value = "X-Backup-Password", required = false) String password) {
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
 
-            // 1. Gera o SQL puro em um arquivo temporário
-            File tempSqlFile = File.createTempFile("backup", ".sql");
+        File tempSqlFile = null;
+        try {
+            tempSqlFile = File.createTempFile("backup", ".sql");
             try (Connection conn = dataSource.getConnection();
                  Statement stmt = conn.createStatement()) {
                 stmt.execute("SCRIPT TO '" + tempSqlFile.getAbsolutePath() + "'");
             }
-            
-            // 2. Lê os bytes e encripta com a senha do usuário
+
             byte[] rawData = Files.readAllBytes(tempSqlFile.toPath());
             byte[] encryptedData = cryptoService.encrypt(rawData, password);
-            
-            tempSqlFile.delete();
 
             ByteArrayResource resource = new ByteArrayResource(encryptedData);
 
@@ -56,64 +53,69 @@ public class BackupController {
                     .body(resource);
 
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
+        } finally {
+            if (tempSqlFile != null && tempSqlFile.exists()) {
+                tempSqlFile.delete();
+            }
         }
     }
 
     @PostMapping("/import")
     public ResponseEntity<String> importBackup(
             @RequestParam("file") MultipartFile file,
-            @RequestHeader("X-Backup-Password") String password) {
-        try {
-            if (password == null || password.isBlank()) {
-                return ResponseEntity.badRequest().body("Senha não fornecida.");
-            }
+            @RequestHeader(value = "X-Backup-Password", required = false) String password) {
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().body("Senha não fornecida.");
+        }
 
-            // 1. Recebe o arquivo encriptado e desencripta usando a senha
+        File tempSqlFile = null;
+        try {
             byte[] encryptedData = file.getBytes();
             byte[] decryptedData = cryptoService.decrypt(encryptedData, password);
 
-            // 2. Salva o SQL desencriptado em um arquivo temporário para o H2 rodar
-            File tempSqlFile = File.createTempFile("restore", ".sql");
+            tempSqlFile = File.createTempFile("restore", ".sql");
             Files.write(tempSqlFile.toPath(), decryptedData);
 
             try (Connection conn = dataSource.getConnection();
                  Statement stmt = conn.createStatement()) {
-                // Remove tudo primeiro
                 stmt.execute("DROP ALL OBJECTS");
-                // Roda o script de restauracao
                 stmt.execute("RUNSCRIPT FROM '" + tempSqlFile.getAbsolutePath() + "'");
             }
 
-            tempSqlFile.delete();
             return ResponseEntity.ok("Backup restaurado com sucesso!");
 
         } catch (Exception e) {
-            e.printStackTrace();
             String errorMsg = e.getMessage();
             if (errorMsg != null && (errorMsg.contains("padding") || errorMsg.contains("Given final block not properly padded"))) {
                 return ResponseEntity.status(401).body("Senha incorreta! Não foi possível desencriptar o backup.");
             }
-            return ResponseEntity.internalServerError().body("Erro ao restaurar backup: " + errorMsg);
+            return ResponseEntity.internalServerError().body("Falha ao restaurar o arquivo de backup. Verifique a integridade do arquivo.");
+        } finally {
+            if (tempSqlFile != null && tempSqlFile.exists()) {
+                tempSqlFile.delete();
+            }
         }
     }
 
     @PostMapping("/reset")
-    public ResponseEntity<String> resetDatabase() {
+    public ResponseEntity<String> resetDatabase(@RequestHeader(value = "X-Backup-Password", required = false) String password) {
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.status(401).body("Senha de confirmação necessária para redefinir o banco de dados.");
+        }
+
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
-            
+
             stmt.execute("SET REFERENTIAL_INTEGRITY FALSE");
             stmt.execute("TRUNCATE TABLE investimento_lancamento");
             stmt.execute("TRUNCATE TABLE ativo");
             stmt.execute("TRUNCATE TABLE lancamento");
             stmt.execute("SET REFERENTIAL_INTEGRITY TRUE");
-            
+
             return ResponseEntity.ok("Base de dados zerada com sucesso!");
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().body("Erro ao zerar base de dados: " + e.getMessage());
+            return ResponseEntity.internalServerError().body("Erro ao zerar a base de dados.");
         }
     }
 }

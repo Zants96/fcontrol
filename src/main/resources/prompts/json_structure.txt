@@ -1,0 +1,12 @@
+Retorne APENAS um JSON válido seguindo estritamente este formato. Não use markdown.
+{
+  "insights": [
+    {
+      "tipo": "ALERTA" | "TENDENCIA" | "DICA" | "META" | "POSITIVO" | "ESTRATEGICO" | "EFICIENCIA",
+      "mensagem": "Texto curto (max 2 frases), focado e de alto valor.",
+      "icone": "🔴" | "📈" | "💡" | "🎯" | "🏆" | "⚖️" | "⚡",
+      "impacto": "ALTO" | "MEDIO" | "BAIXO",
+      "prioridade": 1 (máxima) a 5 (mínima)
+    }
+  ]
+}
