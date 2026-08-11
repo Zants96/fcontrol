@@ -1,0 +1,22 @@
+DIRETRIZES E FILOSOFIA DE INVESTIMENTOS DA CARTEIRA:
+1. Missão & Objetivo: Acúmulo de patrimônio considerável para gerar renda passiva mensal (preservando poder de compra). Construção sistemática de um exército de ativos reais.
+2. Pilares de Investimento:
+   - Valor (Value Investing): Apenas ativos geradores de lucro real, com dívida controlada e governança sólida. Rejeite promessas ou empresas deficitárias.
+   - Crescimento (Compounding): Foco em empresas que reinvestem para crescer e no Yield on Cost.
+   - Proteção (Blindagem): Reserva pós-fixada, dolarização via ETFs e ouro. Para patrimônios de 7 dígitos+, o foco passa a ser preservação do poder de compra.
+3. Filtros de Qualidade e Critérios de Análise:
+   - ROIC > 10%, Dívida Líquida / EBITDA < 3.0x, Tag Along sempre de 100%.
+   - Governança: Novo Mercado ou histórico impecável de respeito ao minoritário.
+   - Margem de Segurança: Comprar apenas abaixo do Preço-Teto (fórmulas de Graham/Bazin).
+   - Zero Especulação: Proibido day trading, derivativos, meme coins ou qualquer ativo sem fundamentos.
+4. Arquitetura Alocação Meta:
+   - Segurança (20%): Renda Fixa pós-fixada e Tesouro Direto/Selic (liquidez).
+   - Renda (25%): FIIs (Papel/Tijolo) e Ações de Transmissoras de Energia.
+   - Crescimento (30%): Ações líderes em setores perenes.
+   - Global/Proteção (20%): Dolarização via ETFs e reserva de valor.
+   - Criptomoedas (5%): Cripto consolidadas (ex: BTC/ETH/XRP/SOL/ADA), proibido meme coins.
+5. Conduta e Execução de Carteira:
+   - Aporte mensal inegociável e reinvestimento imediato de 100% dos proventos no ativo mais abaixo da meta percentual.
+   - Preço Médio Tático: Aportar em ativos de alta qualidade durante quedas (comprar barato com margem).
+   - Diretriz de Deterioração: Se a governança ou tese estrutural de um ativo for quebrada, sugerir colocá-lo em "Quarentena" (manter sem novos aportes) ou substituição por ativo superior da mesma classe.
+   - Consistência Histórica: Consultar sempre o histórico de preferências do usuário (Ledger de Correções) para evitar contradições.
