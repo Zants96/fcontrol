@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -465,6 +466,7 @@ public class CotacaoService {
         return fallbackValue;
     }
 
+    @Cacheable(value = "macroRates", key = "'selic'")
     public BigDecimal getSelicRate(String token) {
         if (cachedSelic != null && lastSelicFetch != null &&
                 Duration.between(lastSelicFetch, Instant.now()).compareTo(MACRO_CACHE_DURATION) < 0) {
@@ -516,6 +518,7 @@ public class CotacaoService {
         return BigDecimal.valueOf(10.75); // Selic de fallback
     }
 
+    @Cacheable(value = "macroRates", key = "'ipca'")
     public BigDecimal getIpcaRate(String token) {
         if (cachedIpca != null && lastIpcaFetch != null &&
                 Duration.between(lastIpcaFetch, Instant.now()).compareTo(MACRO_CACHE_DURATION) < 0) {
