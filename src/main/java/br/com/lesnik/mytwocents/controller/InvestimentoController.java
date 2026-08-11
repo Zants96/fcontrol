@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/investimentos")
 @RequiredArgsConstructor
@@ -75,7 +77,7 @@ public class InvestimentoController {
      */
     @PostMapping("/lancamentos")
     public ResponseEntity<InvestimentoLancamentoDTO> criarLancamento(
-            @RequestBody InvestimentoLancamentoDTO dto) {
+            @Valid @RequestBody InvestimentoLancamentoDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.criarLancamento(dto));
     }
 
@@ -84,7 +86,7 @@ public class InvestimentoController {
      */
     @PutMapping("/lancamentos/{id}")
     public ResponseEntity<InvestimentoLancamentoDTO> atualizarLancamento(
-            @PathVariable Long id, @RequestBody InvestimentoLancamentoDTO dto) {
+            @PathVariable Long id, @Valid @RequestBody InvestimentoLancamentoDTO dto) {
         try {
             return ResponseEntity.ok(service.atualizarLancamento(id, dto));
         } catch (NoSuchElementException e) {
