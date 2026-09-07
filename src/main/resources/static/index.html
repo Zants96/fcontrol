@@ -388,13 +388,47 @@
   <!-- ─── VIEW: INVESTIMENTOS ────────────────────────────────────────────── -->
   <section class="view hidden" id="view-investimentos">
     
-    <!-- Topbar actions -->
-    <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-bottom: 1.5rem; align-items: center;">
-      <button class="btn btn--secondary" id="btn-atualizar-cotacoes" onclick="atualizarCotacoesBrapi()">Atualizar Cotações</button>
-      <button class="btn btn--primary" onclick="openInvModal()">+ Adicionar Lançamento</button>
+    <!-- ─── TOP HEADER: Cadeado de Segurança (Esq, span 3) + Botões Empilhados (Dir, span 1) ─── -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
+
+      <!-- Cadeado de Segurança (Emergency Lock - Ocupa 3 colunas) -->
+      <div id="sniper-emergency-lock-card" class="card card--red" style="grid-column: span 3; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center; padding: 1.25rem 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span id="em-lock-badge" class="inv-badge" style="background:#10b98120; color:#10b981; font-weight: 700; font-size: 0.85rem;">🛡️ RESERVA SEGURA</span>
+              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Cadeado de Segurança &amp; Liquidez</h3>
+            </div>
+            <p id="em-lock-desc" style="margin: 0.3rem 0 0; font-size: 0.88rem; color: var(--text-muted);">
+              Gestão automatizada da Reserva de Emergência para garantir caixa antes de aportes em renda variável.
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+            <div style="text-align: right;">
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Alocação Atual / Meta</div>
+              <div id="em-lock-values" style="font-weight: 700; font-size: 1rem; color: var(--text-main);">R$ 0,00 / R$ 20.000,00 (0%)</div>
+            </div>
+            <button class="btn btn--secondary" onclick="openEmergencyConfigModal()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">⚙️ Configurar Meta</button>
+          </div>
+        </div>
+        <div style="margin-top: 0.75rem; background: var(--bg-tertiary, rgba(255,255,255,0.05)); height: 8px; border-radius: 4px; overflow: hidden;">
+          <div id="em-lock-bar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.4s ease;"></div>
+        </div>
+      </div>
+
+      <!-- Botões de Ação (Ocupa 1 coluna - Alinhados ao Topo) -->
+      <div style="grid-column: span 1; display: flex; flex-direction: column; gap: 0.6rem; justify-content: flex-start;">
+        <button class="btn btn--primary" onclick="openInvModal()" style="width: 100%; justify-content: center; font-size: 0.88rem; font-weight: 600; padding: 0.55rem 0.75rem;">
+          + Adicionar Lançamento
+        </button>
+        <button class="btn btn--secondary" id="btn-atualizar-cotacoes" onclick="atualizarCotacoesBrapi()" style="width: 100%; justify-content: center; font-size: 0.85rem; padding: 0.55rem 0.75rem;">
+          Atualizar Cotações
+        </button>
+      </div>
+
     </div>
 
-    <!-- Cards de Resumo -->
+    <!-- Cards de Resumo de Valores -->
     <div class="cards-grid inv-cards-grid">
       <div class="card card--blue">
         <div class="card-label">Patrimônio Total</div>
@@ -453,7 +487,7 @@
     <!-- Histórico de Proventos (accordion retrátil) -->
     <div class="inv-accordion" id="prov-historico-accordion" style="margin-top: 1.5rem;">
       <div class="inv-accordion-header" onclick="this.parentElement.classList.toggle('open')"
-           style="border-left: 3px solid #a78bfa;">
+          style="border-left: 3px solid #a78bfa;">
         <div class="inv-accordion-title">
           <span class="inv-badge" style="background:#a78bfa20;color:#a78bfa;">Proventos</span>
           <!-- <span class="inv-accordion-count" id="prov-count-label">carregando...</span> -->
@@ -469,7 +503,7 @@
             <div id="prov-tipo-tooltip" class="prov-tipo-tooltip hidden"></div>
           </div>
           <svg class="inv-accordion-arrow" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="6 9 12 15 18 9"/>
           </svg>
         </div>
@@ -496,6 +530,40 @@
 
     <!-- Acordeões (Ativos por Tipo) -->
     <div id="inv-acordeoes"></div>
+
+    <!-- Sniper Mode: Oportunidades Táticas & Smart Split Aporte Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-top: 2rem; margin-bottom: 1.5rem;">
+      
+      <!-- Oportunidades Táticas -->
+      <div class="chart-card">
+        <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+            <h2 class="chart-title" style="margin: 0;">Oportunidades Táticas</h2>
+            <span id="sniper-ops-count" class="inv-badge" style="background:#8b5cf620; color:#8b5cf6; white-space: nowrap;">0 Gatilhos</span>
+          </div>
+          <button class="btn btn--secondary" onclick="renderSniperOpportunities()" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; white-space: nowrap; margin-left: auto;">Atualizar</button>
+        </div>
+        <div id="sniper-ops-container" style="margin-top: 1rem; max-height: 320px; overflow-y: auto;">
+          <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; padding: 1.5rem;">Nenhum gatilho tático no momento.</p>
+        </div>
+      </div>
+
+      <!-- Aporte Inteligente (Smart Split) -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Aporte Inteligente</h2>
+        </div>
+        <p style="font-size: 0.83rem; color: var(--text-muted); margin-bottom: 0.8rem;">
+          Calcula a distribuição proporcional do valor informado por déficit individual de cada ativo.
+        </p>
+        <div style="display: flex; gap: 0.75rem; margin-bottom: 0.8rem; align-items: center;">
+          <input type="text" id="input-aporte-valor" placeholder="R$ 0,00" class="input-field" style="flex: 1;">
+          <button class="btn btn--primary" onclick="calcularAporteSmartSplitUI()" style="font-size: 0.85rem; padding: 0.5rem 1rem;">Calcular Aporte</button>
+        </div>
+        <div id="aporte-resultado-container" style="max-height: 250px; overflow-y: auto;"></div>
+      </div>
+
+    </div>
 
     <!-- Insights da IA -->
     <div class="section-divider" style="margin-top: 3rem;">
@@ -907,6 +975,30 @@
         <button class="btn btn--primary" id="btn-copy-pix" data-key="leandrolesnik@hotmail.com" style="width: 100%; justify-content: center;">
           Copiar chave PIX
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: CONFIGURAÇÃO DE EMERGÊNCIA (SNIPER MODE) ════════════════════ -->
+<div class="modal-overlay hidden" id="modal-em-config-overlay" aria-hidden="true">
+  <div class="modal" role="dialog" aria-modal="true" style="max-width: 440px;">
+    <div class="modal-header">
+      <h2 class="modal-title">🛡️ Meta da Caixa de Emergência</h2>
+      <button class="modal-close" onclick="closeEmergencyConfigModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 1.5rem;">
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.88rem; font-weight: 500;">Meta de Reserva (R$)</label>
+        <input type="text" id="input-meta-emergencia" class="input-field" placeholder="0,00" style="width: 100%;">
+      </div>
+      <div class="form-group" style="margin-bottom: 1.25rem;">
+        <label style="display: block; margin-bottom: 0.5rem; font-size: 0.88rem; font-weight: 500;">Renda Mensal Estimada (R$)</label>
+        <input type="text" id="input-renda-mensal" class="input-field" placeholder="0,00" style="width: 100%;">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn--secondary" onclick="closeEmergencyConfigModal()">Cancelar</button>
+        <button class="btn btn--primary" onclick="salvarConfigEmergenciaUI()">Salvar Configuração</button>
       </div>
     </div>
   </div>

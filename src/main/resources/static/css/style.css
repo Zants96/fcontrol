@@ -1727,6 +1727,8 @@ select option { background: var(--bg-elevated); }
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  display: inline-block;
 }
 .inv-accordion-count { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; }
 

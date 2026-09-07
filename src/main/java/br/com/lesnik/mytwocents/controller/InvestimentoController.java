@@ -1,13 +1,13 @@
 package br.com.lesnik.mytwocents.controller;
 
-import br.com.lesnik.mytwocents.dto.AtivoDTO;
-import br.com.lesnik.mytwocents.dto.InvestimentoDashboardDTO;
-import br.com.lesnik.mytwocents.dto.InvestimentoLancamentoDTO;
+import br.com.lesnik.mytwocents.dto.*;
 import br.com.lesnik.mytwocents.model.AiConfig;
+import br.com.lesnik.mytwocents.model.CategoriaTatica;
 import br.com.lesnik.mytwocents.model.TipoAtivo;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.service.CotacaoService;
 import br.com.lesnik.mytwocents.service.InvestimentoService;
+import br.com.lesnik.mytwocents.service.SniperEngineService;
 import br.com.lesnik.mytwocents.service.ExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -32,6 +32,7 @@ public class InvestimentoController {
     private final CotacaoService cotacaoService;
     private final AiConfigRepository aiConfigRepository;
     private final ExportService exportService;
+    private final SniperEngineService sniperEngineService;
 
     /**
      * Exporta os ativos da carteira para CSV.
@@ -239,5 +240,62 @@ public class InvestimentoController {
                 .map(c -> c.getCoingeckoKey() != null && !c.getCoingeckoKey().isBlank())
                 .orElse(false);
         return ResponseEntity.ok(Map.of("configurado", configurado));
+    }
+
+    // ─── SNIPER MODE & SMART SPLIT APORTE ────────────────────────────────────
+
+    /**
+     * Retorna o resumo geral de inteligência do Sniper Mode (Cadeado de Segurança e Oportunidades).
+     */
+    @GetMapping("/sniper-overview")
+    public ResponseEntity<SniperOverviewDTO> obterSniperOverview() {
+        return ResponseEntity.ok(sniperEngineService.obterOverview());
+    }
+
+    /**
+     * Calcula o aporte tático inteligente (Smart Split Aporte Engine).
+     */
+    @PostMapping("/aporte/calcular")
+    public ResponseEntity<AporteCalculoResponseDTO> calcularAporte(
+            @Valid @RequestBody AporteCalculoRequestDTO request) {
+        return ResponseEntity.ok(sniperEngineService.calcularAporte(request.getValorAporte()));
+    }
+
+    /**
+     * Lista a matriz de oportunidades táticas (gatilhos de compra e venda).
+     */
+    @GetMapping("/tactical-opportunities")
+    public ResponseEntity<List<TacticalOpportunityDTO>> listarOportunidadesTaticas() {
+        return ResponseEntity.ok(sniperEngineService.listarOportunidadesTaticas());
+    }
+
+    /**
+     * Atualiza as configurações táticas de um ativo (categoria tática, cíclico, estrutural).
+     */
+    @PutMapping("/ativos/{id}/tatica")
+    public ResponseEntity<Void> atualizarTaticaAtivo(
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        CategoriaTatica cat = null;
+        if (body.containsKey("categoriaTatica") && body.get("categoriaTatica") != null) {
+            try {
+                cat = CategoriaTatica.valueOf(body.get("categoriaTatica").toString().toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+        Boolean ciclico = body.containsKey("ciclico") ? Boolean.valueOf(body.get("ciclico").toString()) : null;
+        Boolean estrutural = body.containsKey("estrutural") ? Boolean.valueOf(body.get("estrutural").toString()) : null;
+
+        sniperEngineService.atualizarTaticaAtivo(id, cat, ciclico, estrutural);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Atualiza os alvos da caixa de emergência e renda mensal nas configurações.
+     */
+    @PutMapping("/config/emergency-box")
+    public ResponseEntity<AiConfig> atualizarConfigEmergencia(@RequestBody Map<String, BigDecimal> body) {
+        BigDecimal targetBox = body.get("emergencyBoxTarget");
+        BigDecimal income = body.get("monthlyIncome");
+        return ResponseEntity.ok(sniperEngineService.atualizarConfigEmergencia(targetBox, income));
     }
 }

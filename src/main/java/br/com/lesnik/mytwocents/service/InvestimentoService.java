@@ -304,6 +304,9 @@ public class InvestimentoService {
         if (dto.getDataVencimento() != null) ativo.setDataVencimento(dto.getDataVencimento());
         if (dto.getIndexador() != null) ativo.setIndexador(dto.getIndexador());
         if (dto.getTaxa() != null) ativo.setTaxa(dto.getTaxa());
+        if (dto.getCategoriaTatica() != null) ativo.setCategoriaTatica(dto.getCategoriaTatica());
+        ativo.setCiclico(dto.isCiclico());
+        ativo.setEstrutural(dto.isEstrutural());
 
         ativoRepository.save(ativo);
 
@@ -870,6 +873,9 @@ public class InvestimentoService {
                 .taxa(a.getTaxa())
                 .rendimentoMensal(rendimentoMensal)
                 .dy(dy)
+                .categoriaTatica(a.getCategoriaTatica() != null ? a.getCategoriaTatica() : br.com.lesnik.mytwocents.model.CategoriaTatica.RENDA)
+                .ciclico(a.isCiclico())
+                .estrutural(a.isEstrutural())
                 .build();
     }
 
