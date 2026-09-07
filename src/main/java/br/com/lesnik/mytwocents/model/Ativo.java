@@ -80,6 +80,21 @@ public class Ativo {
     @Column(precision = 15, scale = 4)
     private BigDecimal dividendYield;
 
+    /** Categoria tática para alocação (SEGURANCA, RENDA, CRESCIMENTO, GLOBAL, PREVIDENCIA) */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "categoria_tatica", length = 30)
+    private CategoriaTatica categoriaTatica;
+
+    /** Se o ativo é cíclico (sujeito à Matriz Tática por variação do Preço Médio) */
+    @Column(name = "is_ciclico", nullable = false)
+    @Builder.Default
+    private boolean ciclico = false;
+
+    /** Se o ativo é estrutural (longo prazo) ou tático/especulativo */
+    @Column(name = "is_estrutural", nullable = false)
+    @Builder.Default
+    private boolean estrutural = true;
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 
@@ -94,6 +109,7 @@ public class Ativo {
         if (this.precoMedio == null) this.precoMedio = BigDecimal.ZERO;
         if (this.precoAtual == null) this.precoAtual = BigDecimal.ZERO;
         if (this.dividendosTotal == null) this.dividendosTotal = BigDecimal.ZERO;
+        if (this.categoriaTatica == null) this.categoriaTatica = CategoriaTatica.RENDA;
     }
 
     @PreUpdate

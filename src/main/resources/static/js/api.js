@@ -201,6 +201,49 @@ const Api = {
     return res.json();
   },
 
+  // ─── SNIPER MODE ─────────────────────────────────────────────────────────
+
+  async getSniperOverview() {
+    const res = await fetch(`${API_BASE}/investimentos/sniper-overview`);
+    if (!res.ok) throw new Error('Erro ao buscar visão geral do Sniper Mode');
+    return res.json();
+  },
+
+  async calcularAporteSmartSplit(valorAporte) {
+    const res = await fetch(`${API_BASE}/investimentos/aporte/calcular`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ valorAporte }),
+    });
+    if (!res.ok) throw new Error('Erro ao calcular aporte inteligente');
+    return res.json();
+  },
+
+  async getTacticalOpportunities() {
+    const res = await fetch(`${API_BASE}/investimentos/tactical-opportunities`);
+    if (!res.ok) throw new Error('Erro ao buscar oportunidades táticas');
+    return res.json();
+  },
+
+  async updateAtivoTatica(id, { categoriaTatica, ciclico, estrutural }) {
+    const res = await fetch(`${API_BASE}/investimentos/ativos/${id}/tatica`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categoriaTatica, ciclico, estrutural }),
+    });
+    if (!res.ok) throw new Error('Erro ao atualizar dados táticos do ativo');
+  },
+
+  async updateConfigEmergencia(emergencyBoxTarget, monthlyIncome) {
+    const res = await fetch(`${API_BASE}/investimentos/config/emergency-box`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emergencyBoxTarget, monthlyIncome }),
+    });
+    if (!res.ok) throw new Error('Erro ao atualizar meta de emergência');
+    return res.json();
+  },
+
   async atualizarAtivo(id, dto) {
     const res = await fetch(`${API_BASE}/investimentos/ativos/${id}`, {
       method: 'PUT',
