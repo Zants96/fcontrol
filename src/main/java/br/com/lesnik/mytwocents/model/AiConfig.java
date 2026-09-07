@@ -44,6 +44,16 @@ public class AiConfig {
     @Column(length = 512)
     private String coingeckoKey;
 
+    /** Meta de reserva da caixa de emergência em R$ */
+    @Column(name = "emergency_box_target", precision = 15, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal emergencyBoxTarget = new java.math.BigDecimal("20000.00");
+
+    /** Renda mensal estimada para cálculo da reserva */
+    @Column(name = "monthly_income", precision = 15, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal monthlyIncome = new java.math.BigDecimal("5000.00");
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 

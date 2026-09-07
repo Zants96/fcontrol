@@ -34,4 +34,7 @@ public class AtivoDTO {
     private BigDecimal rendimentoMensal;
     private java.time.LocalDate dataLancamento;
     private BigDecimal dy;
+    private br.com.lesnik.mytwocents.model.CategoriaTatica categoriaTatica;
+    private boolean ciclico;
+    private boolean estrutural;
 }
