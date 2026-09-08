@@ -1997,3 +1997,73 @@ function quickFillOperacao(ticker, tipoOperacao, quantidade, precoAtual) {
     }
   }, 150);
 }
+
+
+// ─── Metas por Tipo de Ativo ───────────────────────────────────────────────
+
+window.carregarMetasPorTipo = async function() {
+  try {
+    const res = await fetch('/api/investimentos/metas-por-tipo');
+    const metas = await res.json();
+    for (const [tipo, valor] of Object.entries(metas)) {
+      const input = document.getElementById('meta-' + tipo);
+      if (input) input.value = parseFloat(valor || 0).toFixed(1);
+    }
+    window.atualizarTotalMetas();
+  } catch (err) {
+    console.error('Erro ao carregar metas:', err);
+  }
+};
+
+window.atualizarTotalMetas = function() {
+  const tipos = ['ACAO', 'FII', 'RENDA_FIXA', 'ETF', 'TESOURO_DIRETO', 'CRIPTO'];
+  let total = 0;
+  for (const tipo of tipos) {
+    const input = document.getElementById('meta-' + tipo);
+    if (input) total += parseFloat(input.value) || 0;
+  }
+  const indicator = document.getElementById('meta-total-indicator');
+  if (indicator) {
+    indicator.textContent = 'Total: ' + total.toFixed(1) + '%';
+    indicator.style.color = Math.abs(total - 100) < 0.01 ? '#10b981' : '#ef4444';
+  }
+};
+
+window.salvarMetasPorTipo = async function() {
+  const tipos = ['ACAO', 'FII', 'RENDA_FIXA', 'ETF', 'TESOURO_DIRETO', 'CRIPTO'];
+  const metas = {};
+  let total = 0;
+  for (const tipo of tipos) {
+    const input = document.getElementById('meta-' + tipo);
+    const val = parseFloat(input?.value) || 0;
+    metas[tipo] = val;
+    total += val;
+  }
+  
+  if (Math.abs(total - 100) > 0.01) {
+    if (typeof showToast === 'function') showToast('O total das metas deve ser exatamente 100% (atual: ' + total.toFixed(1) + '%)', 'error');
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/investimentos/metas-por-tipo', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(metas)
+    });
+    if (!res.ok) throw new Error('Erro ao salvar');
+    if (typeof showToast === 'function') showToast('Metas salvas com sucesso!', 'success');
+    if (typeof loadInvestimentos === 'function') loadInvestimentos();
+  } catch (err) {
+    if (typeof showToast === 'function') showToast('Erro ao salvar metas: ' + err.message, 'error');
+  }
+};
+
+// Carrega metas quando a aba de investimentos for exibida
+setTimeout(function() {
+  if (document.getElementById('metas-por-tipo-container')) {
+    window.carregarMetasPorTipo();
+  }
+}, 1500);
+
+window.loadInvestimentos = loadInvestimentos;

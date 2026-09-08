@@ -6,6 +6,7 @@ import br.com.lesnik.mytwocents.dto.InvestimentoLancamentoDTO;
 import br.com.lesnik.mytwocents.model.*;
 import br.com.lesnik.mytwocents.repository.AtivoRepository;
 import br.com.lesnik.mytwocents.repository.InvestimentoLancamentoRepository;
+import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.LancamentoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,9 +26,11 @@ public class InvestimentoService {
 
     private final AtivoRepository ativoRepository;
     private final InvestimentoLancamentoRepository lancamentoRepository;
+    private final AiConfigRepository aiConfigRepository;
+    private final SniperEngineService sniperEngineService;
     private final LancamentoRepository financeiroRepository;
     private final CotacaoService cotacaoService;
-    private final br.com.lesnik.mytwocents.repository.AiConfigRepository aiConfigRepository;
+
 
     // ─── CRUD DE LANÇAMENTOS ─────────────────────────────────────────────────
 
@@ -1054,6 +1057,18 @@ public class InvestimentoService {
      * Calcula a distribuição ideal da carteira por tipo de ativo,
      * baseada na soma dos metaPercent de cada ativo.
      */
+    private java.util.Map<TipoAtivo, BigDecimal> getProporcoesIdeais() {
+        var cfg = aiConfigRepository.findFirstByOrderByIdDesc().orElse(null);
+        java.util.Map<TipoAtivo, BigDecimal> map = new java.util.LinkedHashMap<>();
+        map.put(TipoAtivo.ACAO, cfg != null && cfg.getMetaAcao() != null ? cfg.getMetaAcao() : new java.math.BigDecimal("25"));
+        map.put(TipoAtivo.FII, cfg != null && cfg.getMetaFii() != null ? cfg.getMetaFii() : new java.math.BigDecimal("15"));
+        map.put(TipoAtivo.RENDA_FIXA, cfg != null && cfg.getMetaRendaFixa() != null ? cfg.getMetaRendaFixa() : new java.math.BigDecimal("20"));
+        map.put(TipoAtivo.ETF, cfg != null && cfg.getMetaEtf() != null ? cfg.getMetaEtf() : new java.math.BigDecimal("15"));
+        map.put(TipoAtivo.TESOURO_DIRETO, cfg != null && cfg.getMetaTesouro() != null ? cfg.getMetaTesouro() : new java.math.BigDecimal("20"));
+        map.put(TipoAtivo.CRIPTO, cfg != null && cfg.getMetaCripto() != null ? cfg.getMetaCripto() : new java.math.BigDecimal("5"));
+        return map;
+    }
+
     private static final java.util.Map<TipoAtivo, BigDecimal> PROPORCOES_IDEAIS = new java.util.LinkedHashMap<>();
     static {
         PROPORCOES_IDEAIS.put(TipoAtivo.ACAO, new BigDecimal("25"));
@@ -1072,7 +1087,7 @@ public class InvestimentoService {
         }
 
         // Usa proporções fixas ideais independente de metaPercent individual
-        for (java.util.Map.Entry<TipoAtivo, BigDecimal> entry : PROPORCOES_IDEAIS.entrySet()) {
+        for (java.util.Map.Entry<TipoAtivo, BigDecimal> entry : getProporcoesIdeais().entrySet()) {
             TipoAtivo tipo = entry.getKey();
             BigDecimal percentual = entry.getValue();
             BigDecimal valorIdeal = patrimonioTotal.multiply(percentual)
