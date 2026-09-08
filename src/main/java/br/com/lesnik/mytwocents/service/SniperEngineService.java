@@ -4,6 +4,10 @@ import br.com.lesnik.mytwocents.dto.*;
 import br.com.lesnik.mytwocents.model.*;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.AtivoRepository;
+import br.com.lesnik.mytwocents.repository.InvestimentoLancamentoRepository;
+import br.com.lesnik.mytwocents.model.InvestimentoLancamento;
+import br.com.lesnik.mytwocents.model.TipoOperacao;
+import br.com.lesnik.mytwocents.model.TipoAtivo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,8 +25,20 @@ public class SniperEngineService {
 
     private final AtivoRepository ativoRepository;
     private final AiConfigRepository aiConfigRepository;
+    private final InvestimentoLancamentoRepository lancamentoRepository;
 
     private static final BigDecimal EM_LOCK_MIN_PCT = new BigDecimal("25.0");
+
+    // Proporções ideais da carteira por tipo de ativo
+    private static final Map<TipoAtivo, BigDecimal> PROPORCOES_POR_TIPO = new LinkedHashMap<>();
+    static {
+        PROPORCOES_POR_TIPO.put(TipoAtivo.ACAO, new BigDecimal("25"));
+        PROPORCOES_POR_TIPO.put(TipoAtivo.FII, new BigDecimal("15"));
+        PROPORCOES_POR_TIPO.put(TipoAtivo.RENDA_FIXA, new BigDecimal("20"));
+        PROPORCOES_POR_TIPO.put(TipoAtivo.ETF, new BigDecimal("15"));
+        PROPORCOES_POR_TIPO.put(TipoAtivo.TESOURO_DIRETO, new BigDecimal("20"));
+        PROPORCOES_POR_TIPO.put(TipoAtivo.CRIPTO, new BigDecimal("5"));
+    }
 
     @Transactional(readOnly = true)
     public SniperOverviewDTO obterOverview() {
@@ -41,8 +57,10 @@ public class SniperEngineService {
                     .multiply(new BigDecimal("100"));
         }
 
-        boolean isLocked = (totalSeguranca.compareTo(targetBox) < 0) 
-                || (pctSeguranca.compareTo(EM_LOCK_MIN_PCT) < 0);
+        boolean isLocked = (totalSeguranca.compareTo(targetBox) < 0);
+        // 🔒 O lock NÃO depende mais do percentual mínimo isolado;
+        // ele só trava quando o valor em R$ da reserva está abaixo da meta,
+        // OU quando o percentual está abaixo de 25% e o valor está abaixo da meta.
 
         BigDecimal valorFaltante = isLocked && targetBox.compareTo(totalSeguranca) > 0
                 ? targetBox.subtract(totalSeguranca)
@@ -108,7 +126,7 @@ public class SniperEngineService {
                         .ativoId(ativoSeguranca.getId())
                         .ticker(ativoSeguranca.getTicker())
                         .nome(ativoSeguranca.getNome() != null ? ativoSeguranca.getNome() : ativoSeguranca.getTicker())
-                        .categoriaTatica(ativoSeguranca.getCategoriaTatica() != null ? ativoSeguranca.getCategoriaTatica() : CategoriaTatica.SEGURANCA)
+                        .categoriaTatica(getCategoriaTaticaEfetiva(ativoSeguranca))
                         .tipoAtivo(ativoSeguranca.getTipoAtivo())
                         .cotasEstimadas(cotas)
                         .precoAtual(preco)
@@ -128,22 +146,80 @@ public class SniperEngineService {
             BigDecimal patrimonioFuturo = overview.getPatrimonioTotal().add(valorAporte);
 
             List<Ativo> ativosElegiveis = ativos.stream()
-                    .filter(a -> a.getMetaPercent() != null && a.getMetaPercent().compareTo(BigDecimal.ZERO) > 0)
+                    .filter(a -> a.getTipoAtivo() != null && PROPORCOES_POR_TIPO.containsKey(a.getTipoAtivo()))
+                    .filter(a -> !isTesouroAproximandoVencimento(a))
                     .collect(Collectors.toList());
 
             if (!ativosElegiveis.isEmpty()) {
+                // Agrupa por tipo e calcula o valor ideal por tipo
+                Map<TipoAtivo, List<Ativo>> ativosPorTipo = ativosElegiveis.stream()
+                        .collect(Collectors.groupingBy(Ativo::getTipoAtivo));
+
                 Map<Ativo, BigDecimal> deficits = new LinkedHashMap<>();
                 BigDecimal somaDeficits = BigDecimal.ZERO;
 
-                for (Ativo a : ativosElegiveis) {
-                    BigDecimal metaReal = patrimonioFuturo.multiply(a.getMetaPercent())
+                for (Map.Entry<TipoAtivo, List<Ativo>> entry : ativosPorTipo.entrySet()) {
+                    TipoAtivo tipo = entry.getKey();
+                    List<Ativo> ativosDoTipo = entry.getValue();
+
+                    BigDecimal pctIdeal = PROPORCOES_POR_TIPO.get(tipo);
+                    if (pctIdeal == null || pctIdeal.compareTo(BigDecimal.ZERO) <= 0) continue;
+
+                    BigDecimal valorIdealTotal = patrimonioFuturo.multiply(pctIdeal)
                             .divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
 
-                    BigDecimal valorAtual = a.getQuantidade().multiply(a.getPrecoAtual());
-                    BigDecimal deficit = metaReal.subtract(valorAtual);
-                    if (deficit.compareTo(BigDecimal.ZERO) > 0) {
-                        deficits.put(a, deficit);
-                        somaDeficits = somaDeficits.add(deficit);
+                    // Soma o valor atual de todos os ativos deste tipo
+                    BigDecimal valorAtualTotal = ativosDoTipo.stream()
+                            .map(a -> a.getQuantidade().multiply(a.getPrecoAtual()))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                    BigDecimal deficitTotal = valorIdealTotal.subtract(valorAtualTotal);
+
+                    if (deficitTotal.compareTo(BigDecimal.ZERO) > 0) {
+                        // Rateia o déficit proporcionalmente ao valor de cada ativo
+                        for (Ativo a : ativosDoTipo) {
+                            BigDecimal valorAtivo = a.getQuantidade().multiply(a.getPrecoAtual());
+                            BigDecimal proporcao = valorAtualTotal.compareTo(BigDecimal.ZERO) > 0
+                                    ? valorAtivo.divide(valorAtualTotal, 6, RoundingMode.HALF_UP)
+                                    : BigDecimal.ONE.divide(BigDecimal.valueOf(ativosDoTipo.size()), 6, RoundingMode.HALF_UP);
+                            BigDecimal deficitAtivo = deficitTotal.multiply(proporcao).setScale(2, RoundingMode.HALF_UP);
+                            if (deficitAtivo.compareTo(BigDecimal.ZERO) > 0) {
+                                deficits.put(a, deficitAtivo);
+                                somaDeficits = somaDeficits.add(deficitAtivo);
+                            }
+                        }
+                    }
+                }
+
+                // ─── Tesouro Direto: verificar déficit considerando TODOS os títulos (inclusive próximos ao vencimento) ───
+                // Se o Tesouro Direto total está abaixo do ideal (20%), gerar um item "Novo Tesouro Direto"
+                List<Ativo> todosTesouros = ativos.stream()
+                        .filter(a -> a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
+                        .collect(Collectors.toList());
+
+                if (!todosTesouros.isEmpty()) {
+                    BigDecimal pctTesouroIdeal = PROPORCOES_POR_TIPO.get(TipoAtivo.TESOURO_DIRETO);
+                    if (pctTesouroIdeal != null && pctTesouroIdeal.compareTo(BigDecimal.ZERO) > 0) {
+                        BigDecimal valorIdealTesouro = patrimonioFuturo.multiply(pctTesouroIdeal)
+                                .divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
+
+                        BigDecimal valorAtualTesouro = todosTesouros.stream()
+                                .map(a -> a.getQuantidade().multiply(a.getPrecoAtual()))
+                                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                        BigDecimal deficitTesouro = valorIdealTesouro.subtract(valorAtualTesouro);
+
+                        if (deficitTesouro.compareTo(BigDecimal.ZERO) > 0) {
+                            // Verifica se já existe um item de Tesouro no rateio (algum título elegível)
+                            boolean jaTemTesouroNoRateio = ativosElegiveis.stream()
+                                    .anyMatch(a -> a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO);
+
+                            if (!jaTemTesouroNoRateio) {
+                                // Adiciona déficit virtual para "Novo Tesouro Direto"
+                                deficits.put(null, deficitTesouro);
+                                somaDeficits = somaDeficits.add(deficitTesouro);
+                            }
+                        }
                     }
                 }
 
@@ -159,33 +235,50 @@ public class SniperEngineService {
                         share = share.min(deficit);
 
                         if (share.compareTo(BigDecimal.ZERO) > 0) {
-                            BigDecimal preco = a.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
-                                    ? a.getPrecoAtual()
-                                    : BigDecimal.ONE;
-
-                            BigDecimal cotas = share.divide(preco, 4, RoundingMode.HALF_UP);
                             BigDecimal pctAporte = share.divide(valorAporte, 4, RoundingMode.HALF_UP)
                                     .multiply(new BigDecimal("100"));
 
-                            // Atualiza se já existir no item de segurança ou cria novo
-                            Optional<AporteItemDTO> existente = itens.stream()
-                                    .filter(i -> i.getAtivoId().equals(a.getId()))
-                                    .findFirst();
+                            if (a != null) {
+                                BigDecimal preco = a.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
+                                        ? a.getPrecoAtual()
+                                        : BigDecimal.ONE;
 
-                            if (existente.isPresent()) {
-                                AporteItemDTO item = existente.get();
-                                item.setValorAlocado(item.getValorAlocado().add(share));
-                                item.setCotasEstimadas(item.getValorAlocado().divide(preco, 4, RoundingMode.HALF_UP));
-                                item.setPercentualAporte(item.getValorAlocado().divide(valorAporte, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP));
+                                BigDecimal cotas = share.divide(preco, 4, RoundingMode.HALF_UP);
+
+                                // Atualiza se já existir no item de segurança ou cria novo
+                                Optional<AporteItemDTO> existente = itens.stream()
+                                        .filter(i -> i.getAtivoId() != null && i.getAtivoId().equals(a.getId()))
+                                        .findFirst();
+
+                                if (existente.isPresent()) {
+                                    AporteItemDTO item = existente.get();
+                                    item.setValorAlocado(item.getValorAlocado().add(share));
+                                    item.setCotasEstimadas(item.getValorAlocado().divide(preco, 4, RoundingMode.HALF_UP));
+                                    item.setPercentualAporte(item.getValorAlocado().divide(valorAporte, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP));
+                                } else {
+                                    itens.add(AporteItemDTO.builder()
+                                            .ativoId(a.getId())
+                                            .ticker(a.getTicker())
+                                            .nome(a.getNome() != null ? a.getNome() : a.getTicker())
+                                            .categoriaTatica(getCategoriaTaticaEfetiva(a))
+                                            .tipoAtivo(a.getTipoAtivo())
+                                            .cotasEstimadas(cotas)
+                                            .precoAtual(preco)
+                                            .valorAlocado(share)
+                                            .percentualAporte(pctAporte.setScale(2, RoundingMode.HALF_UP))
+                                            .deficit(deficit.setScale(2, RoundingMode.HALF_UP))
+                                            .ativoSeguranca(false)
+                                            .build());
+                                }
                             } else {
+                                // Ativo nulo = Novo Tesouro Direto (sugestão de compra de novo título)
                                 itens.add(AporteItemDTO.builder()
-                                        .ativoId(a.getId())
-                                        .ticker(a.getTicker())
-                                        .nome(a.getNome() != null ? a.getNome() : a.getTicker())
-                                        .categoriaTatica(a.getCategoriaTatica() != null ? a.getCategoriaTatica() : CategoriaTatica.RENDA)
-                                        .tipoAtivo(a.getTipoAtivo())
-                                        .cotasEstimadas(cotas)
-                                        .precoAtual(preco)
+                                        .ticker("Novo Tesouro Direto")
+                                        .nome("Novo Tesouro Direto")
+                                        .categoriaTatica(CategoriaTatica.RENDA)
+                                        .tipoAtivo(TipoAtivo.TESOURO_DIRETO)
+                                        .cotasEstimadas(BigDecimal.ZERO)
+                                        .precoAtual(BigDecimal.ZERO)
                                         .valorAlocado(share)
                                         .percentualAporte(pctAporte.setScale(2, RoundingMode.HALF_UP))
                                         .deficit(deficit.setScale(2, RoundingMode.HALF_UP))
@@ -220,7 +313,7 @@ public class SniperEngineService {
                                         .ativoId(a.getId())
                                         .ticker(a.getTicker())
                                         .nome(a.getNome() != null ? a.getNome() : a.getTicker())
-                                        .categoriaTatica(a.getCategoriaTatica() != null ? a.getCategoriaTatica() : CategoriaTatica.RENDA)
+                                        .categoriaTatica(getCategoriaTaticaEfetiva(a))
                                         .tipoAtivo(a.getTipoAtivo())
                                         .cotasEstimadas(cotas)
                                         .precoAtual(preco)
@@ -294,12 +387,71 @@ public class SniperEngineService {
     }
 
     private BigDecimal calcularTotalSeguranca(List<Ativo> ativos) {
-        return ativos.stream()
-                .filter(a -> a.getCategoriaTatica() == CategoriaTatica.SEGURANCA
-                          || a.getTipoAtivo() == TipoAtivo.RENDA_FIXA
-                          || a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
-                .map(a -> a.getQuantidade().multiply(a.getPrecoAtual()))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (Ativo a : ativos) {
+            String ticker = a.getTicker() != null ? a.getTicker().toUpperCase() : "";
+
+            boolean isElegivel = false;
+
+            // Incluir CDB na RENDA_FIXA
+            if (a.getTipoAtivo() == TipoAtivo.RENDA_FIXA && ticker.contains("CDB")) {
+                isElegivel = true;
+            }
+
+            // Incluir Tesouro SELIC no TESOURO_DIRETO
+            if (a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO && ticker.contains("SELIC")) {
+                isElegivel = true;
+            }
+
+            // Incluir Poupança na RENDA_FIXA
+            if (a.getTipoAtivo() == TipoAtivo.RENDA_FIXA && ticker.contains("POUPANCA")) {
+                isElegivel = true;
+            }
+
+            // Incluir ativos marcados manualmente como SEGURANCA
+            if (a.getCategoriaTatica() == CategoriaTatica.SEGURANCA) {
+                isElegivel = true;
+            }
+
+            if (!isElegivel) continue;
+
+            // Calcular valor real baseado nos lançamentos (para CDB, Poupança, etc.)
+            BigDecimal valorReal = calcularValorRealAtivo(a);
+            total = total.add(valorReal);
+        }
+
+        log.info("Total Seguranca calculado: R$ {}", total);
+        return total;
+    }
+
+    private BigDecimal calcularValorRealAtivo(Ativo a) {
+        List<InvestimentoLancamento> txs = lancamentoRepository.findByAtivoIdOrderByDataDesc(a.getId());
+
+        if (txs == null || txs.isEmpty()) {
+            // Fallback para o valor simples se não houver lançamentos
+            return a.getQuantidade().multiply(a.getPrecoAtual());
+        }
+
+        // Ordenar por data crescente
+        txs.sort(Comparator.comparing(InvestimentoLancamento::getData)
+                .thenComparing(InvestimentoLancamento::getId));
+
+        double currentBalance = 0.0;
+
+        for (InvestimentoLancamento tx : txs) {
+            if (tx.getTipoOperacao() == TipoOperacao.COMPRA) {
+                currentBalance += tx.getValorTotal().doubleValue();
+            } else if (tx.getTipoOperacao() == TipoOperacao.VENDA) {
+                currentBalance -= tx.getValorTotal().doubleValue();
+            }
+        }
+
+        if (currentBalance < 0.0) {
+            currentBalance = 0.0;
+        }
+
+        return BigDecimal.valueOf(currentBalance).setScale(2, RoundingMode.HALF_UP);
     }
 
     private BigDecimal calcularPatrimonioTotal(List<Ativo> ativos) {
@@ -358,7 +510,7 @@ public class SniperEngineService {
                         .ticker(a.getTicker())
                         .nome(a.getNome() != null ? a.getNome() : a.getTicker())
                         .tipoAtivo(a.getTipoAtivo())
-                        .categoriaTatica(a.getCategoriaTatica())
+                        .categoriaTatica(getCategoriaTaticaEfetiva(a))
                         .ciclico(a.isCiclico())
                         .estrutural(a.isEstrutural())
                         .precoAtual(a.getPrecoAtual())
@@ -369,49 +521,49 @@ public class SniperEngineService {
                         .sugestaoAcao(acao)
                         .sugestaoQuantidade(sugestaoQtde)
                         .build());
-            }
-            // Gatilhos de Venda (Altas, apenas para não estruturais)
-            else if (!a.isEstrutural() && var >= 30.0) {
-                int nivel;
-                String acao;
-                BigDecimal prop;
+                                    }
+                                    // Gatilhos de Venda (Altas, apenas para não estruturais)
+                                    else if (!a.isEstrutural() && var >= 30.0) {
+                                        int nivel;
+                                        String acao;
+                                        BigDecimal prop;
 
-                if (var >= 100.0) {
-                    nivel = 5;
-                    acao = String.format("Valorização extrema (%.1f%% ≥ +100%%): Zerar Posição / Realização Total de Lucro", var);
-                    prop = BigDecimal.ONE;
-                } else if (var >= 60.0) {
-                    nivel = 4;
-                    acao = String.format("Valorização alta (%.1f%% entre +60%% e +99%%): Venda Parcial de 40%% da posição", var);
-                    prop = new BigDecimal("0.40");
-                } else if (var >= 50.0) {
-                    nivel = 3;
-                    acao = String.format("Valorização expressiva (%.1f%% entre +50%% e +59%%): Venda Parcial de 30%% da posição", var);
-                    prop = new BigDecimal("0.30");
-                } else if (var >= 40.0) {
-                    nivel = 2;
-                    acao = String.format("Valorização moderada (%.1f%% entre +40%% e +49%%): Venda Parcial de 20%% da posição", var);
-                    prop = new BigDecimal("0.20");
-                } else {
-                    nivel = 1;
-                    acao = String.format("Valorização inicial (%.1f%% entre +30%% e +39%%): Venda Parcial de 10%% da posição", var);
-                    prop = new BigDecimal("0.10");
-                }
+                                        if (var >= 100.0) {
+                                            nivel = 5;
+                                            acao = String.format("Valorização extrema (%.1f%% ≥ +100%%): Zerar Posição / Realização Total de Lucro", var);
+                                            prop = BigDecimal.ONE;
+                                        } else if (var >= 60.0) {
+                                            nivel = 4;
+                                            acao = String.format("Valorização alta (%.1f%% entre +60%% e +99%%): Venda Parcial de 40%% da posição", var);
+                                            prop = new BigDecimal("0.40");
+                                        } else if (var >= 50.0) {
+                                            nivel = 3;
+                                            acao = String.format("Valorização expressiva (%.1f%% entre +50%% e +59%%): Venda Parcial de 30%% da posição", var);
+                                            prop = new BigDecimal("0.30");
+                                        } else if (var >= 40.0) {
+                                            nivel = 2;
+                                            acao = String.format("Valorização moderada (%.1f%% entre +40%% e +49%%): Venda Parcial de 20%% da posição", var);
+                                            prop = new BigDecimal("0.20");
+                                        } else {
+                                            nivel = 1;
+                                            acao = String.format("Valorização inicial (%.1f%% entre +30%% e +39%%): Venda Parcial de 10%% da posição", var);
+                                            prop = new BigDecimal("0.10");
+                                        }
 
                 BigDecimal sugestaoQtde = a.getQuantidade().multiply(prop).setScale(4, RoundingMode.HALF_UP);
 
-                ops.add(TacticalOpportunityDTO.builder()
-                        .ativoId(a.getId())
-                        .ticker(a.getTicker())
-                        .nome(a.getNome() != null ? a.getNome() : a.getTicker())
-                        .tipoAtivo(a.getTipoAtivo())
-                        .categoriaTatica(a.getCategoriaTatica())
-                        .ciclico(a.isCiclico())
-                        .estrutural(a.isEstrutural())
-                        .precoAtual(a.getPrecoAtual())
-                        .precoMedio(a.getPrecoMedio())
-                        .variacaoPercent(varPct.setScale(2, RoundingMode.HALF_UP))
-                        .tipoGatilho("VENDA")
+                                        ops.add(TacticalOpportunityDTO.builder()
+                                                .ativoId(a.getId())
+                                                .ticker(a.getTicker())
+                                                .nome(a.getNome() != null ? a.getNome() : a.getTicker())
+                                                .tipoAtivo(a.getTipoAtivo())
+                                                .categoriaTatica(getCategoriaTaticaEfetiva(a))
+                                                .ciclico(a.isCiclico())
+                                                .estrutural(a.isEstrutural())
+                                                .precoAtual(a.getPrecoAtual())
+                                                .precoMedio(a.getPrecoMedio())
+                                                .variacaoPercent(varPct.setScale(2, RoundingMode.HALF_UP))
+                                                .tipoGatilho("VENDA")
                         .nivelGatilho(nivel)
                         .sugestaoAcao(acao)
                         .sugestaoQuantidade(sugestaoQtde)
@@ -420,5 +572,48 @@ public class SniperEngineService {
         }
 
         return ops;
+    }
+
+    /**
+     * Verifica se um Tesouro Direto está com vencimento próximo ao ponto
+     * de não poder mais receber aportes.
+     * SELIC: excluir se faltarem menos de 2 anos.
+     * IPCA: excluir se faltarem menos de 3 anos.
+     */
+    private boolean isTesouroAproximandoVencimento(Ativo a) {
+        if (a.getTipoAtivo() != TipoAtivo.TESOURO_DIRETO) return false;
+        if (a.getDataVencimento() == null) return false;
+
+        String indexador = a.getIndexador() != null ? a.getIndexador().toUpperCase() : "";
+        java.time.LocalDate hoje = java.time.LocalDate.now();
+        long anosRestantes = java.time.temporal.ChronoUnit.YEARS.between(hoje, a.getDataVencimento());
+
+        if (indexador.contains("SELIC")) {
+            return anosRestantes < 2;
+        } else if (indexador.contains("IPCA")) {
+            return anosRestantes < 3;
+        }
+        // Outros indexadores: usa regra padrão de 2 anos
+        return anosRestantes < 2;
+    }
+
+    /**
+     * Retorna a categoria tática efetiva de um ativo.
+     * Usa a inferência automática quando o valor armazenado é o padrão RENDA
+     * mas o ativo claramente pertence a outra categoria (ex: ação → CRESCIMENTO).
+     * Se o usuário definiu manualmente uma categoria diferente de RENDA, mantém a manual.
+     */
+    private CategoriaTatica getCategoriaTaticaEfetiva(Ativo a) {
+        CategoriaTatica stored = a.getCategoriaTatica();
+        if (stored != null && stored != CategoriaTatica.RENDA) {
+            return stored; // Usuário definiu manualmente
+        }
+        // Fallback para inferência automática
+        CategoriaTatica inferida = br.com.lesnik.mytwocents.util.CategoriaTaticaUtils.inferirCategoriaTatica(a);
+        if (inferida != CategoriaTatica.RENDA) {
+            return inferida;
+        }
+        // Se a inferência também retorna RENDA, mantém o valor armazenado (se houver)
+        return stored != null ? stored : CategoriaTatica.RENDA;
     }
 }

@@ -44,6 +44,9 @@ public class InvestimentoDashboardDTO {
     /** Distribuição por tipo: TipoAtivo → valor total */
     private Map<TipoAtivo, BigDecimal> distribuicaoPorTipo;
 
+    /** Distribuição ideal por tipo: TipoAtivo → percentual meta (%) */
+    private Map<TipoAtivo, BigDecimal> distribuicaoIdealPorTipo;
+
     /** Ativos agrupados por tipo */
     private Map<TipoAtivo, List<AtivoDTO>> ativosPorTipo;
 
