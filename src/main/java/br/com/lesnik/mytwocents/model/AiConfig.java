@@ -54,6 +54,31 @@ public class AiConfig {
     @Builder.Default
     private java.math.BigDecimal monthlyIncome = new java.math.BigDecimal("5000.00");
 
+    // ─── Metas percentuais por tipo de ativo (devem somar 100%) ───
+    @Column(name = "meta_acao", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal metaAcao = new java.math.BigDecimal("25.00");
+
+    @Column(name = "meta_fii", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal metaFii = new java.math.BigDecimal("15.00");
+
+    @Column(name = "meta_renda_fixa", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal metaRendaFixa = new java.math.BigDecimal("20.00");
+
+    @Column(name = "meta_etf", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal metaEtf = new java.math.BigDecimal("15.00");
+
+    @Column(name = "meta_tesouro", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal metaTesouro = new java.math.BigDecimal("20.00");
+
+    @Column(name = "meta_cripto", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal metaCripto = new java.math.BigDecimal("5.00");
+
     @Column(updatable = false)
     private LocalDateTime criadoEm;
 

@@ -397,7 +397,7 @@
           <div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span id="em-lock-badge" class="inv-badge" style="background:#10b98120; color:#10b981; font-weight: 700; font-size: 0.85rem;">🛡️ RESERVA SEGURA</span>
-              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Cadeado de Segurança &amp; Liquidez</h3>
+              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Segurança &amp; Liquidez</h3>
             </div>
             <p id="em-lock-desc" style="margin: 0.3rem 0 0; font-size: 0.88rem; color: var(--text-muted);">
               Gestão automatizada da Reserva de Emergência para garantir caixa antes de aportes em renda variável.
@@ -405,7 +405,7 @@
           </div>
           <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
             <div style="text-align: left;">
-              <div style="font-size: 0.75rem; color: var(--text-muted);">Alocação Atual / Meta</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.1rem;">Alocação Atual / Meta</div>
               <div id="em-lock-values" style="font-weight: 700; font-size: 1rem; color: var(--text-main);">R$ 0,00 / R$ 20.000,00 (0%)</div>
             </div>
             <button class="btn btn--secondary" onclick="openEmergencyConfigModal()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">⚙️ Configurar Meta</button>
@@ -562,7 +562,66 @@
         </div>
         <div id="aporte-resultado-container" style="max-height: 250px; overflow-y: auto;"></div>
       </div>
+    </div>
 
+    <!-- Metas por Tipo de Ativo -->
+     <div class="charts-row" style="margin-top: 1.5rem; grid-template-columns: 1fr;">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <h2 class="chart-title">Metas por Tipo de Ativo</h2>
+        </div>
+        <p style="font-size: 0.83rem; color: var(--text-muted); margin-bottom: 0.8rem;">
+          Defina a porcentagem ideal de cada tipo de ativo na sua carteira. O total deve somar <strong>100%</strong>.
+        </p>
+        <div id="metas-por-tipo-container" style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.8rem; align-items: flex-end;">
+          <div style="flex: 1; min-width: 110px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block;">Ações</label>
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+              <input type="number" id="meta-ACAO" class="input-field" min="0" max="100" step="0.5" value="25" style="width: 100%; text-align: center; padding: 0.35rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">%</span>
+            </div>
+          </div>
+          <div style="flex: 1; min-width: 110px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block;">FII</label>
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+              <input type="number" id="meta-FII" class="input-field" min="0" max="100" step="0.5" value="15" style="width: 100%; text-align: center; padding: 0.35rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">%</span>
+            </div>
+          </div>
+          <div style="flex: 1; min-width: 110px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block;">Renda Fixa</label>
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+              <input type="number" id="meta-RENDA_FIXA" class="input-field" min="0" max="100" step="0.5" value="20" style="width: 100%; text-align: center; padding: 0.35rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">%</span>
+            </div>
+          </div>
+          <div style="flex: 1; min-width: 110px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block;">ETF</label>
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+              <input type="number" id="meta-ETF" class="input-field" min="0" max="100" step="0.5" value="15" style="width: 100%; text-align: center; padding: 0.35rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">%</span>
+            </div>
+          </div>
+          <div style="flex: 1; min-width: 110px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block;">Tesouro Direto</label>
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+              <input type="number" id="meta-TESOURO_DIRETO" class="input-field" min="0" max="100" step="0.5" value="20" style="width: 100%; text-align: center; padding: 0.35rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">%</span>
+            </div>
+          </div>
+          <div style="flex: 1; min-width: 110px;">
+            <label style="font-size: 0.8rem; color: var(--text-secondary); display: block;">Cripto</label>
+            <div style="display: flex; align-items: center; gap: 0.2rem;">
+              <input type="number" id="meta-CRIPTO" class="input-field" min="0" max="100" step="0.5" value="5" style="width: 100%; text-align: center; padding: 0.35rem;">
+              <span style="font-size: 0.8rem; color: var(--text-muted);">%</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.5rem;">
+          <span id="meta-total-indicator" style="font-size: 0.9rem; font-weight: 600; color: #10b981;">Total: 100%</span>
+          <button class="btn btn--primary" onclick="window.salvarMetasPorTipo()" style="font-size: 0.85rem; padding: 0.5rem 1rem;">Salvar Metas</button>
+        </div>
+      </div>
     </div>
 
     <!-- Insights da IA -->
