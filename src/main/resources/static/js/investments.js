@@ -67,8 +67,10 @@ function renderInvCards(data) {
 
 function renderInvDistChart(data) {
   const dist = data.distribuicaoPorTipo || {};
+  const distIdeal = data.distribuicaoIdealPorTipo || {};
   const labels = [];
   const values = [];
+  const idealValues = [];
   const colors = [];
 
   TIPO_ATIVO_ORDER.forEach(tipo => {
@@ -76,6 +78,12 @@ function renderInvDistChart(data) {
       labels.push(TIPO_ATIVO_LABELS[tipo] || tipo);
       values.push(parseFloat(dist[tipo]));
       colors.push(TIPO_ATIVO_COLORS[tipo] || '#666');
+      // Ideal: valor em R$ calculado do metaPercent
+      if (distIdeal[tipo] && parseFloat(distIdeal[tipo]) > 0) {
+        idealValues.push(parseFloat(distIdeal[tipo]));
+      } else {
+        idealValues.push(0);
+      }
     }
   });
 
@@ -104,21 +112,44 @@ function renderInvDistChart(data) {
   const total = values.reduce((a, b) => a + b, 0);
 
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+
+  // Verificar se há dados ideais para o anel interno
+  const hasIdeal = idealValues.some(v => v > 0);
+
+  const datasets = [];
+
+  // Dataset 1: Anel externo — distribuição ATUAL (mais espesso)
+  datasets.push({
+    data: values,
+    backgroundColor: colors.map(c => c + 'cc'),
+    borderColor: isLight ? '#ccd9ecff' : '#111827',
+    borderWidth: 1,
+    hoverBorderWidth: 0,
+    weight: 2
+  });
+
+  // Dataset 2: Anel interno — distribuição IDEAL (aparência preenchida sem bordas)
+  if (hasIdeal) {
+    datasets.push({
+      data: idealValues,
+      backgroundColor: colors.map(c => c + '40'),
+      borderColor: colors.map(c => c + '40'),
+      borderWidth: 0,
+      hoverBorderWidth: 0,
+      weight: 2,
+      borderRadius: 0
+    });
+  }
+
   _invDistChart = new Chart(ctx, {
     type: 'doughnut',
     data: { 
       labels, 
-      datasets: [{ 
-        data: values, 
-        backgroundColor: colors.map(c => c + 'cc'), 
-        borderColor: isLight ? '#ccd9ecff' : '#111827',
-        borderWidth: 1, 
-        hoverBorderWidth: 0 
-      }] 
+      datasets
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      cutout: '65%',
+      cutout: '55%',
       plugins: {
         legend: {
           position: 'right',
@@ -132,8 +163,15 @@ function renderInvDistChart(data) {
         tooltip: {
           callbacks: {
             label: (ctx) => {
-              const pct = ((ctx.raw / total) * 100).toFixed(1);
-              return ` ${ctx.label}: ${fmtCurrency(ctx.raw)} (${pct}%)`;
+              const datasetIndex = ctx.datasetIndex;
+              const label = ctx.label;
+              const raw = ctx.raw;
+              const pct = ((raw / total) * 100).toFixed(1);
+              if (datasetIndex === 0) {
+                return ` ${label}: ${fmtCurrency(raw)} (${pct}% real)`;
+              } else {
+                return ` ${label}: ${fmtCurrency(raw)} (${pct}% ideal)`;
+              }
             }
           }
         }
@@ -359,20 +397,13 @@ function renderInvAcordeoes(data) {
                 varTooltipAttr = `data-lucro="${lp}" data-percent="${v}"`;
               }
 
-              const catTat = a.categoriaTatica || 'RENDA';
-              const catColor = CATEGORIA_TATICA_COLORS[catTat] || '#3b82f6';
-              const catLabel = CATEGORIA_TATICA_LABELS[catTat] || catTat;
-
               return `<tr>
                 <td>
                   <div class="inv-ticker-container" data-tooltip="${escHtml(a.longName || a.nome || a.ticker)}">
                     ${a.logoUrl ? `<img src="${a.logoUrl}" class="inv-ticker-logo" alt="${escHtml(a.ticker)}" onerror="this.style.display='none'" />` : ''}
                     <div>
                       <strong>${escHtml(a.ticker)}</strong>
-                      <div style="display: flex; gap: 0.25rem; margin-top: 0.15rem; flex-wrap: wrap;">
-                        <span class="inv-badge" style="background:${catColor}15; color:${catColor}; font-size: 0.65rem; padding: 0.1rem 0.3rem;">${catLabel}</span>
-                        ${a.ciclico ? '<span class="inv-badge" style="background:#f59e0b15; color:#f59e0b; font-size: 0.65rem; padding: 0.1rem 0.3rem;">⚡ Cíclico</span>' : ''}
-                      </div>
+                      <!-- Badges removidos por solicitação do usuário -->
                     </div>
                   </div>
                 </td>
@@ -1682,21 +1713,7 @@ function formatarTaxaIndexador(taxa, indexador) {
 
 // ─── SNIPER MODE & SMART SPLIT APORTE ────────────────────────────────────
 
-const CATEGORIA_TATICA_LABELS = {
-  SEGURANCA: '🛡️ Segurança',
-  RENDA: '📈 Renda',
-  CRESCIMENTO: '🚀 Crescimento',
-  GLOBAL: '🌐 Global',
-  PREVIDENCIA: '🏖️ Previdência'
-};
 
-const CATEGORIA_TATICA_COLORS = {
-  SEGURANCA: '#10b981',
-  RENDA: '#3b82f6',
-  CRESCIMENTO: '#8b5cf6',
-  GLOBAL: '#f59e0b',
-  PREVIDENCIA: '#ec4899'
-};
 
 async function renderSniperOverview() {
   try {
@@ -1817,7 +1834,7 @@ function renderSniperOpportunitiesList(ops) {
               ${escHtml(op.sugestaoAcao)}
             </p>
             <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
-              Preço Atual: ${fmtCurrency(parseFloat(op.precoAtual || 0))} | PM: ${fmtCurrency(parseFloat(op.precoMedio || 0))} | Sugestão: ${parseFloat(op.sugestaoQuantidade || 0).toFixed(4)} cotas
+              Preço Atual: ${fmtCurrency(parseFloat(op.precoAtual || 0))} | PM: ${fmtCurrency(parseFloat(op.precoMedio || 0))} | Sugestão: ${Math.round(parseFloat(op.sugestaoQuantidade || 0))} cotas
             </div>
           </div>
           <button class="btn btn--primary" onclick="quickFillOperacao('${escHtml(op.ticker)}', '${op.tipoGatilho}', ${op.sugestaoQuantidade || 0}, ${op.precoAtual || 0})" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; white-space: nowrap;">

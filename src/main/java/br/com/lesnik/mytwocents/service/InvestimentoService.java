@@ -553,6 +553,7 @@ public class InvestimentoService {
                 .dividendosTotal(dividendosTotal)
                 .variacaoPercent(variacaoPercent)
                 .distribuicaoPorTipo(distribuicao)
+                .distribuicaoIdealPorTipo(calcularDistribuicaoIdeal(ativos, patrimonioTotal))
                 .ativosPorTipo(ativosPorTipo)
                 .resumoPorTipo(resumoPorTipo)
                 .evolucaoInvestido12m(evolucaoInvestido12m)
@@ -873,7 +874,7 @@ public class InvestimentoService {
                 .taxa(a.getTaxa())
                 .rendimentoMensal(rendimentoMensal)
                 .dy(dy)
-                .categoriaTatica(a.getCategoriaTatica() != null ? a.getCategoriaTatica() : br.com.lesnik.mytwocents.model.CategoriaTatica.RENDA)
+                .categoriaTatica(a.getCategoriaTatica() != null && a.getCategoriaTatica() != CategoriaTatica.RENDA ? a.getCategoriaTatica() : br.com.lesnik.mytwocents.util.CategoriaTaticaUtils.inferirCategoriaTatica(a))
                 .ciclico(a.isCiclico())
                 .estrutural(a.isEstrutural())
                 .build();
@@ -1047,6 +1048,39 @@ public class InvestimentoService {
         }
 
         return Map.of("investido", investido, "patrimonio", patrimonio);
+    }
+
+    /**
+     * Calcula a distribuição ideal da carteira por tipo de ativo,
+     * baseada na soma dos metaPercent de cada ativo.
+     */
+    private static final java.util.Map<TipoAtivo, BigDecimal> PROPORCOES_IDEAIS = new java.util.LinkedHashMap<>();
+    static {
+        PROPORCOES_IDEAIS.put(TipoAtivo.ACAO, new BigDecimal("25"));
+        PROPORCOES_IDEAIS.put(TipoAtivo.FII, new BigDecimal("15"));
+        PROPORCOES_IDEAIS.put(TipoAtivo.RENDA_FIXA, new BigDecimal("20"));
+        PROPORCOES_IDEAIS.put(TipoAtivo.ETF, new BigDecimal("15"));
+        PROPORCOES_IDEAIS.put(TipoAtivo.TESOURO_DIRETO, new BigDecimal("20"));
+        PROPORCOES_IDEAIS.put(TipoAtivo.CRIPTO, new BigDecimal("5"));
+    }
+
+    private Map<TipoAtivo, BigDecimal> calcularDistribuicaoIdeal(List<Ativo> ativos, BigDecimal patrimonioTotal) {
+        Map<TipoAtivo, BigDecimal> distribuicaoIdeal = new LinkedHashMap<>();
+
+        if (patrimonioTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return distribuicaoIdeal;
+        }
+
+        // Usa proporções fixas ideais independente de metaPercent individual
+        for (java.util.Map.Entry<TipoAtivo, BigDecimal> entry : PROPORCOES_IDEAIS.entrySet()) {
+            TipoAtivo tipo = entry.getKey();
+            BigDecimal percentual = entry.getValue();
+            BigDecimal valorIdeal = patrimonioTotal.multiply(percentual)
+                    .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            distribuicaoIdeal.put(tipo, valorIdeal);
+        }
+
+        return distribuicaoIdeal;
     }
 
     private String mapearSubcategoriaAporte(TipoAtivo tipo) {
