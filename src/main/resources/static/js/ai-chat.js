@@ -675,7 +675,7 @@ async function loadAiInsights(targetId = 'ai-insights-dashboard', mes = null, ti
       <div class="ai-insight-setup-icon" style="font-size: 1.75rem; margin-bottom: 0.5rem;">✨</div>
       <p style="margin: 0; color: var(--text-muted); font-size: 0.9rem;">Gostaria de analisar suas finanças deste período com Inteligência Artificial?</p>
       <button class="btn btn--primary" id="btn-gerar-insights-${targetId}" style="margin-top: 1rem; padding: 0.5rem 1.25rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.5rem; border-radius: 6px;">
-        <span>✨ Gerar Insights com IA</span>
+        <span>Gerar Insights com IA</span>
       </button>
     </div>
   `;
