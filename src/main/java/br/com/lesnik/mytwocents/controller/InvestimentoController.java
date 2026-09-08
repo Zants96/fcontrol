@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -297,5 +298,40 @@ public class InvestimentoController {
         BigDecimal targetBox = body.get("emergencyBoxTarget");
         BigDecimal income = body.get("monthlyIncome");
         return ResponseEntity.ok(sniperEngineService.atualizarConfigEmergencia(targetBox, income));
+    }
+
+    // ─── Metas por Tipo de Ativo ───
+
+    @GetMapping("/metas-por-tipo")
+    public ResponseEntity<Map<String, BigDecimal>> getMetasPorTipo() {
+        AiConfig config = sniperEngineService.getConfig();
+        Map<String, BigDecimal> metas = new LinkedHashMap<>();
+        metas.put("ACAO", config.getMetaAcao());
+        metas.put("FII", config.getMetaFii());
+        metas.put("RENDA_FIXA", config.getMetaRendaFixa());
+        metas.put("ETF", config.getMetaEtf());
+        metas.put("TESOURO_DIRETO", config.getMetaTesouro());
+        metas.put("CRIPTO", config.getMetaCripto());
+        return ResponseEntity.ok(metas);
+    }
+
+    @PutMapping("/metas-por-tipo")
+    public ResponseEntity<Map<String, BigDecimal>> updateMetasPorTipo(@RequestBody Map<String, BigDecimal> metas) {
+        AiConfig config = sniperEngineService.getConfig();
+        if (metas.containsKey("ACAO")) config.setMetaAcao(metas.get("ACAO"));
+        if (metas.containsKey("FII")) config.setMetaFii(metas.get("FII"));
+        if (metas.containsKey("RENDA_FIXA")) config.setMetaRendaFixa(metas.get("RENDA_FIXA"));
+        if (metas.containsKey("ETF")) config.setMetaEtf(metas.get("ETF"));
+        if (metas.containsKey("TESOURO_DIRETO")) config.setMetaTesouro(metas.get("TESOURO_DIRETO"));
+        if (metas.containsKey("CRIPTO")) config.setMetaCripto(metas.get("CRIPTO"));
+        config = sniperEngineService.atualizarConfig(config);
+        Map<String, BigDecimal> response = new LinkedHashMap<>();
+        response.put("ACAO", config.getMetaAcao());
+        response.put("FII", config.getMetaFii());
+        response.put("RENDA_FIXA", config.getMetaRendaFixa());
+        response.put("ETF", config.getMetaEtf());
+        response.put("TESOURO_DIRETO", config.getMetaTesouro());
+        response.put("CRIPTO", config.getMetaCripto());
+        return ResponseEntity.ok(response);
     }
 }

@@ -146,7 +146,7 @@ public class SniperEngineService {
             BigDecimal patrimonioFuturo = overview.getPatrimonioTotal().add(valorAporte);
 
             List<Ativo> ativosElegiveis = ativos.stream()
-                    .filter(a -> a.getTipoAtivo() != null && PROPORCOES_POR_TIPO.containsKey(a.getTipoAtivo()))
+                    .filter(a -> a.getTipoAtivo() != null && getProporcoesIdeais().containsKey(a.getTipoAtivo()))
                     .filter(a -> !isTesouroAproximandoVencimento(a))
                     .collect(Collectors.toList());
 
@@ -162,7 +162,7 @@ public class SniperEngineService {
                     TipoAtivo tipo = entry.getKey();
                     List<Ativo> ativosDoTipo = entry.getValue();
 
-                    BigDecimal pctIdeal = PROPORCOES_POR_TIPO.get(tipo);
+                    BigDecimal pctIdeal = getProporcoesIdeais().get(tipo);
                     if (pctIdeal == null || pctIdeal.compareTo(BigDecimal.ZERO) <= 0) continue;
 
                     BigDecimal valorIdealTotal = patrimonioFuturo.multiply(pctIdeal)
@@ -198,7 +198,7 @@ public class SniperEngineService {
                         .collect(Collectors.toList());
 
                 if (!todosTesouros.isEmpty()) {
-                    BigDecimal pctTesouroIdeal = PROPORCOES_POR_TIPO.get(TipoAtivo.TESOURO_DIRETO);
+                    BigDecimal pctTesouroIdeal = getProporcoesIdeais().get(TipoAtivo.TESOURO_DIRETO);
                     if (pctTesouroIdeal != null && pctTesouroIdeal.compareTo(BigDecimal.ZERO) > 0) {
                         BigDecimal valorIdealTesouro = patrimonioFuturo.multiply(pctTesouroIdeal)
                                 .divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
@@ -615,5 +615,29 @@ public class SniperEngineService {
         }
         // Se a inferência também retorna RENDA, mantém o valor armazenado (se houver)
         return stored != null ? stored : CategoriaTatica.RENDA;
+    }
+
+    public AiConfig getConfig() {
+        return getAiConfig();
+    }
+
+    public AiConfig atualizarConfig(AiConfig config) {
+        return aiConfigRepository.save(config);
+    }
+
+    /**
+     * Retorna as proporções ideais dinâmicas do banco (AiConfig).
+     * Se não configuradas, usa os valores padrão.
+     */
+    private Map<TipoAtivo, BigDecimal> getProporcoesIdeais() {
+        AiConfig cfg = getAiConfig();
+        Map<TipoAtivo, BigDecimal> map = new LinkedHashMap<>();
+        map.put(TipoAtivo.ACAO, cfg.getMetaAcao() != null ? cfg.getMetaAcao() : new BigDecimal("25"));
+        map.put(TipoAtivo.FII, cfg.getMetaFii() != null ? cfg.getMetaFii() : new BigDecimal("15"));
+        map.put(TipoAtivo.RENDA_FIXA, cfg.getMetaRendaFixa() != null ? cfg.getMetaRendaFixa() : new BigDecimal("20"));
+        map.put(TipoAtivo.ETF, cfg.getMetaEtf() != null ? cfg.getMetaEtf() : new BigDecimal("15"));
+        map.put(TipoAtivo.TESOURO_DIRETO, cfg.getMetaTesouro() != null ? cfg.getMetaTesouro() : new BigDecimal("20"));
+        map.put(TipoAtivo.CRIPTO, cfg.getMetaCripto() != null ? cfg.getMetaCripto() : new BigDecimal("5"));
+        return map;
     }
 }
