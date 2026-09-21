@@ -136,17 +136,8 @@ function renderBarChart(data) {
 function renderDonutChart(data) {
   destroyIfExists('chart-donut');
   
-  let canvas = document.getElementById('chart-donut');
-  if (!canvas) {
-    const parent = document.querySelector('.chart-wrapper--donut');
-    if (parent) {
-      parent.innerHTML = '<canvas id="chart-donut"></canvas>';
-      canvas = document.getElementById('chart-donut');
-    }
-  }
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
+  const container = document.getElementById('wrapper-donut-annual') || document.querySelector('.chart-wrapper--donut');
+  if (!container) return;
 
   const entries = Object.entries(data.gastosPorSubcategoria || {})
     .filter(([, v]) => parseFloat(v) > 0)
@@ -154,9 +145,13 @@ function renderDonutChart(data) {
     .slice(0, 10);
 
   if (entries.length === 0) {
-    ctx.canvas.parentElement.innerHTML = '<div class="empty-state"><div class="empty-icon">📉</div><p>Sem dados de gastos</p></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📉</div><p>Sem dados de gastos</p></div>';
     return;
   }
+
+  container.innerHTML = '<canvas id="chart-donut"></canvas>';
+  const canvas = document.getElementById('chart-donut');
+  const ctx = canvas.getContext('2d');
 
   chartDonut = new Chart(ctx, {
     type: 'doughnut',
@@ -484,19 +479,12 @@ let chartDonutMonthlyTabela = null;
 
 function renderMonthlyDonut(gastosPorSubcategoria, suffix = '') {
   const canvasId = `chart-donut-monthly${suffix}`;
+  const containerId = suffix === '' ? 'wrapper-donut-monthly' : 'wrapper-donut-monthly-tabela';
+
   destroyIfExists(canvasId);
   
-  let canvas = document.getElementById(canvasId);
-  if (!canvas) {
-    const parent = document.querySelector(suffix === '' ? '#view-dashboard .charts-row:last-of-type .chart-wrapper--donut' : '#view-tabela .charts-row .chart-wrapper--donut');
-    if (parent) {
-      parent.innerHTML = `<canvas id="${canvasId}"></canvas>`;
-      canvas = document.getElementById(canvasId);
-    }
-  }
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
+  const container = document.getElementById(containerId);
+  if (!container) return;
 
   const entries = Object.entries(gastosPorSubcategoria)
     .filter(([, v]) => v > 0)
@@ -504,9 +492,13 @@ function renderMonthlyDonut(gastosPorSubcategoria, suffix = '') {
     .slice(0, 10);
 
   if (entries.length === 0) {
-    ctx.canvas.parentElement.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div><p>Sem dados neste mês</p></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div><p>Sem dados neste mês</p></div>';
     return;
   }
+
+  container.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
 
   const newChart = new Chart(ctx, {
     type: 'doughnut',
@@ -626,19 +618,12 @@ async function renderAportesDashboard(data, mes) {
 
 function renderMonthlyAportesDonut(porSubcategoria) {
   const canvasId = 'chart-donut-aportes';
+  const containerId = 'wrapper-donut-aportes';
+
   destroyIfExists(canvasId);
   
-  let canvas = document.getElementById(canvasId);
-  if (!canvas) {
-    const parent = document.querySelector('#view-dashboard .charts-row:last-of-type .chart-wrapper--donut');
-    if (parent) {
-      parent.innerHTML = `<canvas id="${canvasId}"></canvas>`;
-      canvas = document.getElementById(canvasId);
-    }
-  }
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
+  const container = document.getElementById(containerId);
+  if (!container) return;
 
   const entries = Object.entries(porSubcategoria)
     .filter(([, v]) => v > 0)
@@ -646,9 +631,13 @@ function renderMonthlyAportesDonut(porSubcategoria) {
     .slice(0, 10);
 
   if (entries.length === 0) {
-    ctx.canvas.parentElement.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div><p>Sem aportes neste mês</p></div>';
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div><p>Sem aportes neste mês</p></div>';
     return;
   }
+
+  container.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
 
   const APORTES_DONUT_COLORS = DONUT_COLORS;
 
