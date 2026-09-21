@@ -177,6 +177,23 @@ public class CotacaoService {
             }
         }
 
+        // Atualiza e persiste Selic e IPCA no banco de dados (AiConfig)
+        try {
+            BigDecimal selic = getSelicRate(brapiToken);
+            BigDecimal ipca = getIpcaRate(brapiToken);
+            AiConfig config = aiConfigRepository.findFirstByOrderByIdDesc().orElse(null);
+            if (config != null) {
+                if (selic != null) {
+                    config.setTaxaSelic(selic);
+                    config.setTaxaCdi(selic.subtract(new BigDecimal("0.10")));
+                }
+                if (ipca != null) config.setTaxaIpca(ipca);
+                aiConfigRepository.save(config);
+            }
+        } catch (Exception e) {
+            log.warn("Erro ao atualizar taxas macro no AiConfig: {}", e.getMessage());
+        }
+
         return atualizados;
     }
 

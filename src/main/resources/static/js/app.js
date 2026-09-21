@@ -322,10 +322,7 @@ async function loadDashboard() {
     renderMonthlyDashboard(data, mesSelecionado);
 
     // Dashboard Aportes
-    const mesSelAportes = document.getElementById('select-dash-mes-aportes');
-    const parsedMesAportes = mesSelAportes ? parseInt(mesSelAportes.value) : NaN;
-    const mesSelecionadoAportes = !isNaN(parsedMesAportes) ? parsedMesAportes : (new Date().getMonth() + 1);
-    renderAportesDashboard(data, mesSelecionadoAportes);
+    renderAportesDashboard(data, mesSelecionado);
 
     // Insights da IA (com cache de 4h)
     loadAiInsights('ai-insights-dashboard');

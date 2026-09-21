@@ -68,6 +68,10 @@ public class SniperEngineService {
 
         List<TacticalOpportunityDTO> oportunidades = calcularOportunidadesTaticas(ativos);
 
+        BigDecimal taxaSelic = config.getTaxaSelic() != null ? config.getTaxaSelic() : new BigDecimal("13.75");
+        BigDecimal taxaIpca = config.getTaxaIpca() != null ? config.getTaxaIpca() : new BigDecimal("4.22");
+        BigDecimal taxaCdi = taxaSelic.subtract(new BigDecimal("0.10"));
+
         return SniperOverviewDTO.builder()
                 .emergencyLock(isLocked)
                 .totalSeguranca(totalSeguranca)
@@ -75,6 +79,9 @@ public class SniperEngineService {
                 .pctSeguranca(pctSeguranca.setScale(2, RoundingMode.HALF_UP))
                 .patrimonioTotal(patrimonioTotal)
                 .valorFaltanteSeguranca(valorFaltante.setScale(2, RoundingMode.HALF_UP))
+                .taxaSelic(taxaSelic)
+                .taxaIpca(taxaIpca)
+                .taxaCdi(taxaCdi)
                 .quantidadeOportunidadesTaticas(oportunidades.size())
                 .oportunidades(oportunidades)
                 .build();

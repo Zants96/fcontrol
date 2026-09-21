@@ -18,6 +18,9 @@ public class SniperOverviewDTO {
     private BigDecimal pctSeguranca;
     private BigDecimal patrimonioTotal;
     private BigDecimal valorFaltanteSeguranca;
+    private BigDecimal taxaSelic;
+    private BigDecimal taxaIpca;
+    private BigDecimal taxaCdi;
     private int quantidadeOportunidadesTaticas;
     private List<TacticalOpportunityDTO> oportunidades;
 }
