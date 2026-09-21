@@ -54,6 +54,21 @@ public class AiConfig {
     @Builder.Default
     private java.math.BigDecimal monthlyIncome = new java.math.BigDecimal("5000.00");
 
+    /** Taxa Selic anual salva */
+    @Column(name = "taxa_selic", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal taxaSelic = new java.math.BigDecimal("13.75");
+
+    /** Taxa IPCA anual acumulada salva */
+    @Column(name = "taxa_ipca", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal taxaIpca = new java.math.BigDecimal("4.22");
+
+    /** Taxa CDI anual estimada/salva */
+    @Column(name = "taxa_cdi", precision = 5, scale = 2)
+    @Builder.Default
+    private java.math.BigDecimal taxaCdi = new java.math.BigDecimal("13.65");
+
     // ─── Metas percentuais por tipo de ativo (devem somar 100%) ───
     @Column(name = "meta_acao", precision = 5, scale = 2)
     @Builder.Default
