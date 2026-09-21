@@ -78,7 +78,6 @@ function renderInvDistChart(data) {
       labels.push(TIPO_ATIVO_LABELS[tipo] || tipo);
       values.push(parseFloat(dist[tipo]));
       colors.push(TIPO_ATIVO_COLORS[tipo] || '#666');
-      // Ideal: valor em R$ calculado do metaPercent
       if (distIdeal[tipo] && parseFloat(distIdeal[tipo]) > 0) {
         idealValues.push(parseFloat(distIdeal[tipo]));
       } else {
@@ -110,34 +109,32 @@ function renderInvDistChart(data) {
   }
 
   const total = values.reduce((a, b) => a + b, 0);
-
+  const totalIdeal = idealValues.reduce((a, b) => a + b, 0);
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-
-  // Verificar se há dados ideais para o anel interno
   const hasIdeal = idealValues.some(v => v > 0);
+  const themeBorderColor = isLight ? '#ccd9ecff' : '#111827';
 
   const datasets = [];
 
-  // Dataset 1: Anel externo — distribuição ATUAL (mais espesso)
+  // Anel Externo: Alocação REAL (vibrante)
   datasets.push({
+    label: 'Alocação Real',
     data: values,
-    backgroundColor: colors.map(c => c + 'cc'),
-    borderColor: isLight ? '#ccd9ecff' : '#111827',
+    backgroundColor: colors.map(c => c),
+    borderColor: themeBorderColor,
     borderWidth: 1,
-    hoverBorderWidth: 0,
-    weight: 2
+    hoverBorderWidth: 0
   });
 
-  // Dataset 2: Anel interno — distribuição IDEAL (aparência preenchida sem bordas)
+  // Anel Interno: Alocação IDEAL (40% alfa)
   if (hasIdeal) {
     datasets.push({
+      label: 'Alocação Ideal',
       data: idealValues,
-      backgroundColor: colors.map(c => c + '40'),
-      borderColor: colors.map(c => c + '40'),
-      borderWidth: 0,
-      hoverBorderWidth: 0,
-      weight: 2,
-      borderRadius: 0
+      backgroundColor: colors.map(c => c + '66'),
+      borderColor: themeBorderColor,
+      borderWidth: 1,
+      hoverBorderWidth: 0
     });
   }
 
@@ -148,8 +145,9 @@ function renderInvDistChart(data) {
       datasets
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      cutout: '55%',
+      responsive: true, 
+      maintainAspectRatio: false,
+      cutout: '50%',
       plugins: {
         legend: {
           position: 'right',
@@ -161,17 +159,21 @@ function renderInvDistChart(data) {
           },
         },
         tooltip: {
+          backgroundColor: '#1a2235',
+          titleColor: '#f1f5f9',
+          bodyColor: '#94a3b8',
+          borderColor: 'rgba(148,163,184,0.15)',
+          borderWidth: 1,
+          padding: 10,
           callbacks: {
             label: (ctx) => {
               const datasetIndex = ctx.datasetIndex;
               const label = ctx.label;
-              const raw = ctx.raw;
-              const pct = ((raw / total) * 100).toFixed(1);
-              if (datasetIndex === 0) {
-                return ` ${label}: ${fmtCurrency(raw)} (${pct}% real)`;
-              } else {
-                return ` ${label}: ${fmtCurrency(raw)} (${pct}% ideal)`;
-              }
+              const val = ctx.parsed || 0;
+              const tot = datasetIndex === 0 ? total : totalIdeal;
+              const pct = tot > 0 ? ((val / tot) * 100).toFixed(1) : 0;
+              const tipoStr = datasetIndex === 0 ? 'Atual' : 'Ideal';
+              return `${tipoStr} ${pct}% (${fmtCurrency(val)})`;
             }
           }
         }
@@ -1741,11 +1743,20 @@ async function renderSniperOverview() {
     const valuesEl = $('em-lock-values');
     const barEl = $('em-lock-bar');
     const cardEl = $('sniper-emergency-lock-card');
+    const selicBadge = $('selic-rate-badge');
 
     const totSeg = parseFloat(overview.totalSeguranca || 0);
     const targetBox = parseFloat(overview.emergencyBoxTarget || 20000);
     const pctSeg = parseFloat(overview.pctSeguranca || 0);
     const faltante = parseFloat(overview.valorFaltanteSeguranca || 0);
+    const selicNum = parseFloat(overview.taxaSelic || 13.75);
+    const selicVal = selicNum.toFixed(2);
+    const cdiVal = parseFloat(overview.taxaCdi || (selicNum - 0.10)).toFixed(2);
+    const ipcaVal = parseFloat(overview.taxaIpca || 4.22).toFixed(2);
+
+    if (selicBadge) {
+      selicBadge.textContent = `⚡ Selic: ${selicVal.replace('.', ',')}% | CDI: ${cdiVal.replace('.', ',')}% | IPCA: ${ipcaVal.replace('.', ',')}%`;
+    }
 
     const pctMeta = targetBox > 0 ? Math.min(100, (totSeg / targetBox) * 100) : 0;
 
@@ -1823,23 +1834,18 @@ function renderSniperOpportunitiesList(ops) {
 
     return `
       <div style="background: var(--bg-hover, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-left: 4px solid ${color}; border-radius: var(--radius-sm, 6px); padding: 0.85rem; margin-bottom: 0.75rem;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-          <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-              <strong style="font-size: 1rem;">${escHtml(op.ticker)}</strong>
-              <span class="inv-badge" style="background:${color}20; color:${color}; font-size: 0.75rem;">${icon} ${isCompra ? 'COMPRA' : 'VENDA'} NÍVEL ${op.nivelGatilho}</span>
-              <span style="font-size: 0.8rem; font-weight: 600; color: ${color};">${varPct > 0 ? '+' : ''}${varPct.toFixed(2)}% vs PM</span>
-            </div>
-            <p style="margin: 0.35rem 0 0; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.3;">
-              ${escHtml(op.sugestaoAcao)}
-            </p>
-            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
-              Preço Atual: ${fmtCurrency(parseFloat(op.precoAtual || 0))} | PM: ${fmtCurrency(parseFloat(op.precoMedio || 0))} | Sugestão: ${Math.round(parseFloat(op.sugestaoQuantidade || 0))} cotas
-            </div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <strong style="font-size: 1rem;">${escHtml(op.ticker)}</strong>
+            <span class="inv-badge" style="background:${color}20; color:${color}; font-size: 0.75rem;">${icon} ${isCompra ? 'COMPRA' : 'VENDA'} NÍVEL ${op.nivelGatilho}</span>
+            <span style="font-size: 0.8rem; font-weight: 600; color: ${color};">${varPct > 0 ? '+' : ''}${varPct.toFixed(2)}% vs PM</span>
           </div>
-          <button class="btn btn--primary" onclick="quickFillOperacao('${escHtml(op.ticker)}', '${op.tipoGatilho}', ${op.sugestaoQuantidade || 0}, ${op.precoAtual || 0})" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; white-space: nowrap;">
-            Executar ${isCompra ? 'Compra' : 'Venda'}
-          </button>
+          <p style="margin: 0.35rem 0 0; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.3;">
+            ${escHtml(op.sugestaoAcao)}
+          </p>
+          <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+            Preço Atual: ${fmtCurrency(parseFloat(op.precoAtual || 0))} | PM: ${fmtCurrency(parseFloat(op.precoMedio || 0))} | Sugestão: ${Math.round(parseFloat(op.sugestaoQuantidade || 0))} cotas
+          </div>
         </div>
       </div>
     `;

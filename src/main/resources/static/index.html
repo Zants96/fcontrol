@@ -183,7 +183,7 @@
         <div class="chart-card-header">
           <h2 class="chart-title">Distribuição de Despesas (Ano)</h2>
         </div>
-        <div class="chart-wrapper chart-wrapper--donut">
+        <div class="chart-wrapper chart-wrapper--donut" id="wrapper-donut-annual">
           <canvas id="chart-donut"></canvas>
         </div>
       </div>
@@ -247,7 +247,7 @@
         <div class="chart-card-header">
           <h2 class="chart-title">Distribuição Despesas do Mês</h2>
         </div>
-        <div class="chart-wrapper chart-wrapper--donut">
+        <div class="chart-wrapper chart-wrapper--donut" id="wrapper-donut-monthly">
           <canvas id="chart-donut-monthly"></canvas>
         </div>
       </div>
@@ -280,7 +280,7 @@
         <div class="chart-card-header">
           <h2 class="chart-title">Distribuição dos Aportes do Mês</h2>
         </div>
-        <div class="chart-wrapper chart-wrapper--donut">
+        <div class="chart-wrapper chart-wrapper--donut" id="wrapper-donut-aportes">
           <canvas id="chart-donut-aportes"></canvas>
         </div>
       </div>
@@ -327,7 +327,7 @@
         <div class="chart-card-header">
           <h2 class="chart-title" id="title-dist-tabela">Distribuição de Despesas do Mês</h2>
         </div>
-        <div class="chart-wrapper chart-wrapper--donut">
+        <div class="chart-wrapper chart-wrapper--donut" id="wrapper-donut-monthly-tabela">
           <canvas id="chart-donut-monthly-tabela"></canvas>
         </div>
       </div>
@@ -395,21 +395,24 @@
       <div id="sniper-emergency-lock-card" class="card card--red" style="grid-column: span 3; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center; padding: 1.25rem 1.5rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span id="em-lock-badge" class="inv-badge" style="background:#10b98120; color:#10b981; font-weight: 700; font-size: 0.85rem;">🛡️ RESERVA SEGURA</span>
-              <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Segurança &amp; Liquidez</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <div style="display: flex; justify-content: flex-start; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <span id="em-lock-badge" class="inv-badge" style="background:#10b98120; color:#10b981; font-weight: 700; font-size: 0.85rem;">🛡️ RESERVA SEGURA</span>
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 600;">Segurança &amp; Liquidez</h3>
+              </div>
+              <span id="selic-rate-badge" class="inv-badge" style="background: rgba(251, 146, 60, 0.15); color: #fb923c; font-weight: 600; font-size: 0.78rem;">⚡ Selic: --% | CDI: --% | IPCA: --%</span>
             </div>
             <p id="em-lock-desc" style="margin: 0.3rem 0 0; font-size: 0.88rem; color: var(--text-muted);">
               Gestão automatizada da Reserva de Emergência para garantir caixa antes de aportes em renda variável.
             </p>
           </div>
-          <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
             <div style="text-align: left;">
               <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.1rem;">Alocação Atual / Meta</div>
               <div id="em-lock-values" style="font-weight: 700; font-size: 1rem; color: var(--text-main);">R$ 0,00 / R$ 20.000,00 (0%)</div>
             </div>
-            <button class="btn btn--secondary" onclick="openEmergencyConfigModal()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">⚙️ Configurar Meta</button>
           </div>
+          <button class="btn btn--secondary" onclick="openEmergencyConfigModal()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">⚙️ Configurar Meta</button>
         </div>
         <div style="margin-top: 0.75rem; background: var(--bg-tertiary, rgba(255,255,255,0.05)); height: 8px; border-radius: 4px; overflow: hidden;">
           <div id="em-lock-bar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.4s ease;"></div>
@@ -672,6 +675,25 @@
         </div>
       </div>
 
+      <div class="card">
+        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Exportar Backup</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Gere um arquivo de segurança contendo todos os seus lançamentos. Ideal para transferir dados para outro dispositivo.</p>
+        <button class="btn" id="btn-export-backup" style="width: 100%; justify-content: center; margin-top: auto;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          Exportar Dados (.mtc)
+        </button>
+      </div>
+
+      <div class="card">
+        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Importar Backup</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Restaure seus dados a partir de um arquivo gerado anteriormente. <strong>Atenção: Isso substituirá as informações atuais.</strong></p>
+        <input type="file" id="file-import-backup" accept=".mtc" style="display: none;">
+        <button class="btn btn--danger" id="btn-import-backup" style="width: 100%; justify-content: center; margin-top: auto;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+          Restaurar Dados (.mtc)
+        </button>
+      </div>
+
       <div class="card" id="card-update-manager">
         <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Atualizações</h2>
         <p id="app-update-text" style="color: var(--text-muted); margin-bottom: 1.5rem;">Verifique se há novas versões disponíveis do MyTwoCents.</p>
@@ -699,25 +721,6 @@
             Baixar e Instalar
           </button>
         </div>
-      </div>
-
-      <div class="card">
-        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Exportar Backup</h2>
-        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Gere um arquivo de segurança contendo todos os seus lançamentos. Ideal para transferir dados para outro dispositivo.</p>
-        <button class="btn" id="btn-export-backup" style="width: 100%; justify-content: center; margin-top: auto;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-          Exportar Dados (.mtc)
-        </button>
-      </div>
-
-      <div class="card">
-        <h2 style="margin-bottom: 1rem; color: var(--text-primary);">Importar Backup</h2>
-        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Restaure seus dados a partir de um arquivo gerado anteriormente. <strong>Atenção: Isso substituirá as informações atuais.</strong></p>
-        <input type="file" id="file-import-backup" accept=".mtc" style="display: none;">
-        <button class="btn btn--danger" id="btn-import-backup" style="width: 100%; justify-content: center; margin-top: auto;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-          Restaurar Dados (.mtc)
-        </button>
       </div>
 
       <div class="card">
