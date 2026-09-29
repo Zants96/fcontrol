@@ -8,6 +8,7 @@ import br.com.lesnik.mytwocents.repository.AtivoRepository;
 import br.com.lesnik.mytwocents.repository.InvestimentoLancamentoRepository;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.LancamentoRepository;
+import br.com.lesnik.mytwocents.util.CategoriaTaticaUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,11 @@ public class InvestimentoService {
 
         if (dto.getTipoAtivo() != null && ativo.getTipoAtivo() != dto.getTipoAtivo()) {
             ativo.setTipoAtivo(dto.getTipoAtivo());
+            ativo = ativoRepository.save(ativo);
+        }
+
+        if (dto.getCategoriaTatica() != null) {
+            ativo.setCategoriaTatica(dto.getCategoriaTatica());
             ativo = ativoRepository.save(ativo);
         }
 
@@ -218,6 +224,12 @@ public class InvestimentoService {
         if (dto.getTipoAtivo() != null && lancamento.getAtivo().getTipoAtivo() != dto.getTipoAtivo()) {
             Ativo ativo = lancamento.getAtivo();
             ativo.setTipoAtivo(dto.getTipoAtivo());
+            ativoRepository.save(ativo);
+        }
+
+        if (dto.getCategoriaTatica() != null) {
+            Ativo ativo = lancamento.getAtivo();
+            ativo.setCategoriaTatica(dto.getCategoriaTatica());
             ativoRepository.save(ativo);
         }
 
@@ -877,7 +889,7 @@ public class InvestimentoService {
                 .taxa(a.getTaxa())
                 .rendimentoMensal(rendimentoMensal)
                 .dy(dy)
-                .categoriaTatica(a.getCategoriaTatica() != null && a.getCategoriaTatica() != CategoriaTatica.RENDA ? a.getCategoriaTatica() : br.com.lesnik.mytwocents.util.CategoriaTaticaUtils.inferirCategoriaTatica(a))
+                .categoriaTatica(a.getCategoriaTatica() != null ? a.getCategoriaTatica() : CategoriaTaticaUtils.inferirCategoriaTatica(a))
                 .ciclico(a.isCiclico())
                 .estrutural(a.isEstrutural())
                 .build();
@@ -893,6 +905,7 @@ public class InvestimentoService {
                 .ativoId(l.getAtivo().getId())
                 .ticker(l.getAtivo().getTicker())
                 .tipoAtivo(l.getAtivo().getTipoAtivo())
+                .categoriaTatica(l.getAtivo().getCategoriaTatica() != null ? l.getAtivo().getCategoriaTatica() : CategoriaTaticaUtils.inferirCategoriaTatica(l.getAtivo()))
                 .tipoOperacao(l.getTipoOperacao())
                 .data(l.getData())
                 .quantidade(l.getQuantidade())

@@ -14,6 +14,24 @@ const TIPO_ATIVO_COLORS = {
 
 const TIPO_ATIVO_ORDER = ['ACAO', 'FII', 'RENDA_FIXA', 'ETF', 'TESOURO_DIRETO', 'CRIPTO'];
 
+const CATEGORIA_TATICA_LABELS = {
+  SEGURANCA: 'Segurança',
+  RENDA: 'Renda',
+  CRESCIMENTO: 'Crescimento',
+  GLOBAL: 'Global',
+  PREVIDENCIA: 'Previdência'
+};
+
+const CATEGORIA_TATICA_COLORS = {
+  SEGURANCA: '#10b981',
+  RENDA: '#3b82f6',
+  CRESCIMENTO: '#f59e0b',
+  GLOBAL: '#8b5cf6',
+  PREVIDENCIA: '#ec4899'
+};
+
+const CATEGORIA_TATICA_ORDER = ['SEGURANCA', 'RENDA', 'CRESCIMENTO', 'GLOBAL', 'PREVIDENCIA'];
+
 let _invDistChart = null;
 let _invEvolucaoChart = null;
 let _invDividendosChart = null;
@@ -66,25 +84,61 @@ function renderInvCards(data) {
 // ─── DONUT CHART ─────────────────────────────────────────────────────────
 
 function renderInvDistChart(data) {
-  const dist = data.distribuicaoPorTipo || {};
-  const distIdeal = data.distribuicaoIdealPorTipo || {};
+  state.lastDashboardData = data;
+  const mode = state.distChartMode || 'tipo';
+
   const labels = [];
   const values = [];
   const idealValues = [];
   const colors = [];
 
-  TIPO_ATIVO_ORDER.forEach(tipo => {
-    if (dist[tipo] && parseFloat(dist[tipo]) > 0) {
-      labels.push(TIPO_ATIVO_LABELS[tipo] || tipo);
-      values.push(parseFloat(dist[tipo]));
-      colors.push(TIPO_ATIVO_COLORS[tipo] || '#666');
-      if (distIdeal[tipo] && parseFloat(distIdeal[tipo]) > 0) {
-        idealValues.push(parseFloat(distIdeal[tipo]));
-      } else {
-        idealValues.push(0);
-      }
+  if (mode === 'tatica') {
+    const taticaTotals = {};
+    if (data.ativosPorTipo) {
+      Object.values(data.ativosPorTipo).forEach(lista => {
+        (lista || []).forEach(a => {
+          const isRF = a.tipoAtivo === 'RENDA_FIXA' || a.tipoAtivo === 'TESOURO_DIRETO';
+          const catKey = a.categoriaTatica || (isRF ? 'SEGURANCA' : (a.tipoAtivo === 'FII' ? 'RENDA' : 'CRESCIMENTO'));
+          const val = parseFloat(a.valorTotal || 0);
+          if (val > 0) {
+            taticaTotals[catKey] = (taticaTotals[catKey] || 0) + val;
+          }
+        });
+      });
     }
-  });
+
+    CATEGORIA_TATICA_ORDER.forEach(catKey => {
+      if (taticaTotals[catKey] && taticaTotals[catKey] > 0) {
+        labels.push(CATEGORIA_TATICA_LABELS[catKey] || catKey);
+        values.push(taticaTotals[catKey]);
+        colors.push(CATEGORIA_TATICA_COLORS[catKey] || '#94a3b8');
+      }
+    });
+
+    Object.keys(taticaTotals).forEach(catKey => {
+      if (!CATEGORIA_TATICA_ORDER.includes(catKey) && taticaTotals[catKey] > 0) {
+        labels.push(catKey);
+        values.push(taticaTotals[catKey]);
+        colors.push('#94a3b8');
+      }
+    });
+  } else {
+    const dist = data.distribuicaoPorTipo || {};
+    const distIdeal = data.distribuicaoIdealPorTipo || {};
+
+    TIPO_ATIVO_ORDER.forEach(tipo => {
+      if (dist[tipo] && parseFloat(dist[tipo]) > 0) {
+        labels.push(TIPO_ATIVO_LABELS[tipo] || tipo);
+        values.push(parseFloat(dist[tipo]));
+        colors.push(TIPO_ATIVO_COLORS[tipo] || '#666');
+        if (distIdeal[tipo] && parseFloat(distIdeal[tipo]) > 0) {
+          idealValues.push(parseFloat(distIdeal[tipo]));
+        } else {
+          idealValues.push(0);
+        }
+      }
+    });
+  }
 
   const ctx = $('chart-inv-dist');
   if (!ctx) return;
@@ -405,7 +459,7 @@ function renderInvAcordeoes(data) {
                     ${a.logoUrl ? `<img src="${a.logoUrl}" class="inv-ticker-logo" alt="${escHtml(a.ticker)}" onerror="this.style.display='none'" />` : ''}
                     <div>
                       <strong>${escHtml(a.ticker)}</strong>
-                      <!-- Badges removidos por solicitação do usuário -->
+                      <span style="display: block; font-size: 0.71rem; color: ${CATEGORIA_TATICA_COLORS[a.categoriaTatica || (tipo === 'RENDA_FIXA' || tipo === 'TESOURO_DIRETO' ? 'SEGURANCA' : (tipo === 'FII' ? 'RENDA' : 'CRESCIMENTO'))] || '#94a3b8'}; font-weight: 600; margin-top: 1px;">${escHtml(CATEGORIA_TATICA_LABELS[a.categoriaTatica || (tipo === 'RENDA_FIXA' || tipo === 'TESOURO_DIRETO' ? 'SEGURANCA' : (tipo === 'FII' ? 'RENDA' : 'CRESCIMENTO'))] || 'Segurança')}</span>
                     </div>
                   </div>
                 </td>
@@ -604,12 +658,26 @@ function initInvModal() {
         $('inv-form-taxa').required = false;
       }
     }
+    const catSelect = $('inv-form-categoria-tatica');
+    if (catSelect && !catSelect._manuallySelected) {
+      if (tipo === 'RENDA_FIXA' || tipo === 'TESOURO_DIRETO') catSelect.value = 'SEGURANCA';
+      else if (tipo === 'ACAO') catSelect.value = 'CRESCIMENTO';
+      else if (tipo === 'FII') catSelect.value = 'RENDA';
+      else if (tipo === 'ETF') catSelect.value = 'GLOBAL';
+      else if (tipo === 'CRIPTO') catSelect.value = 'CRESCIMENTO';
+    }
   };
   $('inv-form-tipo')?.addEventListener('change', updateRendaFixaFields);
+  $('inv-form-categoria-tatica')?.addEventListener('change', () => {
+    const catSelect = $('inv-form-categoria-tatica');
+    if (catSelect) catSelect._manuallySelected = true;
+  });
 }
 
 function openInvModal(tipoAtivo) {
   $('inv-form').reset();
+  const catSelect = $('inv-form-categoria-tatica');
+  if (catSelect) catSelect._manuallySelected = false;
   if (tipoAtivo) $('inv-form-tipo').value = tipoAtivo;
 
   // Trigger change event to set conditional fields visibility
@@ -740,8 +808,10 @@ async function onInvFormSubmit(e) {
     }
   }
 
+  const categoriaTatica = $('inv-form-categoria-tatica')?.value || null;
+
   const dto = {
-    ticker, tipoAtivo, tipoOperacao: operacao,
+    ticker, tipoAtivo, categoriaTatica, tipoOperacao: operacao,
     data, quantidade: operacao === 'DIVIDENDO' && quantidade <= 0 ? 0 : quantidade,
     precoUnitario: preco, custos, valorLiquido,
     valorTotal: valorTotal,
@@ -1036,6 +1106,9 @@ async function editarLancamentoInvestimento(id) {
   formPreco.value = fmtCurrency(l.precoUnitario || 0).replace('R$', '').trim();
   formCustos.value = fmtCurrency(l.custos || 0).replace('R$', '').trim();
   $('inv-edit-data').value = formatIsoToBrDate(l.data);
+  if ($('inv-edit-categoria-tatica')) {
+    $('inv-edit-categoria-tatica').value = l.categoriaTatica || 'CRESCIMENTO';
+  }
 
   // Campos condicionais de Renda Fixa/Tesouro
   const groupRendaFixa = $('inv-edit-group-renda-fixa');
@@ -1083,6 +1156,16 @@ function initInvEditModalListeners() {
             <input type="hidden" id="inv-edit-ativo-id" />
             <input type="hidden" id="inv-edit-op" />
             
+            <div class="form-group">
+              <label for="inv-edit-categoria-tatica">Categoria Tática</label>
+              <select id="inv-edit-categoria-tatica" class="form-input">
+                <option value="SEGURANCA">Segurança & Liquidez</option>
+                <option value="RENDA">Renda Passiva</option>
+                <option value="CRESCIMENTO">Crescimento / Capital</option>
+                <option value="GLOBAL">Global / Internacional</option>
+                <option value="PREVIDENCIA">Previdência</option>
+              </select>
+            </div>
             <div class="form-group" id="inv-edit-group-qtd">
               <label for="inv-edit-qtd">Quantidade</label>
               <input type="text" id="inv-edit-qtd" class="form-input" />
@@ -1250,6 +1333,7 @@ function initInvEditModalListeners() {
       const liquidoRaw = op === 'DIVIDENDO' ? $('inv-edit-liquido')?.value : null;
       const valorLiquido = liquidoRaw ? parseInvInput(liquidoRaw) : null;
       const tipoProvento = op === 'DIVIDENDO' ? $('inv-edit-tipo-provento')?.value || 'Dividendo' : null;
+      const categoriaTatica = $('inv-edit-categoria-tatica')?.value || null;
       await Api.updateInvestimentoLancamento(id, {
         quantidade: novaQtd,
         precoUnitario: novoPreco,
@@ -1260,7 +1344,8 @@ function initInvEditModalListeners() {
         dataVencimento,
         indexador,
         taxa,
-        tipoProvento
+        tipoProvento,
+        categoriaTatica
       });
       
       showToast('Lançamento atualizado!', 'success');
@@ -1761,7 +1846,7 @@ async function renderSniperOverview() {
     const pctMeta = targetBox > 0 ? Math.min(100, (totSeg / targetBox) * 100) : 0;
 
     if (valuesEl) {
-      valuesEl.textContent = `${fmtCurrency(totSeg)} / ${fmtCurrency(targetBox)} (${pctMeta.toFixed(0)}% da meta | ${pctSeg.toFixed(1)}% da carteira)`;
+      valuesEl.textContent = `${fmtCurrency(totSeg)} / ${fmtCurrency(targetBox)} (${pctMeta.toFixed(0)}% da meta | ${pctSeg.toFixed(1)}% do patrimônio)`;
     }
 
     if (barEl) {
@@ -2073,3 +2158,14 @@ setTimeout(function() {
 }, 1500);
 
 window.loadInvestimentos = loadInvestimentos;
+
+window.switchDistChartMode = function(mode) {
+  state.distChartMode = mode;
+  const btnTipo = document.getElementById('btn-dist-tipo');
+  const btnTatica = document.getElementById('btn-dist-tatica');
+  if (btnTipo) btnTipo.classList.toggle('active', mode === 'tipo');
+  if (btnTatica) btnTatica.classList.toggle('active', mode === 'tatica');
+  if (state.lastDashboardData) {
+    renderInvDistChart(state.lastDashboardData);
+  }
+};

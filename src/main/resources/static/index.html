@@ -466,8 +466,12 @@
       
       <!-- Distribuição da Carteira -->
       <div class="chart-card">
-        <div class="chart-card-header">
-          <h2 class="chart-title">Distribuição da Carteira</h2>
+        <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 class="chart-title" id="chart-inv-dist-title">Distribuição da Carteira</h2>
+          <div style="display: flex; gap: 0.25rem; background: var(--bg-hover); padding: 3px; border-radius: 6px; border: 1px solid var(--border);">
+            <button id="btn-dist-tipo" class="btn btn--secondary btn--sm active" onclick="switchDistChartMode('tipo')" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">Por Tipo</button>
+            <button id="btn-dist-tatica" class="btn btn--secondary btn--sm" onclick="switchDistChartMode('tatica')" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">Por Tática</button>
+          </div>
         </div>
         <div class="chart-wrapper chart-wrapper--donut" style="height: 280px;">
           <canvas id="chart-inv-dist"></canvas>
@@ -911,6 +915,16 @@
             <option value="ETF">ETFs</option>
             <option value="TESOURO_DIRETO">Tesouro Direto</option>
             <option value="CRIPTO">Criptomoedas</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="inv-form-categoria-tatica">Categoria Tática</label>
+          <select id="inv-form-categoria-tatica" class="form-input">
+            <option value="SEGURANCA">Segurança & Liquidez</option>
+            <option value="RENDA">Renda Passiva</option>
+            <option value="CRESCIMENTO" selected>Crescimento / Capital</option>
+            <option value="GLOBAL">Global / Internacional</option>
+            <option value="PREVIDENCIA">Previdência</option>
           </select>
         </div>
         <div class="form-group" style="flex: 1;">
