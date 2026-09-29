@@ -3,6 +3,7 @@ package br.com.lesnik.mytwocents.service;
 import br.com.lesnik.mytwocents.model.AiConfig;
 import br.com.lesnik.mytwocents.model.Ativo;
 import br.com.lesnik.mytwocents.model.TipoAtivo;
+import br.com.lesnik.mytwocents.util.CategoriaTaticaUtils;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.AtivoRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -139,6 +140,7 @@ public class CotacaoService {
 
                 if (!nomeFaltando && cached != null && cached.isValid()) {
                     ativo.setPrecoAtual(cached.preco());
+                    ativo.setCategoriaTatica(CategoriaTaticaUtils.inferirCategoriaTatica(ativo));
                     ativoRepository.save(ativo);
                     atualizados++;
                     continue;
@@ -167,10 +169,12 @@ public class CotacaoService {
                     if (result.dividendYield() != null) {
                         ativo.setDividendYield(result.dividendYield());
                     }
+                    // Atualiza a Categoria Tática com base na inferência automática
+                    ativo.setCategoriaTatica(CategoriaTaticaUtils.inferirCategoriaTatica(ativo));
                     ativoRepository.save(ativo);
                     cache.put(ativo.getTicker(), new CachedPrice(result.preco(), Instant.now()));
                     atualizados++;
-                    log.info("Cotação atualizada: {} = R$ {} ({})", ativo.getTicker(), result.preco(), result.nome());
+                    log.info("Cotação e categoria tática atualizadas: {} = R$ {} ({}) -> {}", ativo.getTicker(), result.preco(), result.nome(), ativo.getCategoriaTatica());
                 }
             } catch (Exception e) {
                 log.error("Erro ao buscar cotação de {}: {}", ativo.getTicker(), e.getMessage());

@@ -904,6 +904,224 @@ select option { background: var(--bg-elevated); }
   transform: none;
 }
 
+/* ─── Destaques da Carteira & Posições no Lucro Cards ───────────────────── */
+.destaques-grid-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 992px) {
+  .destaques-grid-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.destaque-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.1rem 1.25rem;
+  min-height: 165px;
+}
+
+.destaque-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.destaque-icon-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.destaque-card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+.destaque-info-icon {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.destaque-card-body {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.destaque-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.destaque-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.destaque-ticker {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.badge-pill--up {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-pill--down {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fda4af;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.badge-pill--pct {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+}
+
+.destaque-card-body-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.destaque-metric-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.destaque-metric-text {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.destaque-progress-bar {
+  height: 8px;
+  width: 100%;
+  border-radius: 4px;
+  background: rgba(244, 63, 94, 0.4);
+  overflow: hidden;
+}
+
+.destaque-progress-fill {
+  height: 100%;
+  background: #10b981;
+  border-radius: 4px 0 0 4px;
+  transition: width 0.4s ease;
+}
+
+.destaque-sub-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.2rem;
+}
+
+.destaque-sub-btn {
+  background: transparent;
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.destaque-sub-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.destaque-sub-btn--up {
+  color: #10b981;
+}
+
+.destaque-sub-btn--down {
+  color: #f43f5e;
+}
+
+/* Modal Banner & Tabs */
+.destaque-modal-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.destaque-modal-toggles {
+  display: inline-flex;
+  gap: 0.5rem;
+  background: var(--bg-hover);
+  padding: 4px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+.modal-toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 0.4rem 1.1rem;
+  border-radius: 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.modal-toggle-btn.active-lucro {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.modal-toggle-btn.active-prejuizo {
+  background: rgba(244, 63, 94, 0.15);
+  color: #f43f5e;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
 /* ─── Modal ─────────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;

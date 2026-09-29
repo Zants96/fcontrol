@@ -889,7 +889,7 @@ public class InvestimentoService {
                 .taxa(a.getTaxa())
                 .rendimentoMensal(rendimentoMensal)
                 .dy(dy)
-                .categoriaTatica(a.getCategoriaTatica() != null ? a.getCategoriaTatica() : CategoriaTaticaUtils.inferirCategoriaTatica(a))
+                .categoriaTatica(CategoriaTaticaUtils.inferirCategoriaTatica(a))
                 .ciclico(a.isCiclico())
                 .estrutural(a.isEstrutural())
                 .build();
@@ -905,7 +905,7 @@ public class InvestimentoService {
                 .ativoId(l.getAtivo().getId())
                 .ticker(l.getAtivo().getTicker())
                 .tipoAtivo(l.getAtivo().getTipoAtivo())
-                .categoriaTatica(l.getAtivo().getCategoriaTatica() != null ? l.getAtivo().getCategoriaTatica() : CategoriaTaticaUtils.inferirCategoriaTatica(l.getAtivo()))
+                .categoriaTatica(CategoriaTaticaUtils.inferirCategoriaTatica(l.getAtivo()))
                 .tipoOperacao(l.getTipoOperacao())
                 .data(l.getData())
                 .quantidade(l.getQuantidade())
