@@ -14,6 +14,24 @@ const TIPO_ATIVO_COLORS = {
 
 const TIPO_ATIVO_ORDER = ['ACAO', 'FII', 'RENDA_FIXA', 'ETF', 'TESOURO_DIRETO', 'CRIPTO'];
 
+const CATEGORIA_TATICA_LABELS = {
+  SEGURANCA: 'Segurança',
+  RENDA: 'Renda',
+  CRESCIMENTO: 'Crescimento',
+  GLOBAL: 'Global',
+  PREVIDENCIA: 'Previdência'
+};
+
+const CATEGORIA_TATICA_COLORS = {
+  SEGURANCA: '#10b981',
+  RENDA: '#3b82f6',
+  CRESCIMENTO: '#f59e0b',
+  GLOBAL: '#8b5cf6',
+  PREVIDENCIA: '#ec4899'
+};
+
+const CATEGORIA_TATICA_ORDER = ['SEGURANCA', 'RENDA', 'CRESCIMENTO', 'GLOBAL', 'PREVIDENCIA'];
+
 let _invDistChart = null;
 let _invEvolucaoChart = null;
 let _invDividendosChart = null;
@@ -25,6 +43,7 @@ async function loadInvestimentos() {
     initInvEditModalListeners();
     const data = await Api.getInvestimentoDashboard();
     renderInvCards(data);
+    renderDestaquesECardTatica(data);
     renderInvDistChart(data);
     renderInvEvolucaoChart(data);
     renderInvDividendosChart(data);
@@ -66,25 +85,61 @@ function renderInvCards(data) {
 // ─── DONUT CHART ─────────────────────────────────────────────────────────
 
 function renderInvDistChart(data) {
-  const dist = data.distribuicaoPorTipo || {};
-  const distIdeal = data.distribuicaoIdealPorTipo || {};
+  state.lastDashboardData = data;
+  const mode = state.distChartMode || 'tipo';
+
   const labels = [];
   const values = [];
   const idealValues = [];
   const colors = [];
 
-  TIPO_ATIVO_ORDER.forEach(tipo => {
-    if (dist[tipo] && parseFloat(dist[tipo]) > 0) {
-      labels.push(TIPO_ATIVO_LABELS[tipo] || tipo);
-      values.push(parseFloat(dist[tipo]));
-      colors.push(TIPO_ATIVO_COLORS[tipo] || '#666');
-      if (distIdeal[tipo] && parseFloat(distIdeal[tipo]) > 0) {
-        idealValues.push(parseFloat(distIdeal[tipo]));
-      } else {
-        idealValues.push(0);
-      }
+  if (mode === 'tatica') {
+    const taticaTotals = {};
+    if (data.ativosPorTipo) {
+      Object.values(data.ativosPorTipo).forEach(lista => {
+        (lista || []).forEach(a => {
+          const isRF = a.tipoAtivo === 'RENDA_FIXA' || a.tipoAtivo === 'TESOURO_DIRETO';
+          const catKey = a.categoriaTatica || 'RENDA';
+          const val = parseFloat(a.valorTotal || 0);
+          if (val > 0) {
+            taticaTotals[catKey] = (taticaTotals[catKey] || 0) + val;
+          }
+        });
+      });
     }
-  });
+
+    CATEGORIA_TATICA_ORDER.forEach(catKey => {
+      if (taticaTotals[catKey] && taticaTotals[catKey] > 0) {
+        labels.push(CATEGORIA_TATICA_LABELS[catKey] || catKey);
+        values.push(taticaTotals[catKey]);
+        colors.push(CATEGORIA_TATICA_COLORS[catKey] || '#94a3b8');
+      }
+    });
+
+    Object.keys(taticaTotals).forEach(catKey => {
+      if (!CATEGORIA_TATICA_ORDER.includes(catKey) && taticaTotals[catKey] > 0) {
+        labels.push(catKey);
+        values.push(taticaTotals[catKey]);
+        colors.push('#94a3b8');
+      }
+    });
+  } else {
+    const dist = data.distribuicaoPorTipo || {};
+    const distIdeal = data.distribuicaoIdealPorTipo || {};
+
+    TIPO_ATIVO_ORDER.forEach(tipo => {
+      if (dist[tipo] && parseFloat(dist[tipo]) > 0) {
+        labels.push(TIPO_ATIVO_LABELS[tipo] || tipo);
+        values.push(parseFloat(dist[tipo]));
+        colors.push(TIPO_ATIVO_COLORS[tipo] || '#666');
+        if (distIdeal[tipo] && parseFloat(distIdeal[tipo]) > 0) {
+          idealValues.push(parseFloat(distIdeal[tipo]));
+        } else {
+          idealValues.push(0);
+        }
+      }
+    });
+  }
 
   const ctx = $('chart-inv-dist');
   if (!ctx) return;
@@ -405,7 +460,7 @@ function renderInvAcordeoes(data) {
                     ${a.logoUrl ? `<img src="${a.logoUrl}" class="inv-ticker-logo" alt="${escHtml(a.ticker)}" onerror="this.style.display='none'" />` : ''}
                     <div>
                       <strong>${escHtml(a.ticker)}</strong>
-                      <!-- Badges removidos por solicitação do usuário -->
+                      <span style="display: block; font-size: 0.71rem; color: ${CATEGORIA_TATICA_COLORS[a.categoriaTatica] || '#94a3b8'}; font-weight: 600; margin-top: 1px;">${escHtml(CATEGORIA_TATICA_LABELS[a.categoriaTatica] || 'Renda')}</span>
                     </div>
                   </div>
                 </td>
@@ -604,12 +659,26 @@ function initInvModal() {
         $('inv-form-taxa').required = false;
       }
     }
+    const catSelect = $('inv-form-categoria-tatica');
+    if (catSelect && !catSelect._manuallySelected) {
+      if (tipo === 'RENDA_FIXA' || tipo === 'TESOURO_DIRETO') catSelect.value = 'SEGURANCA';
+      else if (tipo === 'ACAO') catSelect.value = 'CRESCIMENTO';
+      else if (tipo === 'FII') catSelect.value = 'RENDA';
+      else if (tipo === 'ETF') catSelect.value = 'GLOBAL';
+      else if (tipo === 'CRIPTO') catSelect.value = 'CRESCIMENTO';
+    }
   };
   $('inv-form-tipo')?.addEventListener('change', updateRendaFixaFields);
+  $('inv-form-categoria-tatica')?.addEventListener('change', () => {
+    const catSelect = $('inv-form-categoria-tatica');
+    if (catSelect) catSelect._manuallySelected = true;
+  });
 }
 
 function openInvModal(tipoAtivo) {
   $('inv-form').reset();
+  const catSelect = $('inv-form-categoria-tatica');
+  if (catSelect) catSelect._manuallySelected = false;
   if (tipoAtivo) $('inv-form-tipo').value = tipoAtivo;
 
   // Trigger change event to set conditional fields visibility
@@ -997,6 +1066,11 @@ async function editarLancamentoInvestimento(id) {
   $('inv-edit-id').value = l.id;
   $('inv-edit-ativo-id').value = l.ativoId;
   $('inv-edit-op').value = l.tipoOperacao;
+  const form = $('inv-edit-form');
+  if (form) {
+    form._currentTicker = l.ticker;
+    form._currentTipoAtivo = l.tipoAtivo;
+  }
   
   const formQtd = $('inv-edit-qtd');
   const formPreco = $('inv-edit-preco');
@@ -1036,6 +1110,8 @@ async function editarLancamentoInvestimento(id) {
   formPreco.value = fmtCurrency(l.precoUnitario || 0).replace('R$', '').trim();
   formCustos.value = fmtCurrency(l.custos || 0).replace('R$', '').trim();
   $('inv-edit-data').value = formatIsoToBrDate(l.data);
+
+
 
   // Campos condicionais de Renda Fixa/Tesouro
   const groupRendaFixa = $('inv-edit-group-renda-fixa');
@@ -1083,6 +1159,16 @@ function initInvEditModalListeners() {
             <input type="hidden" id="inv-edit-ativo-id" />
             <input type="hidden" id="inv-edit-op" />
             
+            <div class="form-group">
+              <label for="inv-edit-categoria-tatica">Categoria Tática</label>
+              <select id="inv-edit-categoria-tatica" class="form-input">
+                <option value="SEGURANCA">Segurança & Liquidez</option>
+                <option value="RENDA">Renda Passiva</option>
+                <option value="CRESCIMENTO">Crescimento / Capital</option>
+                <option value="GLOBAL">Global / Internacional</option>
+                <option value="PREVIDENCIA">Previdência</option>
+              </select>
+            </div>
             <div class="form-group" id="inv-edit-group-qtd">
               <label for="inv-edit-qtd">Quantidade</label>
               <input type="text" id="inv-edit-qtd" class="form-input" />
@@ -1251,6 +1337,9 @@ function initInvEditModalListeners() {
       const valorLiquido = liquidoRaw ? parseInvInput(liquidoRaw) : null;
       const tipoProvento = op === 'DIVIDENDO' ? $('inv-edit-tipo-provento')?.value || 'Dividendo' : null;
       await Api.updateInvestimentoLancamento(id, {
+        ticker: form._currentTicker,
+        tipoAtivo: form._currentTipoAtivo,
+        tipoOperacao: op,
         quantidade: novaQtd,
         precoUnitario: novoPreco,
         custos: novosCustos,
@@ -1761,7 +1850,7 @@ async function renderSniperOverview() {
     const pctMeta = targetBox > 0 ? Math.min(100, (totSeg / targetBox) * 100) : 0;
 
     if (valuesEl) {
-      valuesEl.textContent = `${fmtCurrency(totSeg)} / ${fmtCurrency(targetBox)} (${pctMeta.toFixed(0)}% da meta | ${pctSeg.toFixed(1)}% da carteira)`;
+      valuesEl.textContent = `${fmtCurrency(totSeg)} / ${fmtCurrency(targetBox)} (${pctMeta.toFixed(0)}% da meta | ${pctSeg.toFixed(1)}% do patrimônio)`;
     }
 
     if (barEl) {
@@ -2073,3 +2162,275 @@ setTimeout(function() {
 }, 1500);
 
 window.loadInvestimentos = loadInvestimentos;
+
+window.switchDistChartMode = function(mode) {
+  state.distChartMode = mode;
+  const btnTipo = document.getElementById('btn-dist-tipo');
+  const btnTatica = document.getElementById('btn-dist-tatica');
+  if (btnTipo) btnTipo.classList.toggle('active', mode === 'tipo');
+  if (btnTatica) btnTatica.classList.toggle('active', mode === 'tatica');
+  if (state.lastDashboardData) {
+    renderInvDistChart(state.lastDashboardData);
+  }
+};
+
+// ─── DESTAQUES & MODAL POSIÇÕES NO LUCRO / PREJUÍZO ─────────────────────
+let _invDistTaticaMiniChart = null;
+let _lucroPrejuizoState = {
+  currentTab: 'lucro',
+  page: 1,
+  pageSize: 5,
+  lucroList: [],
+  prejuizoList: []
+};
+
+function renderDestaquesECardTatica(data) {
+  const allAtivos = [];
+  if (data && data.ativosPorTipo) {
+    Object.values(data.ativosPorTipo).forEach(lista => {
+      (lista || []).forEach(a => {
+        const qtd = parseFloat(a.quantidade || 0);
+        const pm = parseFloat(a.precoMedio || 0);
+        const precoAtual = parseFloat(a.precoAtual || 0);
+        const valorTotal = parseFloat(a.valorTotal || (qtd * precoAtual));
+        const valorInvestido = qtd * pm;
+        
+        let lucro = valorTotal - valorInvestido;
+        let rentabilidade = 0;
+        if (valorInvestido > 0) {
+          rentabilidade = (lucro / valorInvestido) * 100;
+        } else {
+          rentabilidade = parseFloat(a.variacao || 0);
+        }
+
+        allAtivos.push({
+          ...a,
+          valorTotal,
+          valorInvestido,
+          lucro,
+          rentabilidade
+        });
+      });
+    });
+  }
+
+  if (allAtivos.length === 0) return;
+
+  const sorted = [...allAtivos].sort((a, b) => b.rentabilidade - a.rentabilidade);
+  const melhor = sorted[0];
+  const pior = sorted[sorted.length - 1];
+
+  const lucroList = sorted.filter(a => a.rentabilidade >= 0);
+  const prejuizoList = sorted.filter(a => a.rentabilidade < 0).reverse();
+
+  _lucroPrejuizoState.lucroList = lucroList;
+  _lucroPrejuizoState.prejuizoList = prejuizoList;
+
+  // 1. Atualiza Card 1 (Destaques da carteira)
+  if (melhor && document.getElementById('destaque-melhor-ticker')) {
+    document.getElementById('destaque-melhor-ticker').textContent = melhor.ticker;
+    const bMelhor = document.getElementById('destaque-melhor-badge');
+    if (bMelhor) {
+      bMelhor.textContent = `${melhor.rentabilidade >= 0 ? '+' : ''}${melhor.rentabilidade.toFixed(2).replace('.', ',')}% ↗`;
+      bMelhor.className = `badge-pill ${melhor.rentabilidade >= 0 ? 'badge-pill--up' : 'badge-pill--down'}`;
+    }
+  }
+
+  if (pior && document.getElementById('destaque-pior-ticker')) {
+    document.getElementById('destaque-pior-ticker').textContent = pior.ticker;
+    const bPior = document.getElementById('destaque-pior-badge');
+    if (bPior) {
+      bPior.textContent = `${pior.rentabilidade >= 0 ? '+' : ''}${pior.rentabilidade.toFixed(2).replace('.', ',')}% ↘`;
+      bPior.className = `badge-pill ${pior.rentabilidade >= 0 ? 'badge-pill--up' : 'badge-pill--down'}`;
+    }
+  }
+
+  // 2. Atualiza Card 2 (Posições no lucro)
+  const totalCount = allAtivos.length;
+  const lucroCount = lucroList.length;
+  const prejuizoCount = prejuizoList.length;
+  const pctLucro = totalCount > 0 ? (lucroCount / totalCount) * 100 : 0;
+
+  if (document.getElementById('lucro-metric-count')) document.getElementById('lucro-metric-count').textContent = `${lucroCount} de ${totalCount}`;
+  if (document.getElementById('lucro-metric-pct')) document.getElementById('lucro-metric-pct').textContent = `${pctLucro.toFixed(0)}%`;
+  if (document.getElementById('lucro-progress-fill')) document.getElementById('lucro-progress-fill').style.width = `${pctLucro}%`;
+  if (document.getElementById('lucro-sub-count')) document.getElementById('lucro-sub-count').textContent = `${lucroCount} no lucro`;
+  if (document.getElementById('prejuizo-sub-count')) document.getElementById('prejuizo-sub-count').textContent = `${prejuizoCount} no prejuízo`;
+
+  if (document.getElementById('modal-toggle-lucro-count')) document.getElementById('modal-toggle-lucro-count').textContent = `${lucroCount} no lucro`;
+  if (document.getElementById('modal-toggle-prejuizo-count')) document.getElementById('modal-toggle-prejuizo-count').textContent = `${prejuizoCount} no prejuízo`;
+
+  // 3. Mini Chart de Categoria Tática
+  renderMiniTaticaChart(allAtivos);
+}
+
+function renderMiniTaticaChart(allAtivos) {
+  const ctx = document.getElementById('chart-inv-dist-tatica-card');
+  if (!ctx) return;
+
+  if (_invDistTaticaMiniChart) _invDistTaticaMiniChart.destroy();
+
+  const taticaTotals = {};
+  allAtivos.forEach(a => {
+    const isRF = a.tipoAtivo === 'RENDA_FIXA' || a.tipoAtivo === 'TESOURO_DIRETO';
+    const catKey = a.categoriaTatica || 'RENDA';
+    taticaTotals[catKey] = (taticaTotals[catKey] || 0) + (a.valorTotal || 0);
+  });
+
+  const labels = [];
+  const values = [];
+  const colors = [];
+
+  CATEGORIA_TATICA_ORDER.forEach(catKey => {
+    if (taticaTotals[catKey] && taticaTotals[catKey] > 0) {
+      labels.push(CATEGORIA_TATICA_LABELS[catKey] || catKey);
+      values.push(taticaTotals[catKey]);
+      colors.push(CATEGORIA_TATICA_COLORS[catKey] || '#94a3b8');
+    }
+  });
+
+  if (values.length === 0) return;
+
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const themeBorderColor = isLight ? '#ffffff' : '#111827';
+
+  _invDistTaticaMiniChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: colors,
+        borderColor: themeBorderColor,
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '55%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: {
+            color: '#94a3b8',
+            font: { family: 'Inter', size: 12 },
+            boxWidth: 10,
+            padding: 8
+          }
+        },
+        tooltip: {
+          backgroundColor: '#1a2235',
+          callbacks: {
+            label: (c) => `${c.label}: ${fmtCurrency(c.parsed)}`
+          }
+        }
+      }
+    }
+  });
+}
+
+window.openLucroPrejuizoModal = function(tab = 'lucro') {
+  _lucroPrejuizoState.currentTab = tab;
+  _lucroPrejuizoState.page = 1;
+  switchLucroPrejuizoTab(tab);
+  document.getElementById('modal-lucro-prejuizo-overlay')?.classList.remove('hidden');
+  document.getElementById('main-content')?.setAttribute('aria-hidden', 'true');
+};
+
+window.closeLucroPrejuizoModal = function() {
+  document.getElementById('modal-lucro-prejuizo-overlay')?.classList.add('hidden');
+  document.getElementById('main-content')?.removeAttribute('aria-hidden');
+};
+
+window.switchLucroPrejuizoTab = function(tab) {
+  _lucroPrejuizoState.currentTab = tab;
+  _lucroPrejuizoState.page = 1;
+
+  const btnLucro = document.getElementById('modal-toggle-lucro');
+  const btnPrejuizo = document.getElementById('modal-toggle-prejuizo');
+  const modalTitle = document.getElementById('modal-lucro-prejuizo-title');
+
+  if (tab === 'lucro') {
+    if (btnLucro) btnLucro.className = 'modal-toggle-btn active-lucro';
+    if (btnPrejuizo) btnPrejuizo.className = 'modal-toggle-btn';
+    if (modalTitle) modalTitle.textContent = 'Posições no lucro';
+  } else {
+    if (btnLucro) btnLucro.className = 'modal-toggle-btn';
+    if (btnPrejuizo) btnPrejuizo.className = 'modal-toggle-btn active-prejuizo';
+    if (modalTitle) modalTitle.textContent = 'Posições no prejuízo';
+  }
+
+  renderLucroPrejuizoTable();
+};
+
+function renderLucroPrejuizoTable() {
+  const tbody = document.getElementById('modal-lucro-prejuizo-tbody');
+  const paginationEl = document.getElementById('modal-lucro-pagination');
+  if (!tbody) return;
+
+  const isLucro = _lucroPrejuizoState.currentTab === 'lucro';
+  const list = isLucro ? _lucroPrejuizoState.lucroList : _lucroPrejuizoState.prejuizoList;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:2rem;">Nenhuma posição no ${isLucro ? 'lucro' : 'prejuízo'} registrada.</td></tr>`;
+    if (paginationEl) paginationEl.innerHTML = '';
+    return;
+  }
+
+  const page = _lucroPrejuizoState.page;
+  const pageSize = _lucroPrejuizoState.pageSize;
+  const totalPages = Math.ceil(list.length / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const pageItems = list.slice(startIndex, startIndex + pageSize);
+
+  tbody.innerHTML = pageItems.map(a => {
+    const isUp = a.rentabilidade >= 0;
+    const rClass = isUp ? 'badge-pill--up' : 'badge-pill--down';
+    const vClass = (a.variacao || 0) >= 0 ? 'inv-variation--up' : 'inv-variation--down';
+    const arrow = isUp ? '↗' : '↘';
+
+    return `
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+        <td style="padding: 0.75rem 0.5rem;">
+          <div class="inv-ticker-container">
+            ${a.logoUrl ? `<img src="${a.logoUrl}" class="inv-ticker-logo" alt="${escHtml(a.ticker)}" onerror="this.style.display='none'" />` : ''}
+            <div>
+              <strong>${escHtml(a.ticker)}</strong>
+              ${a.nome ? `<span style="display:block;font-size:0.75rem;color:var(--text-muted);">${escHtml(a.nome)}</span>` : ''}
+            </div>
+          </div>
+        </td>
+        <td style="text-align: right; font-weight: 600; padding: 0.75rem 0.5rem;">${fmtCurrency(a.valorTotal || 0)}</td>
+        <td style="text-align: right; padding: 0.75rem 0.5rem;" class="${vClass}">${fmtPercent(a.variacao || 0)}</td>
+        <td style="text-align: right; padding: 0.75rem 0.5rem;">
+          <span class="badge-pill ${rClass}">
+            ${isUp ? '+' : ''}${a.rentabilidade.toFixed(2).replace('.', ',')}% ${arrow}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  if (paginationEl) {
+    if (totalPages <= 1) {
+      paginationEl.innerHTML = '';
+      return;
+    }
+
+    let pPrev = `<button class="btn btn--secondary btn--sm" ${page <= 1 ? 'disabled' : ''} onclick="changeLucroPage(${page - 1})">Anterior</button>`;
+    let pNext = `<button class="btn btn--secondary btn--sm" ${page >= totalPages ? 'disabled' : ''} onclick="changeLucroPage(${page + 1})">Próximo</button>`;
+
+    let pNums = '';
+    for (let p = 1; p <= totalPages; p++) {
+      pNums += `<button class="btn btn--sm ${p === page ? 'btn--primary' : 'btn--secondary'}" onclick="changeLucroPage(${p})">${p}</button>`;
+    }
+
+    paginationEl.innerHTML = `${pPrev} ${pNums} ${pNext}`;
+  }
+}
+
+window.changeLucroPage = function(page) {
+  _lucroPrejuizoState.page = page;
+  renderLucroPrejuizoTable();
+};

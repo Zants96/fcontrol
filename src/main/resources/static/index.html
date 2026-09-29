@@ -466,8 +466,12 @@
       
       <!-- Distribuição da Carteira -->
       <div class="chart-card">
-        <div class="chart-card-header">
-          <h2 class="chart-title">Distribuição da Carteira</h2>
+        <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 class="chart-title" id="chart-inv-dist-title">Distribuição da Carteira</h2>
+          <div style="display: flex; gap: 0.25rem; background: var(--bg-hover); padding: 3px; border-radius: 6px; border: 1px solid var(--border);">
+            <button id="btn-dist-tipo" class="btn btn--secondary btn--sm active" onclick="switchDistChartMode('tipo')" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">Por Tipo</button>
+            <button id="btn-dist-tatica" class="btn btn--secondary btn--sm" onclick="switchDistChartMode('tatica')" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">Por Tática</button>
+          </div>
         </div>
         <div class="chart-wrapper chart-wrapper--donut" style="height: 280px;">
           <canvas id="chart-inv-dist"></canvas>
@@ -534,14 +538,60 @@
     <!-- Acordeões (Ativos por Tipo) -->
     <div id="inv-acordeoes"></div>
 
-    <!-- Sniper Mode: Oportunidades Táticas & Smart Split Aporte Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-top: 2rem; margin-bottom: 1.5rem;">
+    <!-- Cards de Destaques, Posições no Lucro & Aporte Inteligente -->
+    <div class="destaques-grid-row">
+      <!-- Card 1: Destaques da Carteira -->
+      <div class="chart-card destaque-card">
+        <div class="destaque-card-header">
+          <h3 class="destaque-card-title">DESTAQUES DA CARTEIRA</h3>
+        </div>
+        <div class="destaque-card-body">
+          <div class="destaque-col">
+            <span class="destaque-label">Melhor posição</span>
+            <strong id="destaque-melhor-ticker" class="destaque-ticker">-</strong>
+            <span id="destaque-melhor-badge" class="badge-pill badge-pill--up">-</span>
+          </div>
+          <div class="destaque-col" style="align-items: flex-end;">
+            <span class="destaque-label">Pior posição</span>
+            <strong id="destaque-pior-ticker" class="destaque-ticker">-</strong>
+            <span id="destaque-pior-badge" class="badge-pill badge-pill--down">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Posições no Lucro -->
+      <div class="chart-card destaque-card">
+        <div class="destaque-card-header">
+          <h3 class="destaque-card-title">POSIÇÕES NO LUCRO</h3>
+        </div>
+        <div class="destaque-card-body-col">
+          <div class="destaque-metric-row">
+            <span id="lucro-metric-count" class="destaque-metric-text">0 de 0</span>
+            <span id="lucro-metric-pct" class="badge-pill badge-pill--pct">0%</span>
+          </div>
+          <div class="destaque-progress-bar">
+            <div id="lucro-progress-fill" class="destaque-progress-fill" style="width: 0%;"></div>
+          </div>
+          <div class="destaque-sub-actions">
+            <button type="button" class="destaque-sub-btn destaque-sub-btn--up" onclick="openLucroPrejuizoModal('lucro')">
+              <span id="lucro-sub-count">0 no lucro</span> ▲
+            </button>
+            <button type="button" class="destaque-sub-btn destaque-sub-btn--down" onclick="openLucroPrejuizoModal('prejuizo')">
+              <span id="prejuizo-sub-count">0 no prejuízo</span> ▼
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sniper Mode: Oportunidades Táticas & Distribuição Tática Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-top: 1rem; margin-bottom: 1.5rem;">
       
       <!-- Oportunidades Táticas -->
       <div class="chart-card">
         <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-            <h2 class="chart-title" style="margin: 0;">Oportunidades Táticas</h2>
+            <h2 class="chart-title" style="margin: 0;">OPORTUNIDADES TÁTICAS</h2>
             <span id="sniper-ops-count" class="inv-badge" style="background:#8b5cf620; color:#8b5cf6; white-space: nowrap;">0 Gatilhos</span>
           </div>
           <button class="btn btn--secondary" onclick="renderSniperOpportunities()" style="font-size: 0.75rem; padding: 0.35rem 0.75rem; white-space: nowrap; margin-left: auto;">Atualizar</button>
@@ -565,6 +615,7 @@
         </div>
         <div id="aporte-resultado-container" style="max-height: 250px; overflow-y: auto;"></div>
       </div>
+
     </div>
 
     <!-- Metas por Tipo de Ativo -->
@@ -1066,7 +1117,55 @@
   </div>
 </div>
 
-<!-- ═══ TOAST NOTIFICATION ════════════════════════════════════════════════ -->
+<!-- ═══ MODAL: POSIÇÕES NO LUCRO / PREJUÍZO ═════════════════════════════════ -->
+<div class="modal-overlay hidden" id="modal-lucro-prejuizo-overlay" aria-hidden="true">
+  <div class="modal modal--large" role="dialog" aria-modal="true" style="max-width: 680px;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-lucro-prejuizo-title">Posições no lucro</h2>
+      <button class="modal-close" onclick="closeLucroPrejuizoModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 1.25rem;">
+      
+      <!-- Alert Info -->
+      <div class="destaque-modal-banner">
+        <span style="font-size: 1.1rem; color: #3b82f6;">ⓘ</span>
+        <span>Consideramos a rentabilidade para fornecer a informação dos ativos no lucro e no prejuízo.</span>
+      </div>
+
+      <!-- Pill Toggle Header -->
+      <div style="display: flex; justify-content: center; margin: 1.25rem 0 1rem;">
+        <div class="destaque-modal-toggles">
+          <button id="modal-toggle-lucro" class="modal-toggle-btn active-lucro" onclick="switchLucroPrejuizoTab('lucro')">
+            <span id="modal-toggle-lucro-count">0 no lucro</span> ▲
+          </button>
+          <button id="modal-toggle-prejuizo" class="modal-toggle-btn" onclick="switchLucroPrejuizoTab('prejuizo')">
+            <span id="modal-toggle-prejuizo-count">0 no prejuízo</span> ▼
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabela do Modal -->
+      <table class="data-table modal-table" style="width: 100%;">
+        <thead>
+          <tr>
+            <th style="text-align: left;">Ativo</th>
+            <th style="text-align: right;">Valor</th>
+            <th style="text-align: right;">Variação</th>
+            <th style="text-align: right;">Rentabilidade</th>
+          </tr>
+        </thead>
+        <tbody id="modal-lucro-prejuizo-tbody">
+          <!-- preenchido via JS -->
+        </tbody>
+      </table>
+
+      <!-- Paginação -->
+      <div id="modal-lucro-pagination" style="display: flex; justify-content: center; gap: 0.35rem; margin-top: 1.25rem;">
+      </div>
+
+    </div>
+  </div>
+</div>
 <div class="toast hidden" id="toast" role="alert" aria-live="assertive"></div>
 
 <script src="/js/utils.js?v=1.1"></script>
