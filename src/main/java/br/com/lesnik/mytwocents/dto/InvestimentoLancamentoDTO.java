@@ -1,5 +1,6 @@
 package br.com.lesnik.mytwocents.dto;
 
+import br.com.lesnik.mytwocents.model.CategoriaTatica;
 import br.com.lesnik.mytwocents.model.TipoAtivo;
 import br.com.lesnik.mytwocents.model.TipoOperacao;
 import jakarta.validation.constraints.*;
@@ -23,6 +24,8 @@ public class InvestimentoLancamentoDTO {
 
     @NotNull(message = "O tipo do ativo é obrigatório")
     private TipoAtivo tipoAtivo;
+
+    private CategoriaTatica categoriaTatica;
 
     @NotNull(message = "O tipo de operação é obrigatório")
     private TipoOperacao tipoOperacao;
