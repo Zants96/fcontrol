@@ -125,26 +125,36 @@ public class SniperEngineService {
                         ? ativoSeguranca.getPrecoAtual()
                         : BigDecimal.ONE;
 
-                BigDecimal cotas = alocarSeguranca.divide(preco, 4, RoundingMode.HALF_UP);
-                BigDecimal pctAporte = alocarSeguranca.divide(valorAporte, 4, RoundingMode.HALF_UP)
-                        .multiply(new BigDecimal("100"));
+                BigDecimal minimo = calcularMinimoAporte(ativoSeguranca);
+                if (alocarSeguranca.compareTo(minimo) >= 0) {
+                    BigDecimal cotas = calcularCotas(ativoSeguranca, alocarSeguranca);
+                    // Recalcula valor real baseado em cotas inteiras (para ativos não fracionáveis)
+                    BigDecimal valorReal = ativoSeguranca.getTipoAtivo() == TipoAtivo.CRIPTO
+                            || ativoSeguranca.getTipoAtivo() == TipoAtivo.RENDA_FIXA
+                            || ativoSeguranca.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO
+                            ? alocarSeguranca
+                            : cotas.multiply(preco).setScale(2, RoundingMode.HALF_UP);
 
-                itens.add(AporteItemDTO.builder()
-                        .ativoId(ativoSeguranca.getId())
-                        .ticker(ativoSeguranca.getTicker())
-                        .nome(ativoSeguranca.getNome() != null ? ativoSeguranca.getNome() : ativoSeguranca.getTicker())
-                        .categoriaTatica(getCategoriaTaticaEfetiva(ativoSeguranca))
-                        .tipoAtivo(ativoSeguranca.getTipoAtivo())
-                        .cotasEstimadas(cotas)
-                        .precoAtual(preco)
-                        .valorAlocado(alocarSeguranca.setScale(2, RoundingMode.HALF_UP))
-                        .percentualAporte(pctAporte.setScale(2, RoundingMode.HALF_UP))
-                        .deficit(overview.getValorFaltanteSeguranca())
-                        .ativoSeguranca(true)
-                        .build());
+                    BigDecimal pctAporte = valorReal.divide(valorAporte, 4, RoundingMode.HALF_UP)
+                            .multiply(new BigDecimal("100"));
 
-                disponivel = disponivel.subtract(alocarSeguranca);
-                msgLock = String.format("Cadeado de Segurança ATIVO: R$ %.2f direcionado para recompor a Reserva de Emergência.", alocarSeguranca);
+                    itens.add(AporteItemDTO.builder()
+                            .ativoId(ativoSeguranca.getId())
+                            .ticker(ativoSeguranca.getTicker())
+                            .nome(ativoSeguranca.getNome() != null ? ativoSeguranca.getNome() : ativoSeguranca.getTicker())
+                            .categoriaTatica(getCategoriaTaticaEfetiva(ativoSeguranca))
+                            .tipoAtivo(ativoSeguranca.getTipoAtivo())
+                            .cotasEstimadas(cotas)
+                            .precoAtual(preco)
+                            .valorAlocado(valorReal)
+                            .percentualAporte(pctAporte.setScale(2, RoundingMode.HALF_UP))
+                            .deficit(overview.getValorFaltanteSeguranca())
+                            .ativoSeguranca(true)
+                            .build());
+
+                    disponivel = disponivel.subtract(valorReal);
+                    msgLock = String.format("Cadeado de Segurança ATIVO: R$ %.2f direcionado para recompor a Reserva de Emergência.", valorReal);
+                }
             }
         }
 
@@ -250,7 +260,29 @@ public class SniperEngineService {
                                         ? a.getPrecoAtual()
                                         : BigDecimal.ONE;
 
-                                BigDecimal cotas = share.divide(preco, 4, RoundingMode.HALF_UP);
+                                BigDecimal minimo = calcularMinimoAporte(a);
+
+                                // Pula ativos cujo share não atinge o mínimo de aporte
+                                if (share.compareTo(minimo) < 0) {
+                                    // Não subtrai de disponivel — fica como sobra de caixa
+                                    continue;
+                                }
+
+                                BigDecimal cotas = calcularCotas(a, share);
+                                // Para ativos com cotas inteiras, recalcula o valor real
+                                BigDecimal valorReal = (a.getTipoAtivo() == TipoAtivo.CRIPTO
+                                        || a.getTipoAtivo() == TipoAtivo.RENDA_FIXA
+                                        || a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
+                                        ? share
+                                        : cotas.multiply(preco).setScale(2, RoundingMode.HALF_UP);
+
+                                // Se após arredondamento ficou menor que o mínimo, pula
+                                if (valorReal.compareTo(minimo) < 0) {
+                                    continue;
+                                }
+
+                                BigDecimal pctAporteReal = valorReal.divide(valorAporte, 4, RoundingMode.HALF_UP)
+                                        .multiply(new BigDecimal("100"));
 
                                 // Atualiza se já existir no item de segurança ou cria novo
                                 Optional<AporteItemDTO> existente = itens.stream()
@@ -259,8 +291,8 @@ public class SniperEngineService {
 
                                 if (existente.isPresent()) {
                                     AporteItemDTO item = existente.get();
-                                    item.setValorAlocado(item.getValorAlocado().add(share));
-                                    item.setCotasEstimadas(item.getValorAlocado().divide(preco, 4, RoundingMode.HALF_UP));
+                                    item.setValorAlocado(item.getValorAlocado().add(valorReal));
+                                    item.setCotasEstimadas(calcularCotas(a, item.getValorAlocado()));
                                     item.setPercentualAporte(item.getValorAlocado().divide(valorAporte, 4, RoundingMode.HALF_UP).multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP));
                                 } else {
                                     itens.add(AporteItemDTO.builder()
@@ -271,14 +303,20 @@ public class SniperEngineService {
                                             .tipoAtivo(a.getTipoAtivo())
                                             .cotasEstimadas(cotas)
                                             .precoAtual(preco)
-                                            .valorAlocado(share)
-                                            .percentualAporte(pctAporte.setScale(2, RoundingMode.HALF_UP))
+                                            .valorAlocado(valorReal)
+                                            .percentualAporte(pctAporteReal.setScale(2, RoundingMode.HALF_UP))
                                             .deficit(deficit.setScale(2, RoundingMode.HALF_UP))
                                             .ativoSeguranca(false)
                                             .build());
                                 }
+
+                                disponivel = disponivel.subtract(valorReal);
                             } else {
                                 // Ativo nulo = Novo Tesouro Direto (sugestão de compra de novo título)
+                                // Mínimo para Tesouro sem preço conhecido: R$ 1,00 (1% de ~R$ 100)
+                                if (share.compareTo(new BigDecimal("1.00")) < 0) {
+                                    continue;
+                                }
                                 itens.add(AporteItemDTO.builder()
                                         .ticker("Novo Tesouro Direto")
                                         .nome("Novo Tesouro Direto")
@@ -291,11 +329,11 @@ public class SniperEngineService {
                                         .deficit(deficit.setScale(2, RoundingMode.HALF_UP))
                                         .ativoSeguranca(false)
                                         .build());
-                            }
 
-                            disponivel = disponivel.subtract(share);
-                        }
-                    }
+                                disponivel = disponivel.subtract(share);
+                            }
+                        } // fecha if (share > 0)
+                    } // fecha for
                 } else {
                     // Sem déficit específico: rateia de acordo com a metaPercent
                     BigDecimal somaMetas = ativosElegiveis.stream()
@@ -312,8 +350,23 @@ public class SniperEngineService {
                                         ? a.getPrecoAtual()
                                         : BigDecimal.ONE;
 
-                                BigDecimal cotas = share.divide(preco, 4, RoundingMode.HALF_UP);
-                                BigDecimal pctAporte = share.divide(valorAporte, 4, RoundingMode.HALF_UP)
+                                BigDecimal minimo = calcularMinimoAporte(a);
+                                if (share.compareTo(minimo) < 0) {
+                                    continue; // Abaixo do mínimo — fica como sobra
+                                }
+
+                                BigDecimal cotas = calcularCotas(a, share);
+                                BigDecimal valorReal = (a.getTipoAtivo() == TipoAtivo.CRIPTO
+                                        || a.getTipoAtivo() == TipoAtivo.RENDA_FIXA
+                                        || a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
+                                        ? share
+                                        : cotas.multiply(preco).setScale(2, RoundingMode.HALF_UP);
+
+                                if (valorReal.compareTo(minimo) < 0) {
+                                    continue;
+                                }
+
+                                BigDecimal pctAporte = valorReal.divide(valorAporte, 4, RoundingMode.HALF_UP)
                                         .multiply(new BigDecimal("100"));
 
                                 itens.add(AporteItemDTO.builder()
@@ -324,17 +377,65 @@ public class SniperEngineService {
                                         .tipoAtivo(a.getTipoAtivo())
                                         .cotasEstimadas(cotas)
                                         .precoAtual(preco)
-                                        .valorAlocado(share)
+                                        .valorAlocado(valorReal)
                                         .percentualAporte(pctAporte.setScale(2, RoundingMode.HALF_UP))
                                         .deficit(BigDecimal.ZERO)
                                         .ativoSeguranca(false)
                                         .build());
 
-                                disponivel = disponivel.subtract(share);
+                                disponivel = disponivel.subtract(valorReal);
                             }
                         }
                     }
                 }
+            }
+        }
+
+        // Passo 3: Redirecionar sobra ≥ R$ 1,00 para CDB
+        // O arredondamento de cotas inteiras pode deixar sobras significativas.
+        // Se a sobra for suficiente para ao menos R$ 1,00, aplicar no CDB disponível.
+        if (disponivel.compareTo(new BigDecimal("1.00")) >= 0) {
+            Ativo cdb = ativos.stream()
+                    .filter(a -> a.getTipoAtivo() == TipoAtivo.RENDA_FIXA)
+                    .findFirst()
+                    .orElse(null);
+
+            if (cdb != null) {
+                BigDecimal sobra = disponivel;
+                BigDecimal precoCdb = cdb.getPrecoAtual() != null && cdb.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
+                        ? cdb.getPrecoAtual() : BigDecimal.ONE;
+
+                BigDecimal pctAporte = sobra.divide(valorAporte, 4, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100"));
+
+                // Verifica se já existe o CDB na lista de itens
+                Optional<AporteItemDTO> cdbExistente = itens.stream()
+                        .filter(i -> i.getAtivoId() != null && i.getAtivoId().equals(cdb.getId()))
+                        .findFirst();
+
+                if (cdbExistente.isPresent()) {
+                    AporteItemDTO item = cdbExistente.get();
+                    item.setValorAlocado(item.getValorAlocado().add(sobra));
+                    item.setCotasEstimadas(item.getValorAlocado().divide(precoCdb, 4, RoundingMode.HALF_UP));
+                    item.setPercentualAporte(item.getValorAlocado().divide(valorAporte, 4, RoundingMode.HALF_UP)
+                            .multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP));
+                } else {
+                    itens.add(AporteItemDTO.builder()
+                            .ativoId(cdb.getId())
+                            .ticker(cdb.getTicker())
+                            .nome(cdb.getNome() != null ? cdb.getNome() : cdb.getTicker())
+                            .categoriaTatica(getCategoriaTaticaEfetiva(cdb))
+                            .tipoAtivo(TipoAtivo.RENDA_FIXA)
+                            .cotasEstimadas(sobra.divide(precoCdb, 4, RoundingMode.HALF_UP))
+                            .precoAtual(precoCdb)
+                            .valorAlocado(sobra.setScale(2, RoundingMode.HALF_UP))
+                            .percentualAporte(pctAporte.setScale(2, RoundingMode.HALF_UP))
+                            .deficit(BigDecimal.ZERO)
+                            .ativoSeguranca(false)
+                            .build());
+                }
+
+                disponivel = BigDecimal.ZERO;
             }
         }
 
@@ -378,6 +479,55 @@ public class SniperEngineService {
             config.setMonthlyIncome(monthlyIncome);
         }
         return aiConfigRepository.save(config);
+    }
+
+    // ─── MÍNIMO DE APORTE POR TIPO DE ATIVO ────────────────────────────────────
+
+    /**
+     * Calcula o valor mínimo de aporte para um ativo de acordo com as regras:
+     * - CRIPTO: sem mínimo (frações permitidas) → retorna ZERO
+     * - RENDA_FIXA (CDB): mínimo R$ 1,00
+     * - TESOURO_DIRETO / SELIC: mínimo 1% do preço unitário do título
+     * - Demais (ACAO, FII, ETF): mínimo = preço de 1 cota
+     */
+    private BigDecimal calcularMinimoAporte(Ativo a) {
+        if (a == null) return BigDecimal.ZERO;
+        TipoAtivo tipo = a.getTipoAtivo();
+        BigDecimal preco = a.getPrecoAtual() != null && a.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
+                ? a.getPrecoAtual() : BigDecimal.ONE;
+
+        if (tipo == TipoAtivo.CRIPTO) {
+            return BigDecimal.ZERO; // frações permitidas
+        } else if (tipo == TipoAtivo.RENDA_FIXA) {
+            return new BigDecimal("1.00"); // CDB mínimo R$ 1,00
+        } else if (tipo == TipoAtivo.TESOURO_DIRETO) {
+            // Mínimo = 1% do preço unitário do título
+            return preco.multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            // ACAO, FII, ETF: mínimo = 1 cota inteira
+            return preco;
+        }
+    }
+
+    /**
+     * Calcula o número de cotas compráveis com o valor disponível.
+     * Para CRIPTO e RENDA_FIXA e TESOURO_DIRETO: aceita frações.
+     * Para ACAO, FII, ETF: arredonda para baixo (cotas inteiras).
+     */
+    private BigDecimal calcularCotas(Ativo a, BigDecimal valor) {
+        if (a == null || valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
+        TipoAtivo tipo = a.getTipoAtivo();
+        BigDecimal preco = a.getPrecoAtual() != null && a.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
+                ? a.getPrecoAtual() : BigDecimal.ONE;
+
+        BigDecimal cotas = valor.divide(preco, 4, RoundingMode.HALF_UP);
+
+        if (tipo == TipoAtivo.CRIPTO || tipo == TipoAtivo.RENDA_FIXA || tipo == TipoAtivo.TESOURO_DIRETO) {
+            return cotas; // frações permitidas
+        } else {
+            // Arredonda para baixo (cotas inteiras)
+            return cotas.setScale(0, RoundingMode.FLOOR).setScale(4, RoundingMode.UNNECESSARY);
+        }
     }
 
     // ─── MÉTODOS PRIVADOS AUXILIARES ─────────────────────────────────────────

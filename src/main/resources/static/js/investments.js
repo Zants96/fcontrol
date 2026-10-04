@@ -8,8 +8,12 @@ const TIPO_ATIVO_LABELS = {
 };
 
 const TIPO_ATIVO_COLORS = {
-  ACAO: '#60a5fa', FII: '#fb923c', RENDA_FIXA: '#34d399',
-  ETF: '#a78bfa', TESOURO_DIRETO: '#10b981', CRIPTO: '#fbbf24'
+  ACAO: '#60a5fa',          // Azul
+  FII: '#fb923c',           // Laranja
+  RENDA_FIXA: '#34d399',    // Verde esmeralda
+  ETF: '#a78bfa',           // Roxo
+  TESOURO_DIRETO: '#22d3ee', // Ciano
+  CRIPTO: '#fbbf24'         // Amarelo
 };
 
 const TIPO_ATIVO_ORDER = ['ACAO', 'FII', 'RENDA_FIXA', 'ETF', 'TESOURO_DIRETO', 'CRIPTO'];
@@ -23,11 +27,11 @@ const CATEGORIA_TATICA_LABELS = {
 };
 
 const CATEGORIA_TATICA_COLORS = {
-  SEGURANCA: '#10b981',
-  RENDA: '#3b82f6',
-  CRESCIMENTO: '#f59e0b',
-  GLOBAL: '#8b5cf6',
-  PREVIDENCIA: '#ec4899'
+  SEGURANCA: '#34d399',    // Verde esmeralda — igual à Renda Fixa (ativos de segurança)
+  RENDA: '#22d3ee',        // Ciano — igual ao Tesouro Direto (geração de renda)
+  CRESCIMENTO: '#fb923c',  // Laranja — ação/crescimento
+  GLOBAL: '#a78bfa',       // Roxo — ETFs globais
+  PREVIDENCIA: '#ec4899'   // Rosa — previdência
 };
 
 const CATEGORIA_TATICA_ORDER = ['SEGURANCA', 'RENDA', 'CRESCIMENTO', 'GLOBAL', 'PREVIDENCIA'];
@@ -1527,7 +1531,7 @@ async function renderProvHistoricoCard() {
 
 function buildTipoTooltipHtml(tipoBreakdown, title) {
   const tipoLabels = { ACAO: 'Ações', FII: 'FIIs', ETF: 'ETFs', RENDA_FIXA: 'Renda Fixa', TESOURO_DIRETO: 'Tesouro Direto', CRIPTO: 'Cripto' };
-  const tipoColors = { ACAO: '#60a5fa', FII: '#fb923c', ETF: '#a78bfa', RENDA_FIXA: '#34d399', TESOURO_DIRETO: '#10b981', CRIPTO: '#fbbf24' };
+  const tipoColors = { ACAO: '#60a5fa', FII: '#fb923c', ETF: '#a78bfa', RENDA_FIXA: '#34d399', TESOURO_DIRETO: '#22d3ee', CRIPTO: '#fbbf24' };
   let html = title ? `<div style="font-size:0.72rem;font-weight:600;color:var(--text-muted);margin-bottom:0.4rem;">${title}</div>` : '';
   for (const [tipo, val] of Object.entries(tipoBreakdown)) {
     const cor = tipoColors[tipo] || '#94a3b8';
@@ -1984,18 +1988,24 @@ async function calcularAporteSmartSplitUI() {
         </tr>
       </thead>
       <tbody>
-        ${res.itens.map(item => `
+        ${res.itens.map(item => {
+          const tipo = item.tipoAtivo || '';
+          const cotas = parseFloat(item.cotasEstimadas || 0);
+          // Exibe frações para CRIPTO, RENDA_FIXA e TESOURO_DIRETO; inteiro para os demais
+          const fracionavel = tipo === 'CRIPTO' || tipo === 'RENDA_FIXA' || tipo === 'TESOURO_DIRETO';
+          const cotasStr = fracionavel ? cotas.toFixed(4) : Math.floor(cotas).toString();
+          return `
           <tr>
             <td>
               <strong>${escHtml(item.ticker)}</strong>
               ${item.ativoSeguranca ? '<span class="inv-badge" style="background:#10b98120;color:#10b981;font-size:0.65rem;margin-left:0.25rem;">Segurança</span>' : ''}
             </td>
-            <td>${parseFloat(item.cotasEstimadas || 0).toFixed(4)}</td>
+            <td>${cotasStr}</td>
             <td>${fmtCurrency(parseFloat(item.precoAtual || 0))}</td>
             <td style="font-weight: 700; color: var(--accent-green, #10b981);">${fmtCurrency(parseFloat(item.valorAlocado || 0))}</td>
             <td>${parseFloat(item.percentualAporte || 0).toFixed(1)}%</td>
           </tr>
-        `).join('')}
+        `}).join('')}
       </tbody>
     </table>
     <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem; text-align: right;">
