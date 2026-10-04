@@ -5,16 +5,16 @@
 const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
 const CHART_COLORS = {
-  green:  '#10b981',
-  greenLight: '#34d399',
-  red:    '#f87171',
-  blue:   '#60a5fa',
-  purple: '#a78bfa',
-  orange: '#fb923c',
-  yellow: '#fbbf24',
-  pink:   '#f472b6',
-  cyan:   '#22d3ee',
-  lime:   '#a3e635',
+  green:  '#34d399',   // Verde esmeralda (Renda Fixa / Segurança)
+  cyan:   '#22d3ee',   // Ciano (Tesouro Direto / Renda)
+  blue:   '#60a5fa',   // Azul (Ações)
+  purple: '#a78bfa',   // Roxo (ETF / Global)
+  orange: '#fb923c',   // Laranja (FIIs / Crescimento)
+  yellow: '#fbbf24',   // Amarelo (Cripto)
+  pink:   '#ec4899',   // Rosa (Previdência)
+  red:    '#f87171',   // Vermelho (negativo)
+  lime:   '#a3e635',   // Lime
+  indigo: '#818cf8',   // Índigo
 };
 
 const DONUT_COLORS = Object.values(CHART_COLORS);
@@ -264,7 +264,7 @@ function renderTopGastos(topGastos) {
 
   container.innerHTML = topGastos.map((item, i) => {
     const pct = max > 0 ? (parseFloat(item.valor) / max * 100).toFixed(1) : 0;
-    const colors = ['#10b981','#34d399','#60a5fa','#a78bfa','#fb923c'];
+    const colors = ['#34d399','#22d3ee','#60a5fa','#a78bfa','#fb923c'];
     return `
       <div class="top-item">
         <div class="top-rank">${i + 1}</div>
@@ -559,7 +559,7 @@ function renderMonthlyTopGastos(gastosPorSubcategoria, suffix = '') {
   }
 
   const max = entries[0][1];
-  const colors = ['#10b981','#34d399','#60a5fa','#a78bfa','#fb923c'];
+  const colors = ['#34d399','#22d3ee','#60a5fa','#a78bfa','#fb923c'];
 
   container.innerHTML = entries.map(([sub, val], i) => {
     const pct = max > 0 ? (val / max * 100).toFixed(1) : 0;
@@ -705,7 +705,7 @@ function renderMonthlyTopAportes(porSubcategoria) {
   }
 
   const max = entries[0][1];
-  const colors = ['#10b981', '#34d399', '#60a5fa', '#a78bfa', '#fb923c'];
+  const colors = ['#34d399', '#22d3ee', '#60a5fa', '#a78bfa', '#fb923c'];
 
   container.innerHTML = entries.map(([sub, val], i) => {
     const pct = max > 0 ? (val / max * 100).toFixed(1) : 0;
