@@ -29,17 +29,6 @@ public class SniperEngineService {
 
     private static final BigDecimal EM_LOCK_MIN_PCT = new BigDecimal("25.0");
 
-    // Proporções ideais da carteira por tipo de ativo
-    private static final Map<TipoAtivo, BigDecimal> PROPORCOES_POR_TIPO = new LinkedHashMap<>();
-    static {
-        PROPORCOES_POR_TIPO.put(TipoAtivo.ACAO, new BigDecimal("25"));
-        PROPORCOES_POR_TIPO.put(TipoAtivo.FII, new BigDecimal("15"));
-        PROPORCOES_POR_TIPO.put(TipoAtivo.RENDA_FIXA, new BigDecimal("20"));
-        PROPORCOES_POR_TIPO.put(TipoAtivo.ETF, new BigDecimal("15"));
-        PROPORCOES_POR_TIPO.put(TipoAtivo.TESOURO_DIRETO, new BigDecimal("20"));
-        PROPORCOES_POR_TIPO.put(TipoAtivo.CRIPTO, new BigDecimal("5"));
-    }
-
     @Transactional(readOnly = true)
     public SniperOverviewDTO obterOverview() {
         List<Ativo> ativos = ativoRepository.findByAtivoTrueOrderByTipoAtivoAscTickerAsc();
@@ -108,30 +97,41 @@ public class SniperEngineService {
         boolean lockAtivo = overview.isEmergencyLock();
         String msgLock = null;
 
-        // Passo 1: Cadeado de Segurança (Emergency Lock)
+        // Passo 1: Cadeado de Segurança (Emergency Lock / Segurança & Liquidez)
+        // Se a Reserva de Emergência estiver abaixo do alvo, direciona 60% do aporte para Segurança & Liquidez,
+        // reservando os 40% restantes para rebalancear a carteira via Smart Split.
         if (lockAtivo && overview.getValorFaltanteSeguranca().compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal tetoSeguranca = valorAporte.multiply(new BigDecimal("0.60")).setScale(2, RoundingMode.HALF_UP);
             BigDecimal alocarSeguranca = disponivel.min(overview.getValorFaltanteSeguranca());
 
-            // Procura ativo de segurança
+            // Se o valor faltante de segurança for maior que o aporte, limita a 60% para manter equilíbrio no rebalanceamento da carteira
+            if (alocarSeguranca.compareTo(tetoSeguranca) > 0 && tetoSeguranca.compareTo(new BigDecimal("1.00")) >= 0) {
+                alocarSeguranca = tetoSeguranca;
+            }
+
+            // Procura ativo de segurança (categoria tática SEGURANCA, ou CDB/SELIC/Poupança)
             Ativo ativoSeguranca = ativos.stream()
-                    .filter(a -> a.getCategoriaTatica() == CategoriaTatica.SEGURANCA
-                              || a.getTipoAtivo() == TipoAtivo.RENDA_FIXA
-                              || a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
+                    .filter(a -> getCategoriaTaticaEfetiva(a) == CategoriaTatica.SEGURANCA
+                              || (a.getTipoAtivo() == TipoAtivo.RENDA_FIXA && (a.getTicker().toUpperCase().contains("CDB") || (a.getNome() != null && a.getNome().toUpperCase().contains("CDB"))))
+                              || (a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO && (a.getTicker().toUpperCase().contains("SELIC") || (a.getNome() != null && a.getNome().toUpperCase().contains("SELIC")))))
                     .findFirst()
                     .orElse(ativos.isEmpty() ? null : ativos.get(0));
 
             if (ativoSeguranca != null) {
-                BigDecimal preco = ativoSeguranca.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
+                BigDecimal preco = ativoSeguranca.getPrecoAtual() != null && ativoSeguranca.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
                         ? ativoSeguranca.getPrecoAtual()
                         : BigDecimal.ONE;
 
                 BigDecimal minimo = calcularMinimoAporte(ativoSeguranca);
+                if (alocarSeguranca.compareTo(minimo) < 0 && disponivel.compareTo(minimo) >= 0) {
+                    alocarSeguranca = minimo.min(overview.getValorFaltanteSeguranca());
+                }
+
                 if (alocarSeguranca.compareTo(minimo) >= 0) {
                     BigDecimal cotas = calcularCotas(ativoSeguranca, alocarSeguranca);
-                    // Recalcula valor real baseado em cotas inteiras (para ativos não fracionáveis)
-                    BigDecimal valorReal = ativoSeguranca.getTipoAtivo() == TipoAtivo.CRIPTO
+                    BigDecimal valorReal = (ativoSeguranca.getTipoAtivo() == TipoAtivo.CRIPTO
                             || ativoSeguranca.getTipoAtivo() == TipoAtivo.RENDA_FIXA
-                            || ativoSeguranca.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO
+                            || ativoSeguranca.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
                             ? alocarSeguranca
                             : cotas.multiply(preco).setScale(2, RoundingMode.HALF_UP);
 
@@ -153,7 +153,7 @@ public class SniperEngineService {
                             .build());
 
                     disponivel = disponivel.subtract(valorReal);
-                    msgLock = String.format("Cadeado de Segurança ATIVO: R$ %.2f direcionado para recompor a Reserva de Emergência.", valorReal);
+                    msgLock = String.format("Segurança & Liquidez (Meta R$ %.2f): R$ %.2f (60%% do aporte) direcionado para recompor a reserva, mantendo o equilíbrio no rebalanceamento da carteira.", overview.getEmergencyBoxTarget(), valorReal);
                 }
             }
         }
