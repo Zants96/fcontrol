@@ -20,18 +20,22 @@ const TIPO_ATIVO_ORDER = ['ACAO', 'FII', 'RENDA_FIXA', 'ETF', 'TESOURO_DIRETO', 
 
 const CATEGORIA_TATICA_LABELS = {
   SEGURANCA: 'Segurança',
+  SEGURANÇA: 'Segurança',
   RENDA: 'Renda',
   CRESCIMENTO: 'Crescimento',
   GLOBAL: 'Global',
-  PREVIDENCIA: 'Previdência'
+  PREVIDENCIA: 'Previdência',
+  PREVIDÊNCIA: 'Previdência'
 };
 
 const CATEGORIA_TATICA_COLORS = {
   SEGURANCA: '#34d399',    // Verde esmeralda — igual à Renda Fixa (ativos de segurança)
+  SEGURANÇA: '#34d399',
   RENDA: '#22d3ee',        // Ciano — igual ao Tesouro Direto (geração de renda)
   CRESCIMENTO: '#fb923c',  // Laranja — ação/crescimento
   GLOBAL: '#a78bfa',       // Roxo — ETFs globais
-  PREVIDENCIA: '#ec4899'   // Rosa — previdência
+  PREVIDENCIA: '#ec4899',  // Rosa — previdência
+  PREVIDÊNCIA: '#ec4899'
 };
 
 const CATEGORIA_TATICA_ORDER = ['SEGURANCA', 'RENDA', 'CRESCIMENTO', 'GLOBAL', 'PREVIDENCIA'];
@@ -102,8 +106,8 @@ function renderInvDistChart(data) {
     if (data.ativosPorTipo) {
       Object.values(data.ativosPorTipo).forEach(lista => {
         (lista || []).forEach(a => {
-          const isRF = a.tipoAtivo === 'RENDA_FIXA' || a.tipoAtivo === 'TESOURO_DIRETO';
-          const catKey = a.categoriaTatica || 'RENDA';
+          let catKey = (a.categoriaTatica || 'RENDA').toString().toUpperCase().trim();
+          catKey = catKey.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
           const val = parseFloat(a.valorTotal || 0);
           if (val > 0) {
             taticaTotals[catKey] = (taticaTotals[catKey] || 0) + val;
@@ -464,7 +468,7 @@ function renderInvAcordeoes(data) {
                     ${a.logoUrl ? `<img src="${a.logoUrl}" class="inv-ticker-logo" alt="${escHtml(a.ticker)}" onerror="this.style.display='none'" />` : ''}
                     <div>
                       <strong>${escHtml(a.ticker)}</strong>
-                      <span style="display: block; font-size: 0.71rem; color: ${CATEGORIA_TATICA_COLORS[a.categoriaTatica] || '#94a3b8'}; font-weight: 600; margin-top: 1px;">${escHtml(CATEGORIA_TATICA_LABELS[a.categoriaTatica] || 'Renda')}</span>
+                      <span style="display: block; font-size: 0.71rem; color: ${CATEGORIA_TATICA_COLORS[(a.categoriaTatica || 'SEGURANCA').toString().toUpperCase()] || '#34d399'}; font-weight: 600; margin-top: 1px;">${escHtml(CATEGORIA_TATICA_LABELS[(a.categoriaTatica || 'SEGURANCA').toString().toUpperCase()] || a.categoriaTatica || 'Segurança')}</span>
                     </div>
                   </div>
                 </td>
@@ -2164,6 +2168,7 @@ window.salvarMetasPorTipo = async function() {
   }
 };
 
+
 // Carrega metas quando a aba de investimentos for exibida
 setTimeout(function() {
   if (document.getElementById('metas-por-tipo-container')) {
@@ -2282,8 +2287,8 @@ function renderMiniTaticaChart(allAtivos) {
 
   const taticaTotals = {};
   allAtivos.forEach(a => {
-    const isRF = a.tipoAtivo === 'RENDA_FIXA' || a.tipoAtivo === 'TESOURO_DIRETO';
-    const catKey = a.categoriaTatica || 'RENDA';
+    let catKey = (a.categoriaTatica || 'RENDA').toString().toUpperCase().trim();
+    catKey = catKey.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     taticaTotals[catKey] = (taticaTotals[catKey] || 0) + (a.valorTotal || 0);
   });
 

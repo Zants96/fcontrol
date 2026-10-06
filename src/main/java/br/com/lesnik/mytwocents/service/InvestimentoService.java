@@ -437,6 +437,7 @@ public class InvestimentoService {
                             .rendimentoMensal(rendimentoMensal)
                             .dataLancamento(tx.getData())
                             .dy(BigDecimal.ZERO)
+                            .categoriaTatica(a.getCategoriaTatica() != null && a.getCategoriaTatica() != CategoriaTatica.RENDA ? a.getCategoriaTatica() : CategoriaTaticaUtils.inferirCategoriaTatica(a))
                             .build();
 
                     dtos.add(launchDto);
@@ -889,7 +890,7 @@ public class InvestimentoService {
                 .taxa(a.getTaxa())
                 .rendimentoMensal(rendimentoMensal)
                 .dy(dy)
-                .categoriaTatica(CategoriaTaticaUtils.inferirCategoriaTatica(a))
+                .categoriaTatica(a.getCategoriaTatica() != null && a.getCategoriaTatica() != CategoriaTatica.RENDA ? a.getCategoriaTatica() : CategoriaTaticaUtils.inferirCategoriaTatica(a))
                 .ciclico(a.isCiclico())
                 .estrutural(a.isEstrutural())
                 .build();
@@ -900,12 +901,15 @@ public class InvestimentoService {
                 ? AiService.normalizarTipoProvento(l.getTipoProvento())
                 : l.getTipoProvento();
 
+        Ativo a = l.getAtivo();
+        CategoriaTatica cat = a.getCategoriaTatica() != null && a.getCategoriaTatica() != CategoriaTatica.RENDA ? a.getCategoriaTatica() : CategoriaTaticaUtils.inferirCategoriaTatica(a);
+
         return InvestimentoLancamentoDTO.builder()
                 .id(l.getId())
                 .ativoId(l.getAtivo().getId())
                 .ticker(l.getAtivo().getTicker())
                 .tipoAtivo(l.getAtivo().getTipoAtivo())
-                .categoriaTatica(CategoriaTaticaUtils.inferirCategoriaTatica(l.getAtivo()))
+                .categoriaTatica(cat)
                 .tipoOperacao(l.getTipoOperacao())
                 .data(l.getData())
                 .quantidade(l.getQuantidade())
@@ -1082,15 +1086,6 @@ public class InvestimentoService {
         return map;
     }
 
-    private static final java.util.Map<TipoAtivo, BigDecimal> PROPORCOES_IDEAIS = new java.util.LinkedHashMap<>();
-    static {
-        PROPORCOES_IDEAIS.put(TipoAtivo.ACAO, new BigDecimal("25"));
-        PROPORCOES_IDEAIS.put(TipoAtivo.FII, new BigDecimal("15"));
-        PROPORCOES_IDEAIS.put(TipoAtivo.RENDA_FIXA, new BigDecimal("20"));
-        PROPORCOES_IDEAIS.put(TipoAtivo.ETF, new BigDecimal("15"));
-        PROPORCOES_IDEAIS.put(TipoAtivo.TESOURO_DIRETO, new BigDecimal("20"));
-        PROPORCOES_IDEAIS.put(TipoAtivo.CRIPTO, new BigDecimal("5"));
-    }
 
     private Map<TipoAtivo, BigDecimal> calcularDistribuicaoIdeal(List<Ativo> ativos, BigDecimal patrimonioTotal) {
         Map<TipoAtivo, BigDecimal> distribuicaoIdeal = new LinkedHashMap<>();
