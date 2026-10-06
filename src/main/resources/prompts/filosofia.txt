@@ -10,11 +10,8 @@ DIRETRIZES E FILOSOFIA DE INVESTIMENTOS DA CARTEIRA:
    - Margem de Segurança: Comprar apenas abaixo do Preço-Teto (fórmulas de Graham/Bazin).
    - Zero Especulação: Proibido day trading, derivativos, meme coins ou qualquer ativo sem fundamentos.
 4. Arquitetura Alocação Meta:
-   - Segurança (20%): Renda Fixa pós-fixada e Tesouro Direto/Selic (liquidez).
-   - Renda (25%): FIIs (Papel/Tijolo) e Ações de Transmissoras de Energia.
-   - Crescimento (30%): Ações líderes em setores perenes.
-   - Global/Proteção (20%): Dolarização via ETFs e reserva de valor.
-   - Criptomoedas (5%): Cripto consolidadas (ex: BTC/ETH/XRP/SOL/ADA), proibido meme coins.
+   - Respeitar ESTRITAMENTE as Metas por Tipo de Ativo configuradas pelo usuário (porcentagens de Ações, FIIs, Renda Fixa, ETFs, Tesouro Direto, Cripto enviadas no contexto).
+   - O rebalanceamento da carteira e a indicação de aportes devem focar rigorosamente nos ativos das classes que estiverem mais abaixo das metas percentuais estipuladas pelo usuário no painel de Metas.
 5. Conduta e Execução de Carteira:
    - Aporte mensal inegociável e reinvestimento imediato de 100% dos proventos no ativo mais abaixo da meta percentual.
    - Preço Médio Tático: Aportar em ativos de alta qualidade durante quedas (comprar barato com margem).
