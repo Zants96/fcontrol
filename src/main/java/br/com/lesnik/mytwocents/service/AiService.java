@@ -699,6 +699,18 @@ public class AiService {
             }
             ctx.append("\n");
 
+            AiConfig config = configRepository.findFirstByOrderByIdDesc().orElse(null);
+            if (config != null) {
+                ctx.append("METAS PERCENTUAIS POR TIPO DE ATIVO CONFIGURADAS PELO USUÁRIO (ALOCAÇÃO ALVO):\n");
+                ctx.append("- AÇÕES: ").append(config.getMetaAcao() != null ? config.getMetaAcao() : new BigDecimal("25.00")).append("%\n");
+                ctx.append("- FIIs: ").append(config.getMetaFii() != null ? config.getMetaFii() : new BigDecimal("15.00")).append("%\n");
+                ctx.append("- RENDA FIXA: ").append(config.getMetaRendaFixa() != null ? config.getMetaRendaFixa() : new BigDecimal("20.00")).append("%\n");
+                ctx.append("- ETFs: ").append(config.getMetaEtf() != null ? config.getMetaEtf() : new BigDecimal("15.00")).append("%\n");
+                ctx.append("- TESOURO DIRETO: ").append(config.getMetaTesouro() != null ? config.getMetaTesouro() : new BigDecimal("20.00")).append("%\n");
+                ctx.append("- CRIPTOMOEDAS: ").append(config.getMetaCripto() != null ? config.getMetaCripto() : new BigDecimal("5.00")).append("%\n\n");
+            }
+
+
             ctx.append("POSIÇÕES ATUAIS (ATIVOS NA CARTEIRA):\n");
             if (dashboard.getAtivosPorTipo() != null) {
                 dashboard.getAtivosPorTipo().forEach((tipo, ativos) -> {
@@ -862,6 +874,18 @@ public class AiService {
                         }
                     });
                 }
+
+                AiConfig config = configRepository.findFirstByOrderByIdDesc().orElse(null);
+                if (config != null) {
+                    ctx.append("\nMETAS PERCENTUAIS POR TIPO DE ATIVO CONFIGURADAS PELO USUÁRIO (ALOCAÇÃO ALVO):\n");
+                    ctx.append("- Ações: ").append(config.getMetaAcao() != null ? config.getMetaAcao() : new BigDecimal("25.00")).append("%\n");
+                    ctx.append("- FIIs: ").append(config.getMetaFii() != null ? config.getMetaFii() : new BigDecimal("15.00")).append("%\n");
+                    ctx.append("- Renda Fixa: ").append(config.getMetaRendaFixa() != null ? config.getMetaRendaFixa() : new BigDecimal("20.00")).append("%\n");
+                    ctx.append("- ETFs: ").append(config.getMetaEtf() != null ? config.getMetaEtf() : new BigDecimal("15.00")).append("%\n");
+                    ctx.append("- Tesouro Direto: ").append(config.getMetaTesouro() != null ? config.getMetaTesouro() : new BigDecimal("20.00")).append("%\n");
+                    ctx.append("- Criptomoedas: ").append(config.getMetaCripto() != null ? config.getMetaCripto() : new BigDecimal("5.00")).append("%\n");
+                }
+
             } catch (Exception e) {
                 log.error("Erro ao incluir contexto de investimentos na IA: {}", e.getMessage());
             }
