@@ -37,7 +37,7 @@ public class MyTwoCentsDesktopApp extends Application {
     private static final String ENCRYPTED_MARKER = DB_DIR + File.separator + ".encrypted";
     private static final String HINT_FILE = DB_DIR + File.separator + ".hint";
 
-    private static final int DEFAULT_PORT = 8195;
+    private static final int DEFAULT_PORT = 8085;
     private static final int MAX_PORT = 9000;
 
     private ConfigurableApplicationContext springContext;
