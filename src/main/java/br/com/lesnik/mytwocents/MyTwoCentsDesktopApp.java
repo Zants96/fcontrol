@@ -37,8 +37,8 @@ public class MyTwoCentsDesktopApp extends Application {
     private static final String ENCRYPTED_MARKER = DB_DIR + File.separator + ".encrypted";
     private static final String HINT_FILE = DB_DIR + File.separator + ".hint";
 
-    private static final int DEFAULT_PORT = 8085;
-    private static final int MAX_PORT     = 9000;
+    private static final int DEFAULT_PORT = 8195;
+    private static final int MAX_PORT = 9000;
 
     private ConfigurableApplicationContext springContext;
     private Stage primaryStage;
@@ -305,7 +305,8 @@ public class MyTwoCentsDesktopApp extends Application {
                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
                 alert.setTitle("Dica de Senha");
                 alert.setHeaderText(null);
-                alert.setContentText("Nenhuma dica de senha foi cadastrada para esta base de dados.\n\nVocê pode definir uma dica ao criar ou restaurar a senha mestra.");
+                alert.setContentText(
+                        "Nenhuma dica de senha foi cadastrada para esta base de dados.\n\nVocê pode definir uma dica ao criar ou restaurar a senha mestra.");
                 alert.showAndWait();
             });
         }
@@ -339,7 +340,8 @@ public class MyTwoCentsDesktopApp extends Application {
 
         VBox content = new VBox(12);
         content.setPadding(new Insets(16, 16, 12, 16));
-        content.getChildren().addAll(titleLabel, infoLabel, new Separator(), passwordField, new Separator(), recoverySection);
+        content.getChildren().addAll(titleLabel, infoLabel, new Separator(), passwordField, new Separator(),
+                recoverySection);
 
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().setPrefWidth(440);
@@ -495,9 +497,10 @@ public class MyTwoCentsDesktopApp extends Application {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Zerar Banco de Dados");
         alert.setHeaderText("⚠️ ATENÇÃO: Esta ação é irreversível!");
-        alert.setContentText("Todos os seus lançamentos, investimentos e configurações serão apagados permanentemente.\n\n" +
-                "Esta opção deve ser usada apenas se você tiver certeza ou desejar começar do zero.\n\n" +
-                "Deseja realmente apagar todos os dados?");
+        alert.setContentText(
+                "Todos os seus lançamentos, investimentos e configurações serão apagados permanentemente.\n\n" +
+                        "Esta opção deve ser usada apenas se você tiver certeza ou desejar começar do zero.\n\n" +
+                        "Deseja realmente apagar todos os dados?");
 
         ButtonType confirmBtn = new ButtonType("Sim, Apagar Tudo", ButtonBar.ButtonData.OK_DONE);
         ButtonType cancelBtn = new ButtonType("Cancelar", ButtonBar.ButtonData.CANCEL_CLOSE);
@@ -509,7 +512,8 @@ public class MyTwoCentsDesktopApp extends Application {
             Alert info = new Alert(Alert.AlertType.INFORMATION);
             info.setTitle("Banco de Dados Zerado");
             info.setHeaderText(null);
-            info.setContentText("Os dados anteriores foram apagados com sucesso.\nAgora você poderá criar uma nova senha mestra.");
+            info.setContentText(
+                    "Os dados anteriores foram apagados com sucesso.\nAgora você poderá criar uma nova senha mestra.");
             info.showAndWait();
             return true;
         }
@@ -518,19 +522,24 @@ public class MyTwoCentsDesktopApp extends Application {
 
     private void deleteDatabaseFiles() {
         File dbFile = new File(DB_FILE);
-        if (dbFile.exists()) dbFile.delete();
+        if (dbFile.exists())
+            dbFile.delete();
 
         File traceFile = new File(DB_DIR + File.separator + DB_NAME + ".trace.db");
-        if (traceFile.exists()) traceFile.delete();
+        if (traceFile.exists())
+            traceFile.delete();
 
         File lockFile = new File(DB_DIR + File.separator + DB_NAME + ".lock.db");
-        if (lockFile.exists()) lockFile.delete();
+        if (lockFile.exists())
+            lockFile.delete();
 
         File markerFile = new File(ENCRYPTED_MARKER);
-        if (markerFile.exists()) markerFile.delete();
+        if (markerFile.exists())
+            markerFile.delete();
 
         File hintFile = new File(HINT_FILE);
-        if (hintFile.exists()) hintFile.delete();
+        if (hintFile.exists())
+            hintFile.delete();
     }
 
     private String handleRestoreBackupFromLogin() {
@@ -541,7 +550,8 @@ public class MyTwoCentsDesktopApp extends Application {
                     new FileChooser.ExtensionFilter("Backup Encriptado (*.mtc)", "*.mtc"));
 
             File file = fileChooser.showOpenDialog(primaryStage);
-            if (file == null) return null;
+            if (file == null)
+                return null;
 
             TextInputDialog pwdDialog = new TextInputDialog();
             pwdDialog.setTitle("Senha do Backup");
@@ -566,7 +576,8 @@ public class MyTwoCentsDesktopApp extends Application {
 
             Alert confirm = new Alert(
                     Alert.AlertType.CONFIRMATION,
-                    "ATENÇÃO: A restauração substituirá TODOS os dados atuais pelo conteúdo do backup.\n\nArquivo: " + file.getName()
+                    "ATENÇÃO: A restauração substituirá TODOS os dados atuais pelo conteúdo do backup.\n\nArquivo: "
+                            + file.getName()
                             + "\n\nDeseja continuar?",
                     ButtonType.YES, ButtonType.NO);
             confirm.setTitle("Confirmação de Restauração");
@@ -600,7 +611,8 @@ public class MyTwoCentsDesktopApp extends Application {
             TextInputDialog hintDialog = new TextInputDialog();
             hintDialog.setTitle("Dica de Senha");
             hintDialog.setHeaderText("Backup Restaurado com Sucesso!");
-            hintDialog.setContentText("Deseja cadastrar uma dica de senha para lembrar essa senha no futuro? (Opcional):");
+            hintDialog.setContentText(
+                    "Deseja cadastrar uma dica de senha para lembrar essa senha no futuro? (Opcional):");
             java.util.Optional<String> newHint = hintDialog.showAndWait();
             newHint.ifPresent(this::savePasswordHint);
 
@@ -672,12 +684,14 @@ public class MyTwoCentsDesktopApp extends Application {
      * O Spring usará estas propriedades ao inicializar o DataSource.
      */
     /**
-     * Encontra a primeira porta TCP disponível no intervalo [DEFAULT_PORT, MAX_PORT].
+     * Encontra a primeira porta TCP disponível no intervalo [DEFAULT_PORT,
+     * MAX_PORT].
      * Tenta abrir um ServerSocket em cada porta; a primeira que abrir sem exceção
      * é considerada livre.
      *
      * @return número da porta disponível
-     * @throws IllegalStateException se nenhuma porta estiver disponível no intervalo
+     * @throws IllegalStateException se nenhuma porta estiver disponível no
+     *                               intervalo
      */
     private int findAvailablePort() {
         for (int port = DEFAULT_PORT; port <= MAX_PORT; port++) {
@@ -690,7 +704,7 @@ public class MyTwoCentsDesktopApp extends Application {
         }
         throw new IllegalStateException(
                 "Nenhuma porta disponível no intervalo " + DEFAULT_PORT + "–" + MAX_PORT + ". " +
-                "Libere uma porta e tente novamente.");
+                        "Libere uma porta e tente novamente.");
     }
 
     private void configureEncryptedDatabase(String password) {
@@ -747,7 +761,8 @@ public class MyTwoCentsDesktopApp extends Application {
                     showErrorAlert("Erro de Inicialização",
                             "Não foi possível iniciar o servidor interno na porta " + serverPort + ".\n\n" +
                                     "Verifique se não há outra instância do app aberta " +
-                                    "ou se todas as portas no intervalo 8085–9000 estão ocupadas.\n\nErro: " + e.getMessage());
+                                    "ou se todas as portas no intervalo 8085–9000 estão ocupadas.\n\nErro: "
+                                    + e.getMessage());
                     Platform.exit();
                     System.exit(1);
                 });

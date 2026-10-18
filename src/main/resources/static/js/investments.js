@@ -47,6 +47,19 @@ let _invDividendosChart = null;
 // ─── LOAD ────────────────────────────────────────────────────────────────
 
 async function loadInvestimentos() {
+  const loader = $('loader-investimentos');
+  const view = $('view-investimentos');
+   // Show loader: cover the view content area, keep sidebar accessible
+  if (loader) loader.classList.remove('hidden');
+  // No need to block body scrolling; the loader overlay is already positioned over the view.
+  document.body.classList.add('loading-active');
+  // Hide all children except the loader so nothing is visible behind
+  if (view) {
+    view.classList.add('is-loading');
+    Array.from(view.children).forEach(child => {
+      if (child.id !== 'loader-investimentos') child.style.visibility = 'hidden';
+    });
+  }
   try {
     initInvEditModalListeners();
     const data = await Api.getInvestimentoDashboard();
@@ -66,6 +79,16 @@ async function loadInvestimentos() {
   } catch (err) {
     console.error('Erro ao carregar investimentos:', err);
     showToast('Erro ao carregar investimentos: ' + err.message, 'error');
+  } finally {
+    // Reveal content and hide loader
+    if (view) {
+      Array.from(view.children).forEach(child => {
+        if (child.id !== 'loader-investimentos') child.style.visibility = '';
+      });
+      view.classList.remove('is-loading');
+    }
+    if (loader) loader.classList.add('hidden');
+    // No body overflow manipulation.
   }
 }
 
