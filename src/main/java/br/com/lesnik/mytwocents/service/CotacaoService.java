@@ -10,6 +10,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,58 +42,57 @@ public class CotacaoService {
     private static final String COINGECKO_API_KEY = "CG-2xfzwvSvpTHnc91tqN7UA5WT";
 
     private static final Map<String, String> COINGECKO_ID_MAP = Map.ofEntries(
-        Map.entry("BTC", "bitcoin"),
-        Map.entry("ETH", "ethereum"),
-        Map.entry("USDT", "tether"),
-        Map.entry("SOL", "solana"),
-        Map.entry("XRP", "ripple"),
-        Map.entry("ADA", "cardano"),
-        Map.entry("DOT", "polkadot"),
-        Map.entry("DOGE", "dogecoin"),
-        Map.entry("AVAX", "avalanche-2"),
-        Map.entry("MATIC", "matic-network"),
-        Map.entry("POL", "polygon"),
-        Map.entry("LINK", "chainlink"),
-        Map.entry("SHIB", "shiba-inu"),
-        Map.entry("LTC", "litecoin"),
-        Map.entry("BCH", "bitcoin-cash"),
-        Map.entry("XLM", "stellar"),
-        Map.entry("ALGO", "algorand"),
-        Map.entry("ATOM", "cosmos"),
-        Map.entry("UNI", "uniswap"),
-        Map.entry("ICP", "internet-computer"),
-        Map.entry("FIL", "filecoin"),
-        Map.entry("HBAR", "hedera-hashgraph"),
-        Map.entry("VET", "vechain"),
-        Map.entry("NEAR", "near"),
-        Map.entry("LDO", "lido-dao"),
-        Map.entry("GRT", "the-graph"),
-        Map.entry("AAVE", "aave"),
-        Map.entry("MKR", "maker"),
-        Map.entry("IMX", "immutable-x"),
-        Map.entry("OP", "optimism"),
-        Map.entry("ARB", "arbitrum"),
-        Map.entry("RNDR", "render-token"),
-        Map.entry("TIA", "celestia"),
-        Map.entry("SUI", "sui"),
-        Map.entry("SEI", "sei-network"),
-        Map.entry("FTM", "fantom"),
-        Map.entry("INJ", "injective-protocol"),
-        Map.entry("RENDER", "render-token")
-    );
+            Map.entry("BTC", "bitcoin"),
+            Map.entry("ETH", "ethereum"),
+            Map.entry("USDT", "tether"),
+            Map.entry("SOL", "solana"),
+            Map.entry("XRP", "ripple"),
+            Map.entry("ADA", "cardano"),
+            Map.entry("DOT", "polkadot"),
+            Map.entry("DOGE", "dogecoin"),
+            Map.entry("AVAX", "avalanche-2"),
+            Map.entry("MATIC", "matic-network"),
+            Map.entry("POL", "polygon"),
+            Map.entry("LINK", "chainlink"),
+            Map.entry("SHIB", "shiba-inu"),
+            Map.entry("LTC", "litecoin"),
+            Map.entry("BCH", "bitcoin-cash"),
+            Map.entry("XLM", "stellar"),
+            Map.entry("ALGO", "algorand"),
+            Map.entry("ATOM", "cosmos"),
+            Map.entry("UNI", "uniswap"),
+            Map.entry("ICP", "internet-computer"),
+            Map.entry("FIL", "filecoin"),
+            Map.entry("HBAR", "hedera-hashgraph"),
+            Map.entry("VET", "vechain"),
+            Map.entry("NEAR", "near"),
+            Map.entry("LDO", "lido-dao"),
+            Map.entry("GRT", "the-graph"),
+            Map.entry("AAVE", "aave"),
+            Map.entry("MKR", "maker"),
+            Map.entry("IMX", "immutable-x"),
+            Map.entry("OP", "optimism"),
+            Map.entry("ARB", "arbitrum"),
+            Map.entry("RNDR", "render-token"),
+            Map.entry("TIA", "celestia"),
+            Map.entry("SUI", "sui"),
+            Map.entry("SEI", "sei-network"),
+            Map.entry("FTM", "fantom"),
+            Map.entry("INJ", "injective-protocol"),
+            Map.entry("RENDER", "render-token"));
 
     private static final Map<String, String> COINGECKO_LOGO_MAP = Map.ofEntries(
-        Map.entry("BTC", "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"),
-        Map.entry("ETH", "https://assets.coingecko.com/coins/images/279/large/ethereum.png"),
-        Map.entry("USDT", "https://assets.coingecko.com/coins/images/325/large/tether.png"),
-        Map.entry("SOL", "https://assets.coingecko.com/coins/images/4128/large/solana.png"),
-        Map.entry("XRP", "https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png"),
-        Map.entry("ADA", "https://assets.coingecko.com/coins/images/975/large/cardano.png"),
-        Map.entry("DOT", "https://assets.coingecko.com/coins/images/12171/large/polkadot-new-dot-logo.png"),
-        Map.entry("DOGE", "https://assets.coingecko.com/coins/images/7829/large/dogecoin.png"),
-        Map.entry("AVAX", "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedLogo_Trans.png"),
-        Map.entry("LINK", "https://assets.coingecko.com/coins/images/877/large/chainlink-link-logo.png")
-    );
+            Map.entry("BTC", "https://assets.coingecko.com/coins/images/1/large/bitcoin.png"),
+            Map.entry("ETH", "https://assets.coingecko.com/coins/images/279/large/ethereum.png"),
+            Map.entry("USDT", "https://assets.coingecko.com/coins/images/325/large/tether.png"),
+            Map.entry("SOL", "https://assets.coingecko.com/coins/images/4128/large/solana.png"),
+            Map.entry("XRP", "https://assets.coingecko.com/coins/images/44/large/xrp-symbol-white-128.png"),
+            Map.entry("ADA", "https://assets.coingecko.com/coins/images/975/large/cardano.png"),
+            Map.entry("DOT", "https://assets.coingecko.com/coins/images/12171/large/polkadot-new-dot-logo.png"),
+            Map.entry("DOGE", "https://assets.coingecko.com/coins/images/7829/large/dogecoin.png"),
+            Map.entry("AVAX",
+                    "https://assets.coingecko.com/coins/images/12559/large/Avalanche_Circle_RedLogo_Trans.png"),
+            Map.entry("LINK", "https://assets.coingecko.com/coins/images/877/large/chainlink-link-logo.png"));
 
     private final AtivoRepository ativoRepository;
     private final AiConfigRepository aiConfigRepository;
@@ -122,6 +123,7 @@ public class CotacaoService {
      * @return número de ativos atualizados com sucesso
      */
     @Transactional
+    @CacheEvict(value = "dashboard", allEntries = true)
     public int atualizarCotacoes(String brapiToken) {
         if (brapiToken == null || brapiToken.isBlank()) {
             log.warn("Token BrAPI não configurado. Cotações não serão atualizadas.");
@@ -174,7 +176,8 @@ public class CotacaoService {
                     ativoRepository.save(ativo);
                     cache.put(ativo.getTicker(), new CachedPrice(result.preco(), Instant.now()));
                     atualizados++;
-                    log.info("Cotação e categoria tática atualizadas: {} = R$ {} ({}) -> {}", ativo.getTicker(), result.preco(), result.nome(), ativo.getCategoriaTatica());
+                    log.info("Cotação e categoria tática atualizadas: {} = R$ {} ({}) -> {}", ativo.getTicker(),
+                            result.preco(), result.nome(), ativo.getCategoriaTatica());
                 }
             } catch (Exception e) {
                 log.error("Erro ao buscar cotação de {}: {}", ativo.getTicker(), e.getMessage());
@@ -191,7 +194,8 @@ public class CotacaoService {
                     config.setTaxaSelic(selic);
                     config.setTaxaCdi(selic.subtract(new BigDecimal("0.10")));
                 }
-                if (ipca != null) config.setTaxaIpca(ipca);
+                if (ipca != null)
+                    config.setTaxaIpca(ipca);
                 aiConfigRepository.save(config);
             }
         } catch (Exception e) {
@@ -201,7 +205,8 @@ public class CotacaoService {
         return atualizados;
     }
 
-    record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName, BigDecimal dividendYield) {
+    record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName,
+            BigDecimal dividendYield) {
     }
 
     /**
@@ -284,10 +289,13 @@ public class CotacaoService {
             BigDecimal dy = BigDecimal.ZERO;
             if (first.hasNonNull("dividendYield")) {
                 double dyRaw = first.get("dividendYield").asDouble(0.0);
-                dy = BigDecimal.valueOf(dyRaw).multiply(BigDecimal.valueOf(100)).setScale(4, java.math.RoundingMode.HALF_UP);
-            } else if (first.has("defaultKeyStatistics") && first.get("defaultKeyStatistics").hasNonNull("dividendYield")) {
+                dy = BigDecimal.valueOf(dyRaw).multiply(BigDecimal.valueOf(100)).setScale(4,
+                        java.math.RoundingMode.HALF_UP);
+            } else if (first.has("defaultKeyStatistics")
+                    && first.get("defaultKeyStatistics").hasNonNull("dividendYield")) {
                 double dyRaw = first.get("defaultKeyStatistics").get("dividendYield").asDouble(0.0);
-                dy = BigDecimal.valueOf(dyRaw).multiply(BigDecimal.valueOf(100)).setScale(4, java.math.RoundingMode.HALF_UP);
+                dy = BigDecimal.valueOf(dyRaw).multiply(BigDecimal.valueOf(100)).setScale(4,
+                        java.math.RoundingMode.HALF_UP);
             }
 
             if (price > 0) {
@@ -334,20 +342,34 @@ public class CotacaoService {
     private String traduzirSetor(String sector, String ticker, TipoAtivo tipo) {
         if (ticker != null) {
             String t = ticker.toUpperCase().trim();
-            if (t.startsWith("RZTR")) return "Agronegócio (Terra)";
-            if (t.startsWith("XPML")) return "Shoppings";
-            if (t.startsWith("IFRI")) return "Infraestrutura";
-            if (t.startsWith("MXRF")) return "Papéis / Recebíveis";
-            if (t.startsWith("HGLG")) return "Galpões Logísticos";
-            if (t.startsWith("KNCR")) return "Papéis / Recebíveis";
-            if (t.startsWith("HGRU")) return "Renda Urbana";
-            if (t.startsWith("VISC")) return "Shoppings";
-            if (t.startsWith("BTLG")) return "Galpões Logísticos";
-            if (t.startsWith("ALZR")) return "Híbrido";
-            if (t.startsWith("PETR")) return "Petróleo / Gás";
-            if (t.startsWith("VALE")) return "Mineração";
-            if (t.startsWith("BBAS") || t.startsWith("ITUB") || t.startsWith("BBDC") || t.startsWith("SANB")) return "Financeiro";
-            if (t.startsWith("TAEE") || t.startsWith("TRPL") || t.startsWith("EGIE") || t.startsWith("CPLE")) return "Utilidade Pública (Energia)";
+            if (t.startsWith("RZTR"))
+                return "Agronegócio (Terra)";
+            if (t.startsWith("XPML"))
+                return "Shoppings";
+            if (t.startsWith("IFRI"))
+                return "Infraestrutura";
+            if (t.startsWith("MXRF"))
+                return "Papéis / Recebíveis";
+            if (t.startsWith("HGLG"))
+                return "Galpões Logísticos";
+            if (t.startsWith("KNCR"))
+                return "Papéis / Recebíveis";
+            if (t.startsWith("HGRU"))
+                return "Renda Urbana";
+            if (t.startsWith("VISC"))
+                return "Shoppings";
+            if (t.startsWith("BTLG"))
+                return "Galpões Logísticos";
+            if (t.startsWith("ALZR"))
+                return "Híbrido";
+            if (t.startsWith("PETR"))
+                return "Petróleo / Gás";
+            if (t.startsWith("VALE"))
+                return "Mineração";
+            if (t.startsWith("BBAS") || t.startsWith("ITUB") || t.startsWith("BBDC") || t.startsWith("SANB"))
+                return "Financeiro";
+            if (t.startsWith("TAEE") || t.startsWith("TRPL") || t.startsWith("EGIE") || t.startsWith("CPLE"))
+                return "Utilidade Pública (Energia)";
         }
 
         if (sector == null || sector.isBlank() || sector.equalsIgnoreCase("null")) {
@@ -357,28 +379,50 @@ public class CotacaoService {
         // Tradução simples
         String s = sector.trim();
         switch (s) {
-            case "Finance": return "Financeiro";
-            case "Energy Minerals": return "Energia (Petróleo/Gás)";
-            case "Utilities": return "Utilidade Pública";
-            case "Retail Trade": return "Comércio Varejista";
-            case "Health Services": return "Saúde";
-            case "Consumer Services": return "Serviços ao Consumidor";
-            case "Consumer Non-Durables": return "Bens de Consumo Não-Duráveis";
-            case "Non-Energy Minerals": return "Mineração / Metalurgia";
-            case "Commercial Services": return "Serviços Comerciais";
-            case "Distribution Services": return "Distribuição";
-            case "Transportation": return "Transporte / Logística";
-            case "Technology Services": return "Tecnologia / TI";
-            case "Process Industries": return "Indústria de Processo";
-            case "Communications": return "Telecomunicações";
-            case "Producer Manufacturing": return "Manufatura de Produção";
-            case "Electronic Technology": return "Tecnologia Eletrônica";
-            case "Industrial Services": return "Serviços Industriais";
-            case "Health Technology": return "Tecnologia de Saúde";
-            case "Consumer Durables": return "Bens de Consumo Duráveis";
-            case "Miscellaneous": return "Diversos";
-            case "Real Estate": return "Imobiliário";
-            default: return s;
+            case "Finance":
+                return "Financeiro";
+            case "Energy Minerals":
+                return "Energia (Petróleo/Gás)";
+            case "Utilities":
+                return "Utilidade Pública";
+            case "Retail Trade":
+                return "Comércio Varejista";
+            case "Health Services":
+                return "Saúde";
+            case "Consumer Services":
+                return "Serviços ao Consumidor";
+            case "Consumer Non-Durables":
+                return "Bens de Consumo Não-Duráveis";
+            case "Non-Energy Minerals":
+                return "Mineração / Metalurgia";
+            case "Commercial Services":
+                return "Serviços Comerciais";
+            case "Distribution Services":
+                return "Distribuição";
+            case "Transportation":
+                return "Transporte / Logística";
+            case "Technology Services":
+                return "Tecnologia / TI";
+            case "Process Industries":
+                return "Indústria de Processo";
+            case "Communications":
+                return "Telecomunicações";
+            case "Producer Manufacturing":
+                return "Manufatura de Produção";
+            case "Electronic Technology":
+                return "Tecnologia Eletrônica";
+            case "Industrial Services":
+                return "Serviços Industriais";
+            case "Health Technology":
+                return "Tecnologia de Saúde";
+            case "Consumer Durables":
+                return "Bens de Consumo Duráveis";
+            case "Miscellaneous":
+                return "Diversos";
+            case "Real Estate":
+                return "Imobiliário";
+            default:
+                return s;
         }
     }
 
@@ -391,7 +435,8 @@ public class CotacaoService {
                 .map(AiConfig::getCoingeckoKey)
                 .orElse(null);
         String apiKey = (dbKey != null && !dbKey.isBlank()) ? dbKey.trim() : COINGECKO_API_KEY;
-        String url = "https://api.coingecko.com/api/v3/simple/price?vs_currencies=brl,usd&ids=" + coingeckoId + "&x_cg_demo_api_key=" + apiKey;
+        String url = "https://api.coingecko.com/api/v3/simple/price?vs_currencies=brl,usd&ids=" + coingeckoId
+                + "&x_cg_demo_api_key=" + apiKey;
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -458,7 +503,8 @@ public class CotacaoService {
 
     private BigDecimal getRateFromBCB(String seriesCode, BigDecimal fallbackValue) {
         try {
-            String url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs." + seriesCode + "/dados/ultimos/1?formato=json";
+            String url = "https://api.bcb.gov.br/dados/serie/bcdata.sgs." + seriesCode
+                    + "/dados/ultimos/1?formato=json";
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .timeout(Duration.ofSeconds(10))
@@ -468,7 +514,7 @@ public class CotacaoService {
             if (response.statusCode() == 200) {
                 String body = response.body().trim();
                 if (!body.startsWith("[") && !body.startsWith("{")) {
-                    log.warn("Resposta da série BCB {} não é um JSON válido. Status: {}, Corpo: {}", 
+                    log.warn("Resposta da série BCB {} não é um JSON válido. Status: {}, Corpo: {}",
                             seriesCode, response.statusCode(), body.length() > 100 ? body.substring(0, 100) : body);
                     return fallbackValue;
                 }
@@ -535,7 +581,8 @@ public class CotacaoService {
         }
 
         // Fallback final
-        if (cachedSelic != null) return cachedSelic;
+        if (cachedSelic != null)
+            return cachedSelic;
         return BigDecimal.valueOf(10.75); // Selic de fallback
     }
 
@@ -587,7 +634,8 @@ public class CotacaoService {
         }
 
         // Fallback final
-        if (cachedIpca != null) return cachedIpca;
+        if (cachedIpca != null)
+            return cachedIpca;
         return BigDecimal.valueOf(4.50); // IPCA de fallback
     }
 }
