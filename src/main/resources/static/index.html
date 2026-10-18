@@ -387,7 +387,12 @@
 
   <!-- ─── VIEW: INVESTIMENTOS ────────────────────────────────────────────── -->
   <section class="view hidden" id="view-investimentos">
-    
+    <!-- Loader overlay displayed while dashboard data is being fetched -->
+      <div id="loader-investimentos" class="loader-overlay hidden">
+        <div class="spinner"></div>
+        <span class="loader-text">Carregando informações da carteira…</span>
+      </div>
+
     <!-- ─── TOP HEADER: Cadeado de Segurança (Esq, span 3) + Botões Empilhados (Dir, span 1) ─── -->
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
 
