@@ -129,7 +129,7 @@ public class SniperEngineService {
 
                 if (alocarSeguranca.compareTo(minimo) >= 0) {
                     BigDecimal cotas = calcularCotas(ativoSeguranca, alocarSeguranca);
-                    BigDecimal valorReal = (ativoSeguranca.getTipoAtivo() == TipoAtivo.CRIPTO
+                    BigDecimal valorReal = ((ativoSeguranca.getTipoAtivo() == TipoAtivo.CRIPTO && (ativoSeguranca.getTicker() == null || !"ABTC11".equalsIgnoreCase(ativoSeguranca.getTicker())))
                             || ativoSeguranca.getTipoAtivo() == TipoAtivo.RENDA_FIXA
                             || ativoSeguranca.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
                             ? alocarSeguranca
@@ -270,7 +270,7 @@ public class SniperEngineService {
 
                                 BigDecimal cotas = calcularCotas(a, share);
                                 // Para ativos com cotas inteiras, recalcula o valor real
-                                BigDecimal valorReal = (a.getTipoAtivo() == TipoAtivo.CRIPTO
+                                BigDecimal valorReal = ((a.getTipoAtivo() == TipoAtivo.CRIPTO && (a.getTicker() == null || !"ABTC11".equalsIgnoreCase(a.getTicker())))
                                         || a.getTipoAtivo() == TipoAtivo.RENDA_FIXA
                                         || a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
                                         ? share
@@ -356,7 +356,7 @@ public class SniperEngineService {
                                 }
 
                                 BigDecimal cotas = calcularCotas(a, share);
-                                BigDecimal valorReal = (a.getTipoAtivo() == TipoAtivo.CRIPTO
+                                BigDecimal valorReal = ((a.getTipoAtivo() == TipoAtivo.CRIPTO && (a.getTicker() == null || !"ABTC11".equalsIgnoreCase(a.getTicker())))
                                         || a.getTipoAtivo() == TipoAtivo.RENDA_FIXA
                                         || a.getTipoAtivo() == TipoAtivo.TESOURO_DIRETO)
                                         ? share
@@ -496,7 +496,9 @@ public class SniperEngineService {
         BigDecimal preco = a.getPrecoAtual() != null && a.getPrecoAtual().compareTo(BigDecimal.ZERO) > 0
                 ? a.getPrecoAtual() : BigDecimal.ONE;
 
-        if (tipo == TipoAtivo.CRIPTO) {
+        if (a.getTicker() != null && "ABTC11".equalsIgnoreCase(a.getTicker())) {
+            return preco; // ABTC11 é ETF negociado na B3 em cotas inteiras
+        } else if (tipo == TipoAtivo.CRIPTO) {
             return BigDecimal.ZERO; // frações permitidas
         } else if (tipo == TipoAtivo.RENDA_FIXA) {
             return new BigDecimal("1.00"); // CDB mínimo R$ 1,00
@@ -522,7 +524,9 @@ public class SniperEngineService {
 
         BigDecimal cotas = valor.divide(preco, 4, RoundingMode.HALF_UP);
 
-        if (tipo == TipoAtivo.CRIPTO || tipo == TipoAtivo.RENDA_FIXA || tipo == TipoAtivo.TESOURO_DIRETO) {
+        if (a.getTicker() != null && "ABTC11".equalsIgnoreCase(a.getTicker())) {
+            return cotas.setScale(0, RoundingMode.FLOOR).setScale(4, RoundingMode.UNNECESSARY);
+        } else if (tipo == TipoAtivo.CRIPTO || tipo == TipoAtivo.RENDA_FIXA || tipo == TipoAtivo.TESOURO_DIRETO) {
             return cotas; // frações permitidas
         } else {
             // Arredonda para baixo (cotas inteiras)
