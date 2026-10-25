@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Otimização de Tokens – MyTwoCents</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 40px 24px;
+      background: radial-gradient(circle at 50% 10%, #151d30 0%, #080b12 100%);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: #f1f5f9;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1060px;
+      width: 100%;
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 28px;
+      padding: 48px 40px;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 80px rgba(16, 185, 129, 0.06);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      font-size: 1.05rem;
+      max-width: 620px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .metric-card {
+      background: linear-gradient(180deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.7) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 20px;
+      padding: 28px 24px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(52, 211, 153, 0.3);
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 15%;
+      right: 15%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.5), transparent);
+    }
+
+    .metric-icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+
+    .metric-value {
+      font-size: 3.2rem;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.04em;
+      margin-bottom: 8px;
+    }
+
+    .val-green {
+      color: #34d399;
+      text-shadow: 0 0 30px rgba(52, 211, 153, 0.3);
+    }
+
+    .val-cyan {
+      color: #38bdf8;
+      text-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+    }
+
+    .val-amber {
+      color: #fbbf24;
+      text-shadow: 0 0 30px rgba(251, 191, 36, 0.3);
+    }
+
+    .metric-label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 4px;
+    }
+
+    .metric-desc {
+      font-size: 0.8rem;
+      color: #64748b;
+    }
+
+    .table-section {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 18px;
+      padding: 24px;
+    }
+
+    .table-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px 14px;
+      color: #64748b;
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: #cbd5e1;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .code-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 8px;
+      border-radius: 6px;
+      color: #a78bfa;
+    }
+
+    .tag-done {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .tag-pending {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+      .container {
+        padding: 32px 20px;
+      }
+      .metric-value {
+        font-size: 2.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="badge">
+        <span class="dot"></span> Token Optimization Audit
+      </div>
+      <h1 class="title">MyTwoCents Context Efficiency</h1>
+      <p class="subtitle">Auditoria de tamanho de arquivos e aplicação da Regra das 300 Linhas para maximizar a precisão e velocidade das sessões com IA.</p>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon">📉</div>
+        <div class="metric-value val-green">84%</div>
+        <div class="metric-label">Menos Tokens por Leitura</div>
+        <div class="metric-desc">Documentação técnica dividida em tópicos focados</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon">⚡</div>
+        <div class="metric-value val-cyan">3x</div>
+        <div class="metric-label">Respostas Mais Rápidas</div>
+        <div class="metric-desc">Context window reduzida com leitura estritamente necessária</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-icon">💰</div>
+        <div class="metric-value val-amber">80%</div>
+        <div class="metric-label">Economia de Custo de Contexto</div>
+        <div class="metric-desc">Substituição de monólitos por módulos especialistas</div>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="table-title">
+        <span class="dot"></span> Principais Gargalos Identificados & Status
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Arquivo</th>
+            <th>Linhas</th>
+            <th>Tipo</th>
+            <th>Status / Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="code-pill">docs/TECHNICAL.md</span></td>
+            <td><strong>555 → 37</strong></td>
+            <td>Doc Monolith</td>
+            <td><span class="tag-done">Otimizado (93% economia)</span></td>
+          </tr>
+          <tr>
+            <td><span class="code-pill">static/js/investments.js</span></td>
+            <td>2.490</td>
+            <td>UI Monolith</td>
+            <td><span class="tag-pending">Recomendado: Dividir em 4 módulos</span></td>
+          </tr>
+          <tr>
+            <td><span class="code-pill">static/css/style.css</span></td>
+            <td>2.110</td>
+            <td>CSS Monolith</td>
+            <td><span class="tag-pending">Recomendado: Modularizar com @import</span></td>
+          </tr>
+          <tr>
+            <td><span class="code-pill">service/InvestimentoService.java</span></td>
+            <td>1.151</td>
+            <td>Service Monolith</td>
+            <td><span class="tag-pending">Recomendado: Extrair cálculo/posição</span></td>
+          </tr>
+          <tr>
+            <td><span class="code-pill">service/AiService.java</span></td>
+            <td>1.075</td>
+            <td>Service Monolith</td>
+            <td><span class="tag-pending">Recomendado: Externalizar prompts</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

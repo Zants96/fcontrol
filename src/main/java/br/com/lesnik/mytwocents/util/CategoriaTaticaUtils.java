@@ -30,6 +30,11 @@ public final class CategoriaTaticaUtils {
 
         if (tipo == null) return CategoriaTatica.RENDA;
 
+        // ETFs de Criptomoeda (ABTC11, HASH11, etc.) devem ser tratados como CRESCIMENTO
+        if (CryptoEtfUtils.isCryptoEtf(ticker)) {
+            return CategoriaTatica.CRESCIMENTO;
+        }
+
         // Segurança: CDB, Poupança, Reserva e Tesouro SELIC
         if (tipo == TipoAtivo.RENDA_FIXA && (ticker.contains("CDB") || nome.contains("CDB")
                 || ticker.contains("POUPANCA") || nome.contains("POUPANCA")

@@ -1,5 +1,8 @@
 package br.com.lesnik.mytwocents.config;
 
+import br.com.lesnik.mytwocents.model.CategoriaTatica;
+import br.com.lesnik.mytwocents.model.TipoAtivo;
+import br.com.lesnik.mytwocents.repository.AtivoRepository;
 import br.com.lesnik.mytwocents.repository.LancamentoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DataInitializer implements CommandLineRunner {
 
     private final LancamentoRepository repository;
+    private final AtivoRepository ativoRepository;
 
     @Override
     @Transactional
@@ -37,6 +41,25 @@ public class DataInitializer implements CommandLineRunner {
         int migratedResgates = repository.migrateResgatesToReceita();
         if (migratedResgates > 0) {
             log.info("Migração: {} lançamento(s) de Resgate de Investimentos atualizados para RECEITA.", migratedResgates);
+        }
+
+        // Garante que ETFs de Cripto (ABTC11, HASH11, etc.) sejam tratados como CRIPTO e CRESCIMENTO
+        for (String ticker : br.com.lesnik.mytwocents.util.CryptoEtfUtils.getCryptoEtfs()) {
+            ativoRepository.findByTickerIgnoreCase(ticker).ifPresent(etf -> {
+                boolean updated = false;
+                if (etf.getTipoAtivo() != TipoAtivo.CRIPTO) {
+                    etf.setTipoAtivo(TipoAtivo.CRIPTO);
+                    updated = true;
+                }
+                if (etf.getCategoriaTatica() != CategoriaTatica.CRESCIMENTO) {
+                    etf.setCategoriaTatica(CategoriaTatica.CRESCIMENTO);
+                    updated = true;
+                }
+                if (updated) {
+                    ativoRepository.save(etf);
+                    log.info("Ativo {} atualizado para TipoAtivo.CRIPTO e CategoriaTatica.CRESCIMENTO.", ticker);
+                }
+            });
         }
 
         log.info("Banco de dados pronto. Total de lançamentos: {}", repository.count());
