@@ -9,6 +9,7 @@ import br.com.lesnik.mytwocents.repository.InvestimentoLancamentoRepository;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.LancamentoRepository;
 import br.com.lesnik.mytwocents.util.CategoriaTaticaUtils;
+import br.com.lesnik.mytwocents.util.CryptoEtfUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -37,12 +38,23 @@ public class InvestimentoService {
 
     @Transactional
     public InvestimentoLancamentoDTO criarLancamento(InvestimentoLancamentoDTO dto) {
+        // ETFs de Criptomoeda (ABTC11, HASH11, etc.) devem ser tratados como CRIPTOMOEDA
+        if (CryptoEtfUtils.isCryptoEtf(dto.getTicker())) {
+            dto.setTipoAtivo(TipoAtivo.CRIPTO);
+            if (dto.getCategoriaTatica() == null || dto.getCategoriaTatica() == CategoriaTatica.GLOBAL) {
+                dto.setCategoriaTatica(CategoriaTatica.CRESCIMENTO);
+            }
+        }
+
         // Busca ou cria o ativo
         Ativo ativo = ativoRepository.findByTickerIgnoreCase(dto.getTicker())
                 .orElseGet(() -> {
+                    TipoAtivo effectiveTipo = CryptoEtfUtils.isCryptoEtf(dto.getTicker()) ? TipoAtivo.CRIPTO : dto.getTipoAtivo();
+                    CategoriaTatica effectiveCat = CryptoEtfUtils.isCryptoEtf(dto.getTicker()) ? CategoriaTatica.CRESCIMENTO : dto.getCategoriaTatica();
                     Ativo novo = Ativo.builder()
                             .ticker(dto.getTicker().toUpperCase().trim())
-                            .tipoAtivo(dto.getTipoAtivo())
+                            .tipoAtivo(effectiveTipo)
+                            .categoriaTatica(effectiveCat)
                             .quantidade(BigDecimal.ZERO)
                             .precoMedio(BigDecimal.ZERO)
                             .precoAtual(BigDecimal.ZERO)
@@ -52,7 +64,15 @@ public class InvestimentoService {
                     return ativoRepository.save(novo);
                 });
 
-        if (dto.getTipoAtivo() != null && ativo.getTipoAtivo() != dto.getTipoAtivo()) {
+        if (CryptoEtfUtils.isCryptoEtf(ativo.getTicker())) {
+            if (ativo.getTipoAtivo() != TipoAtivo.CRIPTO) {
+                ativo.setTipoAtivo(TipoAtivo.CRIPTO);
+            }
+            if (ativo.getCategoriaTatica() == null || ativo.getCategoriaTatica() == CategoriaTatica.GLOBAL) {
+                ativo.setCategoriaTatica(CategoriaTatica.CRESCIMENTO);
+            }
+            ativo = ativoRepository.save(ativo);
+        } else if (dto.getTipoAtivo() != null && ativo.getTipoAtivo() != dto.getTipoAtivo()) {
             ativo.setTipoAtivo(dto.getTipoAtivo());
             ativo = ativoRepository.save(ativo);
         }
@@ -221,7 +241,14 @@ public class InvestimentoService {
         }
 
         // Recalcula o ativo completo
-        if (dto.getTipoAtivo() != null && lancamento.getAtivo().getTipoAtivo() != dto.getTipoAtivo()) {
+        if (CryptoEtfUtils.isCryptoEtf(lancamento.getAtivo().getTicker())) {
+            Ativo ativo = lancamento.getAtivo();
+            ativo.setTipoAtivo(TipoAtivo.CRIPTO);
+            if (ativo.getCategoriaTatica() == null || ativo.getCategoriaTatica() == CategoriaTatica.GLOBAL) {
+                ativo.setCategoriaTatica(CategoriaTatica.CRESCIMENTO);
+            }
+            ativoRepository.save(ativo);
+        } else if (dto.getTipoAtivo() != null && lancamento.getAtivo().getTipoAtivo() != dto.getTipoAtivo()) {
             Ativo ativo = lancamento.getAtivo();
             ativo.setTipoAtivo(dto.getTipoAtivo());
             ativoRepository.save(ativo);
@@ -322,6 +349,12 @@ public class InvestimentoService {
         if (dto.getCategoriaTatica() != null) ativo.setCategoriaTatica(dto.getCategoriaTatica());
         ativo.setCiclico(dto.isCiclico());
         ativo.setEstrutural(dto.isEstrutural());
+        if (CryptoEtfUtils.isCryptoEtf(ativo.getTicker())) {
+            ativo.setTipoAtivo(TipoAtivo.CRIPTO);
+            if (ativo.getCategoriaTatica() == null || ativo.getCategoriaTatica() == CategoriaTatica.GLOBAL) {
+                ativo.setCategoriaTatica(CategoriaTatica.CRESCIMENTO);
+            }
+        }
 
         ativoRepository.save(ativo);
 
