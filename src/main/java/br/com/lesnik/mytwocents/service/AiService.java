@@ -187,7 +187,7 @@ public class AiService {
                     || msgLower.contains("portfólio")
                     || msgLower.contains("renda fixa") || msgLower.contains("selic") || msgLower.contains("cdi")
                     || msgLower.contains("tesouro") || msgLower.contains("cripto") || msgLower.contains("btc")
-                    || msgLower.contains("eth");
+                    || msgLower.contains("eth") || msgLower.contains("abtc11");
 
             boolean isOrcamento = msgLower.contains("gastos") || msgLower.contains("despesa")
                     || msgLower.contains("assinatura")
@@ -286,8 +286,8 @@ public class AiService {
                       * FII: fundos imobiliários (ex: MXRF11, HGLG11, IFRI11, XPML11, RZTR11)
                       * RENDA_FIXA: CDB, LCI, LCA
                       * TESOURO_DIRETO: Tesouro IPCA, Tesouro Selic, Tesouro Prefixado (ex: "Tesouro IPCA+ 2029", "Tesouro Selic 2028")
-                      * ETF: fundos de índice (ex: IVVB11, BOVA11, WRLD11)
-                      * CRIPTO: criptomoedas (ex: BTC, ETH, XRP)
+                      * ETF: fundos de índice tradicionais (ex: IVVB11, BOVA11, WRLD11). IMPORTANTE: ETFs de criptomoedas/Bitcoin (ex: ABTC11, HASH11, BITH11, QBTC11) devem ser classificados como CRIPTO!
+                      * CRIPTO: criptomoedas e ETFs de cripto/Bitcoin (ex: BTC, ETH, XRP, ABTC11, HASH11, BITH11, QBTC11)
                     - Mapeie "tipoOperacao" para: COMPRA, VENDA, DIVIDENDO.
                     - Extraia os campos:
                       * "ticker": o ticker do ativo (ex: "BBAS3", "CXSE3", "Tesouro IPCA+ 2029"). Preserve o nome ou ticker exato do ativo de Renda Fixa ou Tesouro Direto.
@@ -393,9 +393,14 @@ public class AiService {
             JsonNode invsNode = root.get("investimentos");
             if (invsNode != null && invsNode.isArray()) {
                 for (JsonNode item : invsNode) {
+                    String itemTicker = item.has("ticker") ? item.get("ticker").asText() : "";
+                    String itemTipo = item.has("tipoAtivo") ? item.get("tipoAtivo").asText() : "ACAO";
+                    if ("ABTC11".equalsIgnoreCase(itemTicker)) {
+                        itemTipo = "CRIPTO";
+                    }
                     investimentos.add(ParsedInvestimentoItem.builder()
-                            .ticker(item.has("ticker") ? item.get("ticker").asText() : "")
-                            .tipoAtivo(item.has("tipoAtivo") ? item.get("tipoAtivo").asText() : "ACAO")
+                            .ticker(itemTicker)
+                            .tipoAtivo(itemTipo)
                             .tipoOperacao(item.has("tipoOperacao") ? item.get("tipoOperacao").asText() : "COMPRA")
                             .quantidade(item.has("quantidade")
                                     ? new BigDecimal(item.get("quantidade").asText()).setScale(8, RoundingMode.HALF_UP)

@@ -4,6 +4,7 @@ import br.com.lesnik.mytwocents.model.AiConfig;
 import br.com.lesnik.mytwocents.model.Ativo;
 import br.com.lesnik.mytwocents.model.TipoAtivo;
 import br.com.lesnik.mytwocents.util.CategoriaTaticaUtils;
+import br.com.lesnik.mytwocents.util.CryptoEtfUtils;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.AtivoRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -204,6 +205,10 @@ public class CotacaoService {
     record CotacaoResult(BigDecimal preco, String nome, String logoUrl, String sector, String longName, BigDecimal dividendYield) {
     }
 
+    private boolean isB3Crypto(String ticker) {
+        return CryptoEtfUtils.isCryptoEtf(ticker);
+    }
+
     /**
      * Busca a cotação de um ativo específico.
      */
@@ -218,6 +223,10 @@ public class CotacaoService {
             return null;
         }
 
+        return buscarCotacaoBrapi(ticker, tipo, token);
+    }
+
+    private CotacaoResult buscarCotacaoBrapi(String ticker, TipoAtivo tipo, String token) throws Exception {
         // Ações, FIIs, ETFs → endpoint padrão de quote com dados fundamentais
         String url = BRAPI_QUOTE_URL + ticker + "?token=" + token + "&fundamental=true";
 
@@ -296,6 +305,10 @@ public class CotacaoService {
                     sector = buscarSectorNoList(ticker, token);
                 }
                 sector = traduzirSetor(sector, ticker, tipo);
+                if (CryptoEtfUtils.isCryptoEtf(ticker) && (logoUrl == null || logoUrl.isBlank())) {
+                    String t = ticker.toUpperCase().trim();
+                    logoUrl = t.contains("ETH") ? COINGECKO_LOGO_MAP.get("ETH") : COINGECKO_LOGO_MAP.get("BTC");
+                }
                 return new CotacaoResult(p, name, logoUrl, sector, longName, dy);
             }
         }
@@ -334,6 +347,9 @@ public class CotacaoService {
     private String traduzirSetor(String sector, String ticker, TipoAtivo tipo) {
         if (ticker != null) {
             String t = ticker.toUpperCase().trim();
+            if (CryptoEtfUtils.isCryptoEtf(t) || tipo == TipoAtivo.CRIPTO) {
+                return "Criptomoedas";
+            }
             if (t.startsWith("RZTR")) return "Agronegócio (Terra)";
             if (t.startsWith("XPML")) return "Shoppings";
             if (t.startsWith("IFRI")) return "Infraestrutura";
@@ -386,6 +402,10 @@ public class CotacaoService {
      * Busca cotação de criptomoeda via CoinGecko.
      */
     CotacaoResult buscarCotacaoCripto(String ticker, String token) throws Exception {
+        if (isB3Crypto(ticker)) {
+            CotacaoResult b3Res = buscarCotacaoBrapi(ticker, TipoAtivo.CRIPTO, token);
+            if (b3Res != null) return b3Res;
+        }
         String coingeckoId = COINGECKO_ID_MAP.getOrDefault(ticker.toUpperCase().trim(), ticker.toLowerCase().trim());
         String dbKey = aiConfigRepository.findFirstByOrderByIdDesc()
                 .map(AiConfig::getCoingeckoKey)

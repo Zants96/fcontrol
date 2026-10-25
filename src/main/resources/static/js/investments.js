@@ -660,6 +660,18 @@ function initInvModal() {
   $('inv-form-custos')?.addEventListener('input', formatCurrency);
   $('inv-form-quantidade')?.addEventListener('input', calcInvTotal);
 
+  // ABTC11 é ETF de Bitcoin e deve ser tratado automaticamente como CRIPTO
+  $('inv-form-ticker')?.addEventListener('input', (e) => {
+    const val = e.target.value.trim().toUpperCase();
+    if (val === 'ABTC11') {
+      const tipoSelect = $('inv-form-tipo');
+      if (tipoSelect && tipoSelect.value !== 'CRIPTO') {
+        tipoSelect.value = 'CRIPTO';
+        tipoSelect.dispatchEvent(new Event('change'));
+      }
+    }
+  });
+
   const inputAporte = $('input-aporte-valor');
   if (inputAporte && !inputAporte.dataset.maskBound) {
     inputAporte.dataset.maskBound = 'true';
@@ -796,7 +808,10 @@ async function onInvFormSubmit(e) {
 
   const operacao = document.querySelector('input[name="inv-operacao"]:checked')?.value;
   const ticker = $('inv-form-ticker')?.value?.trim().toUpperCase();
-  const tipoAtivo = $('inv-form-tipo')?.value;
+  let tipoAtivo = $('inv-form-tipo')?.value;
+  if (ticker === 'ABTC11') {
+    tipoAtivo = 'CRIPTO';
+  }
   const dataRaw = $('inv-form-data')?.value;
   const data = convertDateToIso(dataRaw);
   const quantidade = parseInvInput($('inv-form-quantidade')?.value);
@@ -1100,7 +1115,7 @@ async function editarLancamentoInvestimento(id) {
   const form = $('inv-edit-form');
   if (form) {
     form._currentTicker = l.ticker;
-    form._currentTipoAtivo = l.tipoAtivo;
+    form._currentTipoAtivo = (l.ticker && l.ticker.toUpperCase() === 'ABTC11') ? 'CRIPTO' : l.tipoAtivo;
   }
   
   const formQtd = $('inv-edit-qtd');
