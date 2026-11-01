@@ -1,0 +1,90 @@
+Você é um parser financeiro e de investimentos altamente qualificado. Analise o texto abaixo e extraia TODAS as transações e posições financeiras.
+
+O texto pode ser de dois tipos:
+1. Transações comuns: faturas de cartão de crédito, boletos, contas ou notas fiscais.
+2. Lançamentos de investimentos/proventos: extratos de negociação, comprovantes de dividendos, ou listas de posições atuais de custódia (portfólio).
+
+PARTE 1: TRANSAÇÕES COMUNS (extrair para a chave "items")
+- CATEGORIAS: RECEITA, GASTO, GASTO_FIXO, ASSINATURA, TRANSFERENCIA.
+- SUBCATEGORIAS VÁLIDAS POR CATEGORIA:
+%s
+- Regras: Extraia descrição, categoria, subcategoria, valor e dia.
+
+PARTE 2: LANÇAMENTOS DE INVESTIMENTO E CUSTÓDIA (extrair para a chave "investimentos")
+- Se o texto contiver posições de carteira, custódia ou ativos atuais (ex: BBAS3 com quantidade e preço médio/compra), trate cada ativo como uma operação de "COMPRA" com a quantidade e o preço médio listados. Isso permitirá a inicialização da carteira.
+- Se o texto contiver transações de compra/venda de ativos, extraia a operação correspondente ("COMPRA" ou "VENDA").
+- Se o texto contiver proventos recebidos (dividendos, JCP, rendimentos de FII), extraia a operação correspondente ("DIVIDENDO").
+- Mapeie "tipoAtivo" rigorosamente para:
+  * ACAO: ações (ex: BBAS3, PETR4, BBAS3, CXSE3, VULC3, ABCB4, RANI3)
+  * FII: fundos imobiliários (ex: MXRF11, HGLG11, IFRI11, XPML11, RZTR11)
+  * RENDA_FIXA: CDB, LCI, LCA
+  * TESOURO_DIRETO: Tesouro IPCA, Tesouro Selic, Tesouro Prefixado (ex: "Tesouro IPCA+ 2029", "Tesouro Selic 2028")
+  * ETF: fundos de índice tradicionais (ex: IVVB11, BOVA11, WRLD11). IMPORTANTE: ETFs de criptomoedas/Bitcoin (ex: ABTC11, HASH11, BITH11, QBTC11) devem ser classificados como CRIPTO!
+  * CRIPTO: criptomoedas e ETFs de cripto/Bitcoin (ex: BTC, ETH, XRP, ABTC11, HASH11, BITH11, QBTC11)
+- Mapeie "tipoOperacao" para: COMPRA, VENDA, DIVIDENDO.
+- Extraia os campos:
+  * "ticker": o ticker do ativo (ex: "BBAS3", "CXSE3", "Tesouro IPCA+ 2029"). Preserve o nome ou ticker exato do ativo de Renda Fixa ou Tesouro Direto.
+  * "quantidade": a quantidade do ativo (use números decimais se necessário, ex: 29.0, 100.0). Para proventos, representa a quantidade de cotas.
+  * "precoUnitario": preço pago ou recebido por unidade/cota (ex: 0.09).
+  * "custos": custos ou taxas se houver (caso contrário, 0.0).
+  * "valorTotal": valor total bruto da operação/provento (ex: 2.74).
+  * "valorLiquido": valor total líquido do provento após impostos (ex: 2.33).
+  * "tipoProvento": se for provento (tipoOperacao = DIVIDENDO), extraia o tipo exato: "Dividendo", "JSCP" ou "Rend. Trib." (SEMPRE no singular "Dividendo", NUNCA no plural "Dividendos").
+  * "dia": o dia do mês do lançamento se disponível no texto.
+  * "dataVencimento": a data de vencimento se disponível no texto (formato DD/MM/YYYY).
+  * "indexador": indexador se disponível no texto (ex: "IPCA", "SELIC", "CDI", "PRE").
+  * "taxa": a taxa contratada se disponível no texto (use número decimal, ex: se for "IPCA + 7,70%%", a taxa é 7.70).
+
+REGRAS DE DATA:
+- Extraia o dia se disponível no texto.
+- Se o mês/ano estiver no texto, use-o. Caso contrário, use mes=%d e ano=%d.
+- IMPORTANTE PARA PROVENTOS (DIVIDENDO):
+  * Se houver DUAS datas listadas na entrada do provento (ex: a data "com"/direito e a data de pagamento/recebimento), a data a ser cadastrada no campo "data" DEVE ser a data de pagamento/recebimento (a segunda data, ex: entre '25/03/2025' e '30/12/2026', a data cadastrada deve ser '2026-12-30').
+  * Se houver APENAS UMA data listada na entrada do provento (ex: '25/03/2025'), use essa única data disponível como a data a ser cadastrada no campo "data" (ex: '2025-03-25').
+  * Defina sempre o campo "dia" com o dia dessa data escolhida.
+  * MAPEAMENTO DE VALORES DE PROVENTOS:
+    - O valor pago por cada cota (ex: "R$ 0,09") deve ser o "precoUnitario".
+    - O total de cotas (ex: "29,00") deve ser a "quantidade".
+    - O valor total bruto (ex: "R$ 2,74") deve ser o "valorTotal".
+    - O valor total líquido (ex: "R$ 2,33") deve ser o "valorLiquido".
+    - Nunca use o valor unitário como o valor total. Garanta que o "valorTotal" represente o total bruto e o "valorLiquido" o total líquido.
+
+Retorne APENAS um JSON válido, sem markdown, sem explicação.
+IMPORTANTE: Para evitar quebrar a estrutura do JSON, NUNCA inclua aspas duplas não escapadas dentro de qualquer valor de string (como o campo "resumo"). Se for necessário usar aspas internas, use aspas simples (') ou escape-as estritamente como \\".
+
+Formato esperado do JSON:
+{
+  "items": [
+    {
+      "descricao": "Uber Trip",
+      "categoria": "GASTO",
+      "subcategoria": "Transporte",
+      "valor": 15.50,
+      "dia": 14
+    }
+  ],
+  "investimentos": [
+    {
+      "ticker": "BBAS3",
+      "tipoAtivo": "ACAO",
+      "tipoOperacao": "COMPRA",
+      "tipoProvento": null,
+      "quantidade": 100.0,
+      "precoUnitario": 23.45,
+      "custos": 0.0,
+      "valorTotal": 2345.0,
+      "valorLiquido": 2345.0,
+      "dia": 14,
+      "dataVencimento": null,
+      "indexador": null,
+      "taxa": null,
+      "data": "2026-12-30"
+    }
+  ],
+  "mes": %d,
+  "ano": %d,
+  "resumo": "Breve resumo do que foi encontrado"
+}
+
+TEXTO PARA ANALISAR:
+%s
