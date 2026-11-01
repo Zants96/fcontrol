@@ -289,13 +289,13 @@ function renderInvEvolucaoChart(data) {
       labels,
       datasets: [
         {
-          label: 'Valor Aplicado',
+          label: 'Valor aplicado',
           data: investido,
           backgroundColor: '#059669', // Verde escuro
           borderRadius: 4
         },
         {
-          label: 'Variação (Lucro/Prejuízo)',
+          label: 'Ganho de Capital',
           data: lucros,
           backgroundColor: lucrosColors,
           borderRadius: 4
@@ -320,8 +320,8 @@ function renderInvEvolucaoChart(data) {
               let valInvestido = 0;
               let valLucro = 0;
               contextItems.forEach(ci => {
-                if (ci.dataset.label === 'Valor Aplicado') valInvestido = ci.raw;
-                if (ci.dataset.label === 'Variação (Lucro/Prejuízo)') valLucro = ci.raw;
+                if (ci.dataset.label === 'Valor aplicado') valInvestido = ci.raw;
+                if (ci.dataset.label === 'Ganho de Capital') valLucro = ci.raw;
               });
               const valPatrimonio = valInvestido + valLucro;
               return `\nPatrimônio Total: ${fmtCurrency(valPatrimonio)}`;

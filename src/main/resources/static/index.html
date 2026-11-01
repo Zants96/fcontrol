@@ -461,8 +461,22 @@
     <div class="charts-row">
       <!-- Evolução Patrimonial (12M) -->
       <div class="chart-card">
-        <div class="chart-card-header">
+        <div class="chart-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
           <h2 class="chart-title">Evolução do Patrimônio (12 Meses)</h2>
+          <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.8rem; color: #94a3b8;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="width: 12px; height: 12px; background-color: #059669; border-radius: 3px; display: inline-block;"></span>
+              <span>Valor aplicado</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="width: 12px; height: 12px; background-color: #34d399; border-radius: 3px; display: inline-block;"></span>
+              <span>Ganho de Capital</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.4rem;">
+              <span style="width: 12px; height: 12px; background-color: #f87171; border-radius: 3px; display: inline-block;"></span>
+              <span>Perda de Capital</span>
+            </div>
+          </div>
         </div>
         <div class="chart-wrapper" style="height: 280px;">
           <canvas id="chart-inv-evolucao"></canvas>
