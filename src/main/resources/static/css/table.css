@@ -1,0 +1,156 @@
+/* ─── Table View ────────────────────────────────────────────────────────── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  gap: 0.75rem;
+  flex-wrap: nowrap;
+}
+
+.table-toolbar label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.month-tabs {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.month-tab {
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.month-tab:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+.month-tab.active {
+  background: rgba(16,185,129,0.15);
+  border-color: var(--border-active);
+  color: var(--brand-glow);
+  font-weight: 600;
+}
+
+.table-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background: var(--bg-elevated);
+  padding: 0.875rem 1rem;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table td {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  transition: background 0.15s;
+}
+
+.data-table tbody tr:hover td { background: var(--bg-hover); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.data-table .col-actions {
+  text-align: right;
+  width: 100px;
+}
+
+.totals-row td {
+  background: var(--bg-elevated) !important;
+  border-top: 2px solid var(--border-active) !important;
+  color: var(--brand-glow);
+  font-size: 0.9rem;
+  padding: 1rem 1rem !important;
+}
+
+.cell-valor {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.cell-valor--zero { color: var(--text-muted); }
+
+/* ─── Action Buttons (Table) ─────────────────────────────────────────────── */
+.action-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.action-btn {
+  width: 30px; height: 30px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.action-btn svg { width: 16px; height: 16px; }
+
+.logo-icon svg { width: 24px; height: 24px; color: #fff; }
+
+.action-btn--edit { background: rgba(96,165,250,0.1); color: var(--accent-blue); }
+.action-btn--edit:hover { background: rgba(96,165,250,0.25); }
+
+.action-btn--del { background: rgba(248,113,113,0.1); color: var(--accent-red); }
+.action-btn--del:hover { background: rgba(248,113,113,0.25); }
+
+#btn-export-csv {
+  background: var(--bg-hover);
+  color: var(--brand-glow);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+#btn-export-csv:hover {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--brand-glow);
+  border-color: var(--brand-glow);
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+  transform: none;
+}
+
+#btn-export-pdf {
+  background: var(--bg-hover);
+  color: var(--accent-red);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  transition: all 0.2s ease;
+}
+
+#btn-export-pdf:hover {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.4);
+  transform: none;
+}
