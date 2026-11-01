@@ -8,6 +8,7 @@ import br.com.lesnik.mytwocents.repository.AtivoRepository;
 import br.com.lesnik.mytwocents.repository.InvestimentoLancamentoRepository;
 import br.com.lesnik.mytwocents.repository.AiConfigRepository;
 import br.com.lesnik.mytwocents.repository.LancamentoRepository;
+import br.com.lesnik.mytwocents.repository.PatrimonioHistoricoRepository;
 import br.com.lesnik.mytwocents.util.CategoriaTaticaUtils;
 import br.com.lesnik.mytwocents.util.CryptoEtfUtils;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,7 @@ public class InvestimentoService {
     private final SniperEngineService sniperEngineService;
     private final LancamentoRepository financeiroRepository;
     private final CotacaoService cotacaoService;
+    private final PatrimonioHistoricoRepository patrimonioHistoricoRepository;
 
 
     // ─── CRUD DE LANÇAMENTOS ─────────────────────────────────────────────────
@@ -581,6 +583,7 @@ public class InvestimentoService {
 
         for (java.time.YearMonth ym : last12Months) {
             java.time.LocalDate endOfMonth = ym.atEndOfMonth();
+            boolean isMesCorrente = ym.equals(maxMonth);
             
             // Dividendos no mês
             BigDecimal dividendosNoMes = todosLancamentos.stream()
@@ -588,10 +591,40 @@ public class InvestimentoService {
                     .map(InvestimentoLancamento::getValorTotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            Map<String, BigDecimal> valores = calcularPatrimonioEInvestidoNaData(endOfMonth, ativos, todosLancamentos, selicRate, ipcaRate);
+            Optional<PatrimonioHistorico> snapshotOpt = patrimonioHistoricoRepository.findByAnoAndMes(ym.getYear(), ym.getMonthValue());
 
-            evolucaoInvestido12m.add(valores.get("investido"));
-            evolucaoPatrimonio12m.add(valores.get("patrimonio"));
+            BigDecimal valorInvMes;
+            BigDecimal valorPatMes;
+
+            if (!isMesCorrente && snapshotOpt.isPresent()) {
+                // Utiliza o histórico consolidado já registrado daquele mês
+                PatrimonioHistorico snap = snapshotOpt.get();
+                valorInvMes = snap.getValorInvestido();
+                valorPatMes = snap.getValorPatrimonio();
+            } else {
+                // Calcula na data
+                Map<String, BigDecimal> valores = calcularPatrimonioEInvestidoNaData(endOfMonth, ativos, todosLancamentos, selicRate, ipcaRate);
+                valorInvMes = valores.get("investido");
+                valorPatMes = valores.get("patrimonio");
+
+                // Grava ou atualiza o snapshot do mês
+                PatrimonioHistorico snap = snapshotOpt.orElseGet(() -> PatrimonioHistorico.builder()
+                        .ano(ym.getYear())
+                        .mes(ym.getMonthValue())
+                        .build());
+                snap.setValorInvestido(valorInvMes);
+                snap.setValorPatrimonio(valorPatMes);
+                snap.setValorLucro(valorPatMes.subtract(valorInvMes));
+                snap.setValorDividendos(dividendosNoMes);
+                try {
+                    patrimonioHistoricoRepository.save(snap);
+                } catch (Exception e) {
+                    log.warn("Erro ao salvar snapshot de patrimônio histórico para {}/{}: {}", ym.getMonthValue(), ym.getYear(), e.getMessage());
+                }
+            }
+
+            evolucaoInvestido12m.add(valorInvMes);
+            evolucaoPatrimonio12m.add(valorPatMes);
             evolucaoDividendos12m.add(dividendosNoMes);
         }
 
