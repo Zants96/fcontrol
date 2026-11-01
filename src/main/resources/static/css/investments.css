@@ -17,6 +17,7 @@
   align-items: center;
   padding: 1rem 1.25rem;
   cursor: pointer;
+  -webkit-user-select: none;
   user-select: none;
 }
 .inv-accordion-header:hover { background: var(--bg-card); }
