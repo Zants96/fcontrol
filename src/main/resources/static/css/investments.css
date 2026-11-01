@@ -1,0 +1,237 @@
+/* ─── INVESTIMENTOS ─────────────────────────────────────────────────────── */
+.inv-variation--up { color: var(--accent-green) !important; }
+.inv-variation--down { color: var(--accent-red) !important; }
+
+/* Acordeões */
+.inv-accordion {
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+.inv-accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  user-select: none;
+}
+.inv-accordion-header:hover { background: var(--bg-card); }
+.inv-accordion-title { display: flex; align-items: center; gap: 1rem; }
+.inv-accordion-stats { display: flex; align-items: center; gap: 1.5rem; font-size: 0.9rem; font-weight: 500; }
+.inv-accordion-val { color: var(--text-primary); }
+.inv-accordion-pct { color: var(--text-muted); font-size: 0.8rem; }
+.inv-accordion-arrow {
+  color: var(--text-muted);
+  transition: transform 0.3s ease;
+}
+.inv-accordion.open .inv-accordion-arrow { transform: rotate(180deg); }
+.inv-accordion-body {
+  display: none;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+}
+.inv-accordion.open .inv-accordion-body { display: block; }
+.inv-table { margin-bottom: 0; border: none; }
+.inv-ticker-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  position: relative;
+  cursor: help;
+}
+
+/* Balão de Dica (Tooltip Premium) */
+.inv-ticker-container[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 130%;
+  left: 0;
+  transform: translateY(4px);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: normal;
+  max-width: 300px;
+  width: max-content;
+  line-height: 1.4;
+  box-shadow: var(--shadow-md), var(--shadow-glow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 1000;
+}
+
+.inv-ticker-container[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  bottom: 110%;
+  left: 15px;
+  transform: translateY(4px);
+  border-width: 6px;
+  border-style: solid;
+  border-color: var(--border) transparent transparent transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 1000;
+}
+
+.inv-ticker-container[data-tooltip]:hover::after,
+.inv-ticker-container[data-tooltip]:hover::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+.inv-ticker-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: contain;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.inv-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  display: inline-block;
+}
+.inv-accordion-count { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; }
+
+/* Radio Toggle (Compra/Venda/Dividendo) */
+.inv-radio-toggle {
+  display: flex;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.inv-radio-toggle label {
+  flex: 1;
+  text-align: center;
+  cursor: pointer;
+}
+.inv-radio-toggle input { display: none; }
+.inv-radio-toggle span {
+  display: block;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+.inv-radio-toggle input:checked + span {
+  background: var(--brand-glow);
+  color: #000;
+}
+
+/* ─── HISTÓRICO DE PROVENTOS ─────────────────────────────────────────────── */
+.prov-hist-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.prov-hist-table th {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.6rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.prov-hist-table th:first-child { text-align: left; }
+.prov-hist-table td {
+  padding: 0.45rem 0.6rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.prov-hist-table td:first-child { text-align: left; }
+.prov-hist-table tbody tr:hover td {
+  background: var(--bg-hover);
+}
+
+.prov-total-clickable:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+.prov-tipo-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  width: max-content;
+  max-width: 240px;
+  min-width: 140px;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
+.prov-cell-tooltip {
+  position: fixed;
+  background: var(--bg-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
+  width: max-content;
+  max-width: 260px;
+  min-width: 150px;
+  z-index: 9999;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  font-family: inherit;
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Loader overlay for Investimentos view – scoped to view only, sidebar stays free */
+#view-investimentos {
+  position: relative;
+}
+#view-investimentos.is-loading {
+  overflow: hidden;
+  min-height: 80vh;
+  max-height: calc(100vh - var(--topbar-h));
+}
+.loader-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-main, #0f172a);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  z-index: 100;
+}
+
+.loader-overlay .loader-text {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-muted, #94a3b8);
+  letter-spacing: 0.02em;
+  animation: pulse-text 1.8s ease-in-out infinite;
+}
